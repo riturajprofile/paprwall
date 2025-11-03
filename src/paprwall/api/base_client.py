@@ -14,7 +14,7 @@ class BaseAPIClient(ABC):
         self.config = config_manager
         self.session = requests.Session()
         self.session.headers.update({
-            'User-Agent': 'riturajprofile-wallpaper/1.0.0'
+            'User-Agent': 'paprwall/1.0.0'
         })
     
     @abstractmethod

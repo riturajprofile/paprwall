@@ -3,9 +3,9 @@ Source manager - coordinates all image sources.
 """
 from typing import List, Dict, Any
 import logging
-from riturajprofile_wallpaper.api.pixabay_client import PixabayClient
-from riturajprofile_wallpaper.api.unsplash_client import UnsplashClient
-from riturajprofile_wallpaper.api.pexels_client import PexelsClient
+from paprwall.api.pixabay_client import PixabayClient
+from paprwall.api.unsplash_client import UnsplashClient
+from paprwall.api.pexels_client import PexelsClient
 
 logger = logging.getLogger(__name__)
 

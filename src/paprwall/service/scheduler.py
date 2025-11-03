@@ -7,8 +7,8 @@ from apscheduler.triggers.interval import IntervalTrigger
 from datetime import datetime
 import logging
 
-from riturajprofile_wallpaper.core.rotator import WallpaperRotator
-from riturajprofile_wallpaper.config.config_manager import ConfigManager
+from paprwall.core.rotator import WallpaperRotator
+from paprwall.config.config_manager import ConfigManager
 
 logger = logging.getLogger(__name__)
 

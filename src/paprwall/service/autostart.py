@@ -17,7 +17,7 @@ SERVICE_NAME = 'paprwall.service'
 def get_service_content():
     """Generate systemd service file content"""
     python_path = sys.executable
-    module_path = 'riturajprofile_wallpaper.service.daemon'
+    module_path = 'paprwall.service.daemon'
     
     return f"""[Unit]
 Description=Paprwall - Auto-rotating Wallpaper Service

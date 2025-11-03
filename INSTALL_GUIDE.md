@@ -152,7 +152,7 @@ journalctl --user -u paprwall -f
 
 ### Auto-Fetch Time
 
-Edit `~/.config/riturajprofile-wallpaper/preferences.json`:
+Edit `~/.config/paprwall/preferences.json`:
 
 ```json
 {
@@ -170,7 +170,7 @@ Edit `~/.config/riturajprofile-wallpaper/preferences.json`:
 
 ### Source Weights
 
-Edit `~/.config/riturajprofile-wallpaper/sources.json`:
+Edit `~/.config/paprwall/sources.json`:
 
 ```json
 {
@@ -189,7 +189,7 @@ Edit `~/.config/riturajprofile-wallpaper/sources.json`:
 
 **Option 1: Config File**
 
-Edit `~/.config/riturajprofile-wallpaper/api_keys.json`:
+Edit `~/.config/paprwall/api_keys.json`:
 
 ```json
 {
@@ -287,7 +287,7 @@ echo $XDG_CURRENT_DESKTOP
 paprwall --set /path/to/test/image.jpg
 
 # Check logs
-cat ~/.local/share/riturajprofile-wallpaper/logs/app.log
+cat ~/.local/share/paprwall/logs/app.log
 ```
 
 ### Fetch Fails
@@ -301,7 +301,7 @@ paprwall --test pexels
 ping pixabay.com
 
 # View detailed logs
-tail -f ~/.local/share/riturajprofile-wallpaper/logs/app.log
+tail -f ~/.local/share/paprwall/logs/app.log
 ```
 
 ### Auto-Start Not Working
@@ -343,11 +343,11 @@ Paprwall includes intelligent retry for failed fetches:
 
 | Type | Location |
 |------|----------|
-| Config | `~/.config/riturajprofile-wallpaper/` |
-| Data | `~/.local/share/riturajprofile-wallpaper/` |
-| Images | `~/.local/share/riturajprofile-wallpaper/images/` |
-| Cache | `~/.cache/riturajprofile-wallpaper/` |
-| Logs | `~/.local/share/riturajprofile-wallpaper/logs/` |
+| Config | `~/.config/paprwall/` |
+| Data | `~/.local/share/paprwall/` |
+| Images | `~/.local/share/paprwall/images/` |
+| Cache | `~/.cache/paprwall/` |
+| Logs | `~/.local/share/paprwall/logs/` |
 | Service | `~/.config/systemd/user/paprwall.service` |
 
 ---

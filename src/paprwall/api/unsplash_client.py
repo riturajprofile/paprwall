@@ -2,7 +2,7 @@
 Unsplash API client.
 """
 from typing import List, Dict, Any
-from riturajprofile_wallpaper.api.base_client import BaseAPIClient
+from paprwall.api.base_client import BaseAPIClient
 
 
 class UnsplashClient(BaseAPIClient):

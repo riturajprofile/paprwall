@@ -9,9 +9,9 @@ import gi
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk, GdkPixbuf, GLib, Gdk
 
-from riturajprofile_wallpaper.config.config_manager import ConfigManager
-from riturajprofile_wallpaper.core.rotator import WallpaperRotator
-from riturajprofile_wallpaper.utils.logger import setup_logger
+from paprwall.config.config_manager import ConfigManager
+from paprwall.core.rotator import WallpaperRotator
+from paprwall.utils.logger import setup_logger
 
 logger = setup_logger()
 
@@ -493,7 +493,7 @@ class MainWindow(Gtk.Window):
         location_row.pack_start(location_label, True, True, 0)
         
         location_entry = Gtk.Entry()
-        location_entry.set_text(os.path.expanduser("~/.local/share/riturajprofile-wallpaper"))
+        location_entry.set_text(os.path.expanduser("~/.local/share/paprwall"))
         location_row.pack_start(location_entry, True, True, 0)
         
         browse_btn = Gtk.Button(label="Browse")
@@ -655,7 +655,7 @@ class MainWindow(Gtk.Window):
     def on_open_folder(self, button):
         """Open wallpaper folder"""
         import subprocess
-        folder = os.path.expanduser("~/.local/share/riturajprofile-wallpaper/images")
+        folder = os.path.expanduser("~/.local/share/paprwall/images")
         
         # Create folder if it doesn't exist
         os.makedirs(folder, exist_ok=True)

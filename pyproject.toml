@@ -49,7 +49,7 @@ Repository = "https://github.com/riturajprofile/paprwall"
 "Bug Tracker" = "https://github.com/riturajprofile/paprwall/issues"
 
 [project.scripts]
-paprwall = "riturajprofile_wallpaper.cli:main"
+paprwall = "paprwall.cli:main"
 
 [project.gui-scripts]
-paprwall-gui = "riturajprofile_wallpaper.gui.main_window:main"
+paprwall-gui = "paprwall.gui.main_window:main"

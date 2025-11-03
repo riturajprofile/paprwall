@@ -1,6 +1,6 @@
 """
-Default API keys and configuration for riturajprofile-wallpaper.
-Users can override these in ~/.config/riturajprofile-wallpaper/api_keys.json
+Default API keys and configuration for paprwall.
+Users can override these in ~/.config/paprwall/api_keys.json
 
 SECURITY NOTE: This file contains placeholder keys for demonstration.
 Users MUST add their own API keys in the config file to use the app.
@@ -12,7 +12,7 @@ Get free API keys from:
 import hashlib
 
 # Default API keys - PLACEHOLDERS ONLY!
-# Users must provide their own keys in ~/.config/riturajprofile-wallpaper/api_keys.json
+# Users must provide their own keys in ~/.config/paprwall/api_keys.json
 DEFAULT_API_KEYS = {
     "pixabay": {
         "api_key": "YOUR_PIXABAY_API_KEY_HERE",  # Get from: https://pixabay.com/api/docs/

@@ -7,8 +7,8 @@ set -e
 
 # Configuration
 INSTALL_DIR="$HOME/.paprwall"
-CONFIG_DIR="$HOME/.config/riturajprofile-wallpaper"
-DATA_DIR="$HOME/.local/share/riturajprofile-wallpaper"
+CONFIG_DIR="$HOME/.config/paprwall"
+DATA_DIR="$HOME/.local/share/paprwall"
 BIN_DIR="$HOME/.local/bin"
 SERVICE_FILE="$HOME/.config/systemd/user/paprwall.service"
 

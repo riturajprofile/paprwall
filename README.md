@@ -195,7 +195,7 @@ Or configure via GUI: **Settings → Sources**
 
 ### Configuration Files
 
-All configuration is stored in `~/.config/riturajprofile-wallpaper/`:
+All configuration is stored in `~/.config/paprwall/`:
 
 - `api_keys.json` - Your custom API keys
 - `sources.json` - Enabled sources and distribution
@@ -210,7 +210,7 @@ By default, the app fetches 5 images per day:
 - **Pexels**: 1 image (33%)
 - **Local**: 0 images (0%)
 
-You can adjust these weights in the GUI or by editing `~/.config/riturajprofile-wallpaper/sources.json`.
+You can adjust these weights in the GUI or by editing `~/.config/paprwall/sources.json`.
 
 ---
 
@@ -246,7 +246,7 @@ The app comes with default API keys for basic functionality. For **higher rate l
 
 **Via Config File:**
 
-Create/edit `~/.config/riturajprofile-wallpaper/api_keys.json`:
+Create/edit `~/.config/paprwall/api_keys.json`:
 
 ```json
 {
@@ -267,9 +267,9 @@ Create/edit `~/.config/riturajprofile-wallpaper/api_keys.json`:
 
 Or use the example template:
 ```bash
-cp api_keys.json.example ~/.config/riturajprofile-wallpaper/api_keys.json
+cp api_keys.json.example ~/.config/paprwall/api_keys.json
 # Then edit with your real keys
-nano ~/.config/riturajprofile-wallpaper/api_keys.json
+nano ~/.config/paprwall/api_keys.json
 ```
 
 **Via .env File (Alternative):**
@@ -321,16 +321,16 @@ The app includes **12 predefined themes**:
 
 ```bash
 # View all available themes
-riturajprofile-wallpaper --themes
+paprwall --themes
 
 # Set a theme
-riturajprofile-wallpaper --set-theme space
+paprwall --set-theme space
 
 # Check current theme
-riturajprofile-wallpaper --current-theme
+paprwall --current-theme
 
 # Fetch wallpapers with the theme
-riturajprofile-wallpaper --fetch
+paprwall --fetch
 ```
 
 ### Custom Search Queries
@@ -339,28 +339,28 @@ Want something very specific?
 
 ```bash
 # Custom search
-riturajprofile-wallpaper --custom-query "cyberpunk city neon"
-riturajprofile-wallpaper --fetch
+paprwall --custom-query "cyberpunk city neon"
+paprwall --fetch
 
 # Another example
-riturajprofile-wallpaper --custom-query "autumn mountains lake"
-riturajprofile-wallpaper --fetch
+paprwall --custom-query "autumn mountains lake"
+paprwall --fetch
 ```
 
 ### Theme Examples
 
 ```bash
 # Get space-themed wallpapers
-riturajprofile-wallpaper --set-theme space
-riturajprofile-wallpaper --fetch
+paprwall --set-theme space
+paprwall --fetch
 
 # Switch to ocean theme
-riturajprofile-wallpaper --set-theme ocean
-riturajprofile-wallpaper --fetch
+paprwall --set-theme ocean
+paprwall --fetch
 
 # Try minimal/clean wallpapers
-riturajprofile-wallpaper --set-theme minimal
-riturajprofile-wallpaper --fetch
+paprwall --set-theme minimal
+paprwall --fetch
 ```
 
 **📖 Full guide:** See `docs/themes.md` for detailed theme documentation
@@ -427,19 +427,19 @@ If you prefer a clean desktop without attribution text, you can remove the overl
 ```bash
 # Copy service file to user systemd directory
 mkdir -p ~/.config/systemd/user
-cp systemd/riturajprofile-wallpaper.service ~/.config/systemd/user/
+cp systemd/paprwall.service ~/.config/systemd/user/
 
 # Enable and start the service
-systemctl --user enable riturajprofile-wallpaper
-systemctl --user start riturajprofile-wallpaper
+systemctl --user enable paprwall
+systemctl --user start paprwall
 
 # Check status
-systemctl --user status riturajprofile-wallpaper
+systemctl --user status paprwall
 ```
 
 ### Configure Rotation Interval:
 
-Edit `~/.config/riturajprofile-wallpaper/preferences.json`:
+Edit `~/.config/paprwall/preferences.json`:
 
 ```json
 {
@@ -455,36 +455,36 @@ Edit `~/.config/riturajprofile-wallpaper/preferences.json`:
 
 ```bash
 # General
-riturajprofile-wallpaper --version      # Show version
-riturajprofile-wallpaper --help         # Show help
+paprwall --version      # Show version
+paprwall --help         # Show help
 
 # GUI
-riturajprofile-wallpaper --gui          # Launch GUI
-riturajprofile-wallpaper-gui            # Alternative command
+paprwall --gui          # Launch GUI
+paprwall-gui            # Alternative command
 
 # Wallpaper Control
-riturajprofile-wallpaper --fetch        # Fetch new images
-riturajprofile-wallpaper --next         # Next wallpaper
-riturajprofile-wallpaper --prev         # Previous wallpaper
-riturajprofile-wallpaper --set IMAGE    # Set specific image
-riturajprofile-wallpaper --current      # Show current wallpaper info
+paprwall --fetch        # Fetch new images
+paprwall --next         # Next wallpaper
+paprwall --prev         # Previous wallpaper
+paprwall --set IMAGE    # Set specific image
+paprwall --current      # Show current wallpaper info
 
 # Theme Selection (NEW!)
-riturajprofile-wallpaper --themes          # List all available themes
-riturajprofile-wallpaper --current-theme   # Show current theme
-riturajprofile-wallpaper --set-theme THEME # Set theme (nature, city, space, etc.)
-riturajprofile-wallpaper --custom-query "SEARCH"  # Custom search query
+paprwall --themes          # List all available themes
+paprwall --current-theme   # Show current theme
+paprwall --set-theme THEME # Set theme (nature, city, space, etc.)
+paprwall --custom-query "SEARCH"  # Custom search query
 
 # Source Management
-riturajprofile-wallpaper --sources      # List enabled sources
-riturajprofile-wallpaper --test SOURCE  # Test source (pixabay/unsplash/pexels)
-riturajprofile-wallpaper --enable SOURCE   # Enable a source
-riturajprofile-wallpaper --disable SOURCE  # Disable a source
+paprwall --sources      # List enabled sources
+paprwall --test SOURCE  # Test source (pixabay/unsplash/pexels)
+paprwall --enable SOURCE   # Enable a source
+paprwall --disable SOURCE  # Disable a source
 
 # Service (via systemd)
-systemctl --user start riturajprofile-wallpaper
-systemctl --user stop riturajprofile-wallpaper
-systemctl --user status riturajprofile-wallpaper
+systemctl --user start paprwall
+systemctl --user stop paprwall
+systemctl --user status paprwall
 ```
 
 ---
@@ -492,14 +492,14 @@ systemctl --user status riturajprofile-wallpaper
 ## 📂 Directory Structure
 
 ```
-~/.config/riturajprofile-wallpaper/     # Configuration
+~/.config/paprwall/     # Configuration
 ├── api_keys.json                       # Your custom API keys
 ├── sources.json                        # Source configuration
 ├── attribution.json                    # Attribution settings
 ├── preferences.json                    # App preferences
 └── local_images.json                   # Local image metadata
 
-~/.local/share/riturajprofile-wallpaper/ # Data
+~/.local/share/paprwall/ # Data
 ├── images/                             # Downloaded wallpapers
 │   ├── 2025-11-03/                     # Daily folders
 │   │   ├── pixabay_1.jpg
@@ -532,7 +532,7 @@ echo $XDG_CURRENT_DESKTOP
 paprwall --set /path/to/test/image.jpg
 
 # Check logs
-cat ~/.local/share/riturajprofile-wallpaper/logs/app.log
+cat ~/.local/share/paprwall/logs/app.log
 ```
 
 ### Service not starting
@@ -563,10 +563,10 @@ paprwall --test pexels
 ### Permission errors
 ```bash
 # Ensure directories exist and are writable
-mkdir -p ~/.config/riturajprofile-wallpaper
-mkdir -p ~/.local/share/riturajprofile-wallpaper
-chmod 755 ~/.config/riturajprofile-wallpaper
-chmod 755 ~/.local/share/riturajprofile-wallpaper
+mkdir -p ~/.config/paprwall
+mkdir -p ~/.local/share/paprwall
+chmod 755 ~/.config/paprwall
+chmod 755 ~/.local/share/paprwall
 ```
 
 ---

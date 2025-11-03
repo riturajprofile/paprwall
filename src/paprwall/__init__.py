@@ -1,5 +1,5 @@
 """
-riturajprofile-wallpaper: Auto-rotating wallpaper app for Linux
+paprwall: Auto-rotating wallpaper app for Linux
 with multi-source support and local images.
 """
 
@@ -11,12 +11,12 @@ from pathlib import Path
 import os
 
 # Package information
-PACKAGE_NAME = "riturajprofile-wallpaper"
-APP_NAME = "riturajprofile_wallpaper"
+PACKAGE_NAME = "paprwall"
+APP_NAME = "paprwall"
 
 # User directories
-CONFIG_DIR = Path.home() / ".config" / "riturajprofile-wallpaper"
-DATA_DIR = Path.home() / ".local" / "share" / "riturajprofile-wallpaper"
+CONFIG_DIR = Path.home() / ".config" / "paprwall"
+DATA_DIR = Path.home() / ".local" / "share" / "paprwall"
 CACHE_DIR = DATA_DIR / "cache"
 IMAGES_DIR = DATA_DIR / "images"
 LOGS_DIR = DATA_DIR / "logs"

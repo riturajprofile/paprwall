@@ -1,12 +1,12 @@
 """
-Configuration manager for riturajprofile-wallpaper.
+Configuration manager for paprwall.
 """
 import json
 import os
 from pathlib import Path
 from typing import Any, Dict, List, Optional
-from riturajprofile_wallpaper import CONFIG_DIR
-from riturajprofile_wallpaper.config.default_keys import (
+from paprwall import CONFIG_DIR
+from paprwall.config.default_keys import (
     DEFAULT_API_KEYS,
     DEFAULT_SOURCES,
     DEFAULT_ATTRIBUTION,

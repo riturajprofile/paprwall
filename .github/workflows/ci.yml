@@ -45,7 +45,7 @@ jobs:
     - name: Verify installation
       run: |
         paprwall --version
-        python -c "import riturajprofile_wallpaper; print(riturajprofile_wallpaper.__version__)"
+        python -c "import paprwall; print(paprwall.__version__)"
 
     - name: Check code style
       run: |

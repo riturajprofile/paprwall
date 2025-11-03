@@ -1,5 +1,5 @@
 """
-Setup script for riturajprofile-wallpaper package.
+Setup script for paprwall package.
 """
 from setuptools import setup, find_packages
 from setuptools.command.install import install
@@ -13,7 +13,7 @@ class PostInstallCommand(install):
         install.run(self)
         # Enable auto-start after installation
         try:
-            subprocess.run([sys.executable, "-m", "riturajprofile_wallpaper.service.autostart", "--enable"], check=True)
+            subprocess.run([sys.executable, "-m", "paprwall.service.autostart", "--enable"], check=True)
             print("\n✅ Auto-start service enabled successfully!")
             print("Paprwall will now start automatically on system boot.")
         except Exception as e:
@@ -33,10 +33,10 @@ setup(
     ],
     entry_points={
         "console_scripts": [
-            "paprwall=riturajprofile_wallpaper.cli:main",
+            "paprwall=paprwall.cli:main",
         ],
         "gui_scripts": [
-            "paprwall-gui=riturajprofile_wallpaper.gui.main_window:main",
+            "paprwall-gui=paprwall.gui.main_window:main",
         ],
     },
     cmdclass={

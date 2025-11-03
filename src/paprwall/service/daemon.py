@@ -7,9 +7,9 @@ import sys
 import signal
 import logging
 from pathlib import Path
-from riturajprofile_wallpaper.service.scheduler import WallpaperScheduler
-from riturajprofile_wallpaper.utils.logger import setup_logger
-from riturajprofile_wallpaper import DATA_DIR
+from paprwall.service.scheduler import WallpaperScheduler
+from paprwall.utils.logger import setup_logger
+from paprwall import DATA_DIR
 
 logger = setup_logger()
 

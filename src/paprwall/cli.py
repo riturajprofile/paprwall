@@ -4,11 +4,11 @@ CLI interface for paprwall.
 import argparse
 import sys
 from pathlib import Path
-from riturajprofile_wallpaper import __version__
-from riturajprofile_wallpaper.config.config_manager import ConfigManager
-from riturajprofile_wallpaper.core.rotator import WallpaperRotator
-from riturajprofile_wallpaper.api.source_manager import SourceManager
-from riturajprofile_wallpaper.utils.logger import setup_logger
+from paprwall import __version__
+from paprwall.config.config_manager import ConfigManager
+from paprwall.core.rotator import WallpaperRotator
+from paprwall.api.source_manager import SourceManager
+from paprwall.utils.logger import setup_logger
 
 logger = setup_logger()
 
@@ -55,7 +55,7 @@ def main():
     # Handle GUI launch
     if args.gui:
         try:
-            from riturajprofile_wallpaper.gui.main_window import main as gui_main
+            from paprwall.gui.main_window import main as gui_main
             return gui_main()
         except ImportError as e:
             logger.error(f"Failed to launch GUI: {e}")
@@ -189,7 +189,7 @@ def main():
     
     # Handle themes
     if args.themes:
-        from riturajprofile_wallpaper.config.default_keys import AVAILABLE_THEMES
+        from paprwall.config.default_keys import AVAILABLE_THEMES
         
         print("\nAvailable Themes:")
         print("=" * 60)
@@ -216,7 +216,7 @@ def main():
     
     if args.set_theme:
         theme_name = args.set_theme.lower()
-        from riturajprofile_wallpaper.config.default_keys import AVAILABLE_THEMES
+        from paprwall.config.default_keys import AVAILABLE_THEMES
         
         if theme_name in AVAILABLE_THEMES:
             config.set_preference('theme', theme_name)

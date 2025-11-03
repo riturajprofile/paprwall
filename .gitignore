@@ -59,9 +59,9 @@ test_images/
 *.secret
 
 # User configuration directories (contains personal API keys)
-.config/riturajprofile-wallpaper/
-.local/share/riturajprofile-wallpaper/
-.cache/riturajprofile-wallpaper/
+.config/paprwall/
+.local/share/paprwall/
+.cache/paprwall/
 
 # Logs
 *.log

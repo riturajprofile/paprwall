@@ -1,12 +1,12 @@
 """
-Logging configuration for riturajprofile-wallpaper.
+Logging configuration for paprwall.
 """
 import logging
 from pathlib import Path
-from riturajprofile_wallpaper import LOGS_DIR
+from paprwall import LOGS_DIR
 
 
-def setup_logger(name: str = 'riturajprofile_wallpaper', level: int = logging.INFO):
+def setup_logger(name: str = 'paprwall', level: int = logging.INFO):
     """
     Set up logger with file and console handlers.
     
