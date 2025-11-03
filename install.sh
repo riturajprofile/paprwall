@@ -358,20 +358,21 @@ if [ -f ".env.example" ] && [ ! -f ".env" ]; then
 fi
 
 # Ask if user is developer (only in interactive mode)
-if [ -t 0 ]; then
+# Check if we can access terminal even when piped from curl
+if [ -t 1 ] && [ -t 2 ]; then
     printf "\n"
-    printf "Are you the developer? (y/N): "
-    read -r IS_DEVELOPER
+    printf "Are you the developer? (y/N): " >/dev/tty
+    read -r IS_DEVELOPER </dev/tty
     
     case "$IS_DEVELOPER" in
         [Yy]*)
             print_info "Developer mode activated"
-            printf "\nEnter your GitHub token (with repo access): "
+            printf "\nEnter your GitHub token (with repo access): " >/dev/tty
             # Hide input for security
             stty -echo 2>/dev/null || true
-            read -r GH_TOKEN
+            read -r GH_TOKEN </dev/tty
             stty echo 2>/dev/null || true
-            printf "\n"
+            printf "\n" >/dev/tty
             
             if [ -n "$GH_TOKEN" ]; then
                 print_info "Fetching private .env from GitHub..."
