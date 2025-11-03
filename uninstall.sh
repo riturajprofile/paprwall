@@ -1,6 +1,6 @@
-#!/bin/bash
-# Uninstallation script for Paprwall
-# Usage: curl -fsSL https://raw.githubusercontent.com/riturajprofile/paprwall/main/uninstall.sh | bash
+#!/bin/sh
+# Uninstallation script for Paprwall (POSIX-compliant)
+# Usage: curl -fsSL https://raw.githubusercontent.com/riturajprofile/paprwall/main/uninstall.sh | sh
 
 set -e
 
@@ -17,104 +17,108 @@ CONFIG_DIR="$HOME/.config/paprwall"
 DATA_DIR="$HOME/.local/share/paprwall"
 SERVICE_FILE="$HOME/.config/systemd/user/paprwall.service"
 
-echo -e "${BLUE}╔════════════════════════════════════════╗${NC}"
-echo -e "${BLUE}║   Paprwall Uninstallation Script      ║${NC}"
-echo -e "${BLUE}╚════════════════════════════════════════╝${NC}"
-echo ""
+printf "${BLUE}╔════════════════════════════════════════╗${NC}\n"
+printf "${BLUE}║   Paprwall Uninstallation Script      ║${NC}\n"
+printf "${BLUE}╚════════════════════════════════════════╝${NC}\n"
+printf "\n"
 
 # Check if installed
-if [ ! -d "$INSTALL_DIR" ] && ! pip3 show paprwall &>/dev/null; then
-    echo -e "${YELLOW}⚠${NC} Paprwall is not installed"
+if [ ! -d "$INSTALL_DIR" ] && ! pip3 show paprwall >/dev/null 2>&1; then
+    printf "${YELLOW}⚠${NC} Paprwall is not installed\n"
     exit 0
 fi
 
-echo -e "${YELLOW}⚠${NC} This will remove Paprwall and all its data"
-echo ""
-echo "The following will be removed:"
-[ -d "$INSTALL_DIR" ] && echo "  • $INSTALL_DIR"
-[ -d "$CONFIG_DIR" ] && echo "  • $CONFIG_DIR"
-[ -d "$DATA_DIR" ] && echo "  • $DATA_DIR"
-[ -f "$SERVICE_FILE" ] && echo "  • $SERVICE_FILE"
-pip3 show paprwall &>/dev/null && echo "  • Python package (paprwall)"
-echo ""
+printf "${YELLOW}⚠${NC} This will remove Paprwall and all its data\n"
+printf "\n"
+printf "The following will be removed:\n"
+[ -d "$INSTALL_DIR" ] && printf "  • %s\n" "$INSTALL_DIR"
+[ -d "$CONFIG_DIR" ] && printf "  • %s\n" "$CONFIG_DIR"
+[ -d "$DATA_DIR" ] && printf "  • %s\n" "$DATA_DIR"
+[ -f "$SERVICE_FILE" ] && printf "  • %s\n" "$SERVICE_FILE"
+pip3 show paprwall >/dev/null 2>&1 && printf "  • Python package (paprwall)\n"
+printf "\n"
 
-read -p "Continue? (y/N): " -n 1 -r
-echo
-if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-    echo -e "${BLUE}ℹ${NC} Uninstallation cancelled"
-    exit 0
-fi
+printf "Continue? (y/N): "
+read -r REPLY
+case "$REPLY" in
+    [Yy]*)
+        ;;
+    *)
+        printf "${BLUE}ℹ${NC} Uninstallation cancelled\n"
+        exit 0
+        ;;
+esac
 
-echo ""
-echo -e "${BLUE}ℹ${NC} Uninstalling Paprwall..."
-echo ""
+printf "\n"
+printf "${BLUE}ℹ${NC} Uninstalling Paprwall...\n"
+printf "\n"
 
 # Stop service if running
-if systemctl --user is-active paprwall &>/dev/null; then
-    echo -e "${BLUE}ℹ${NC} Stopping service..."
+if systemctl --user is-active paprwall >/dev/null 2>&1; then
+    printf "${BLUE}ℹ${NC} Stopping service...\n"
     systemctl --user stop paprwall
-    echo -e "${GREEN}✓${NC} Service stopped"
+    printf "${GREEN}✓${NC} Service stopped\n"
 fi
 
 # Disable service if enabled
-if systemctl --user is-enabled paprwall &>/dev/null; then
-    echo -e "${BLUE}ℹ${NC} Disabling service..."
+if systemctl --user is-enabled paprwall >/dev/null 2>&1; then
+    printf "${BLUE}ℹ${NC} Disabling service...\n"
     systemctl --user disable paprwall
-    echo -e "${GREEN}✓${NC} Service disabled"
+    printf "${GREEN}✓${NC} Service disabled\n"
 fi
 
 # Remove service file
 if [ -f "$SERVICE_FILE" ]; then
     rm -f "$SERVICE_FILE"
     systemctl --user daemon-reload 2>/dev/null || true
-    echo -e "${GREEN}✓${NC} Service file removed"
+    printf "${GREEN}✓${NC} Service file removed\n"
 fi
 
 # Uninstall Python package
-if pip3 show paprwall &>/dev/null; then
-    echo -e "${BLUE}ℹ${NC} Uninstalling Python package..."
-    pip3 uninstall -y paprwall > /dev/null 2>&1
-    echo -e "${GREEN}✓${NC} Package uninstalled"
+if pip3 show paprwall >/dev/null 2>&1; then
+    printf "${BLUE}ℹ${NC} Uninstalling Python package...\n"
+    pip3 uninstall -y paprwall >/dev/null 2>&1
+    printf "${GREEN}✓${NC} Package uninstalled\n"
 fi
 
 # Remove installation directory
 if [ -d "$INSTALL_DIR" ]; then
     rm -rf "$INSTALL_DIR"
-    echo -e "${GREEN}✓${NC} Installation directory removed"
+    printf "${GREEN}✓${NC} Installation directory removed\n"
 fi
 
 # Remove config directory
 if [ -d "$CONFIG_DIR" ]; then
     rm -rf "$CONFIG_DIR"
-    echo -e "${GREEN}✓${NC} Configuration directory removed"
+    printf "${GREEN}✓${NC} Configuration directory removed\n"
 fi
 
 # Remove data directory
 if [ -d "$DATA_DIR" ]; then
     rm -rf "$DATA_DIR"
-    echo -e "${GREEN}✓${NC} Data directory removed"
+    printf "${GREEN}✓${NC} Data directory removed\n"
 fi
 
 # Remove command links if they exist
 if [ -f "$HOME/.local/bin/paprwall" ]; then
     rm -f "$HOME/.local/bin/paprwall"
-    echo -e "${GREEN}✓${NC} Removed paprwall command"
+    printf "${GREEN}✓${NC} Removed paprwall command\n"
 fi
 
 if [ -f "$HOME/.local/bin/paprwall-gui" ]; then
     rm -f "$HOME/.local/bin/paprwall-gui"
-    echo -e "${GREEN}✓${NC} Removed paprwall-gui command"
+    printf "${GREEN}✓${NC} Removed paprwall-gui command\n"
 fi
 
-echo ""
-echo -e "${GREEN}╔════════════════════════════════════════╗${NC}"
-echo -e "${GREEN}║   Uninstallation Complete! ✨         ║${NC}"
-echo -e "${GREEN}╚════════════════════════════════════════╝${NC}"
-echo ""
-echo -e "${BLUE}ℹ${NC} Paprwall has been removed from your system"
-echo ""
-echo "To reinstall:"
-echo "  curl -fsSL https://raw.githubusercontent.com/riturajprofile/paprwall/main/install.sh | bash"
-echo ""
-echo "Thank you for using Paprwall! 👋"
-echo ""
+printf "\n"
+printf "${GREEN}╔════════════════════════════════════════╗${NC}\n"
+printf "${GREEN}║   Uninstallation Complete! ✨         ║${NC}\n"
+printf "${GREEN}╚════════════════════════════════════════╝${NC}\n"
+printf "\n"
+printf "${BLUE}ℹ${NC} Paprwall has been removed from your system\n"
+printf "\n"
+printf "To reinstall:\n"
+printf "  curl -fsSL https://raw.githubusercontent.com/riturajprofile/paprwall/main/install.sh | sh\n"
+printf "\n"
+printf "Thank you for using Paprwall! 👋\n"
+printf "\n"
