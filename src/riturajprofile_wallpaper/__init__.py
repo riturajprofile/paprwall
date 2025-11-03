@@ -1,0 +1,31 @@
+"""
+riturajprofile-wallpaper: Auto-rotating wallpaper app for Linux
+with multi-source support and local images.
+"""
+
+__version__ = "1.0.0"
+__author__ = "riturajprofile"
+__email__ = "riturajprofile@example.com"
+
+from pathlib import Path
+import os
+
+# Package information
+PACKAGE_NAME = "riturajprofile-wallpaper"
+APP_NAME = "riturajprofile_wallpaper"
+
+# User directories
+CONFIG_DIR = Path.home() / ".config" / "riturajprofile-wallpaper"
+DATA_DIR = Path.home() / ".local" / "share" / "riturajprofile-wallpaper"
+CACHE_DIR = DATA_DIR / "cache"
+IMAGES_DIR = DATA_DIR / "images"
+LOGS_DIR = DATA_DIR / "logs"
+
+# Ensure directories exist
+def ensure_directories():
+    """Create necessary directories if they don't exist"""
+    for directory in [CONFIG_DIR, DATA_DIR, CACHE_DIR, IMAGES_DIR, LOGS_DIR]:
+        directory.mkdir(parents=True, exist_ok=True)
+
+# Create directories on import
+ensure_directories()

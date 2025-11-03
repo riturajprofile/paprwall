@@ -1,0 +1,179 @@
+"""
+Attribution manager with secret key functionality.
+"""
+import json
+import hashlib
+from datetime import datetime
+from pathlib import Path
+from typing import Dict, Any
+from PIL import Image, ImageDraw, ImageFont
+from riturajprofile_wallpaper import CONFIG_DIR
+from riturajprofile_wallpaper.config.default_keys import ATTRIBUTION_SECRET_KEY
+
+
+class AttributionManager:
+    """Manages attribution display and secret key verification"""
+    
+    SECRET_KEY = ATTRIBUTION_SECRET_KEY
+    
+    def __init__(self, config_manager):
+        self.config = config_manager
+        self.config_dir = CONFIG_DIR
+    
+    def should_show_attribution(self) -> bool:
+        """
+        Check if attribution should be shown on desktop.
+        Returns False if user has entered secret key.
+        """
+        config = self.config.get_attribution_config()
+        return not config.get('attribution_disabled', False)
+    
+    def verify_secret_key(self, input_key: str) -> bool:
+        """Verify if secret key matches"""
+        return input_key == self.SECRET_KEY
+    
+    def disable_attribution(self, secret_key: str) -> bool:
+        """Disable attribution overlay if secret key is correct"""
+        if self.verify_secret_key(secret_key):
+            config = self.config.get_attribution_config()
+            config['attribution_disabled'] = True
+            config['disabled_at'] = datetime.now().isoformat()
+            self.config.set_attribution_config(config)
+            return True
+        return False
+    
+    def enable_attribution(self):
+        """Re-enable attribution overlay"""
+        config = self.config.get_attribution_config()
+        config['attribution_disabled'] = False
+        self.config.set_attribution_config(config)
+    
+    def create_attribution_text(self, image_data: Dict) -> str:
+        """
+        Create attribution text for image.
+        Format: "Photo by [Author] from [Source] | Wallpaper by riturajprofile"
+        """
+        source = image_data.get('source', 'unknown')
+        
+        if source == 'local':
+            return "Wallpaper by riturajprofile"
+        
+        photographer = image_data.get('photographer', 'Unknown')
+        source_name = source.capitalize()
+        
+        # Always credit riturajprofile
+        return f"Photo by {photographer} from {source_name} | Wallpaper by riturajprofile"
+    
+    def create_desktop_overlay(self, image_path: Path, image_data: Dict) -> Path:
+        """
+        Add attribution text overlay to wallpaper image.
+        Skip if secret key has been entered.
+        
+        Args:
+            image_path: Path to the original image
+            image_data: Image metadata
+            
+        Returns:
+            Path to image (with or without overlay)
+        """
+        if not self.should_show_attribution():
+            return image_path  # Return original without overlay
+        
+        try:
+            img = Image.open(image_path)
+            draw = ImageDraw.Draw(img, 'RGBA')
+            
+            # Get attribution text
+            attribution_text = self.create_attribution_text(image_data)
+            
+            # Load font
+            try:
+                font = ImageFont.truetype('/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf', 16)
+            except:
+                font = ImageFont.load_default()
+            
+            # Calculate position (bottom-right with padding)
+            config = self.config.get_attribution_config()
+            position_type = config.get('position', 'bottom-right')
+            opacity = config.get('opacity', 0.7)
+            
+            # Get text bounding box
+            bbox = draw.textbbox((0, 0), attribution_text, font=font)
+            text_width = bbox[2] - bbox[0]
+            text_height = bbox[3] - bbox[1]
+            
+            padding = 10
+            img_width, img_height = img.size
+            
+            # Calculate position based on preference
+            if position_type == 'bottom-right':
+                x = img_width - text_width - padding * 2
+                y = img_height - text_height - padding * 2
+            elif position_type == 'bottom-left':
+                x = padding
+                y = img_height - text_height - padding * 2
+            elif position_type == 'top-right':
+                x = img_width - text_width - padding * 2
+                y = padding
+            else:  # top-left
+                x = padding
+                y = padding
+            
+            # Draw semi-transparent background
+            background = [
+                x - padding,
+                y - padding,
+                x + text_width + padding,
+                y + text_height + padding
+            ]
+            overlay = Image.new('RGBA', img.size, (255, 255, 255, 0))
+            overlay_draw = ImageDraw.Draw(overlay)
+            overlay_draw.rectangle(background, fill=(0, 0, 0, int(255 * opacity)))
+            
+            # Composite overlay
+            img = img.convert('RGBA')
+            img = Image.alpha_composite(img, overlay)
+            
+            # Draw white text
+            final_draw = ImageDraw.Draw(img)
+            final_draw.text((x, y), attribution_text, fill=(255, 255, 255, 255), font=font)
+            
+            # Save with overlay
+            overlay_path = image_path.with_stem(image_path.stem + '_overlay')
+            img = img.convert('RGB')
+            img.save(overlay_path, quality=95)
+            
+            return overlay_path
+            
+        except Exception as e:
+            print(f"Failed to create overlay: {e}")
+            return image_path
+    
+    def get_gui_attribution_html(self, image_data: Dict) -> str:
+        """
+        Generate HTML for image info panel in GUI.
+        Always shown regardless of secret key.
+        """
+        source = image_data.get('source', 'unknown')
+        
+        if source == 'local':
+            return """
+            <div style="padding: 10px;">
+                <h3 style="margin: 5px 0;">Your Image</h3>
+                <p style="margin: 5px 0;">From: Local Collection</p>
+                <p style="margin: 5px 0; font-style: italic; color: #666;">Wallpaper by riturajprofile</p>
+            </div>
+            """
+        
+        photographer = image_data.get('photographer', 'Unknown')
+        source_name = source.capitalize()
+        source_url = image_data.get('image_url', '#')
+        photographer_url = image_data.get('photographer_url', '#')
+        
+        return f"""
+        <div style="padding: 10px;">
+            <h3 style="margin: 5px 0;">Photo by <a href="{photographer_url}">{photographer}</a></h3>
+            <p style="margin: 5px 0;">Source: <a href="{source_url}">{source_name}</a></p>
+            <p style="margin: 5px 0; font-style: italic; color: #666;">Wallpaper by riturajprofile</p>
+        </div>
+        """

@@ -248,6 +248,30 @@ cp api_keys.json.example ~/.config/riturajprofile-wallpaper/api_keys.json
 nano ~/.config/riturajprofile-wallpaper/api_keys.json
 ```
 
+**Via .env File (Alternative):**
+
+Create a `.env` file in your project directory or home directory:
+
+```bash
+# Copy example file
+cp .env.example .env
+
+# Edit with your real keys
+nano .env
+```
+
+Example `.env` file:
+```bash
+PIXABAY_API_KEY=your_pixabay_key_here
+UNSPLASH_ACCESS_KEY=your_unsplash_key_here
+PEXELS_API_KEY=your_pexels_key_here
+```
+
+**Priority Order:**
+1. ✅ Environment variables (`.env` or system)
+2. ✅ User config file (`api_keys.json`)
+3. ✅ Default placeholders (won't work)
+
 ---
 
 ## 🎨 Choose Your Wallpaper Theme

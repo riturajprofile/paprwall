@@ -1,0 +1,12 @@
+[Unit]
+Description=riturajprofile-wallpaper auto-rotation service
+After=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart=%h/.local/bin/riturajprofile-wallpaper --start
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=default.target
