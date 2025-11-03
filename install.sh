@@ -1,7 +1,23 @@
-#!/bin/bash
+#!/bin/sh
 # One-line installation script for Paprwall
 # Usage: curl -fsSL https://raw.githubusercontent.com/riturajprofile/paprwall/main/install.sh | bash
+# (Works with any shell - auto-bootstraps to bash)
 
+# Self-bootstrap: re-exec with bash if not already running under bash
+if [ -z "$BASH_VERSION" ]; then
+    # Try to find bash
+    if command -v bash >/dev/null 2>&1; then
+        exec bash "$0" "$@"
+    else
+        echo "Error: Bash is required but not found. Please install bash first."
+        echo "  Ubuntu/Debian: sudo apt install bash"
+        echo "  Fedora: sudo dnf install bash"
+        echo "  Arch: sudo pacman -S bash"
+        exit 1
+    fi
+fi
+
+# Now we're running under bash
 set -e
 
 # Colors
