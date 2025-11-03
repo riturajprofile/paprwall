@@ -253,41 +253,46 @@ cd "$INSTALL_DIR" || exit 1
 
 print_info "Creating virtual environment..."
 
-# Check if venv is available, install if missing
-if ! python3 -m venv --help >/dev/null 2>&1; then
-    print_warning "python3-venv module not available"
-    venv_package=$(get_venv_package)
-    
-    print_info "Installing $venv_package automatically..."
-    if install_package "$venv_package"; then
-        print_success "$venv_package installed"
-    else
-        print_error "Failed to install $venv_package"
-        printf "\nPlease install manually:\n"
-        printf "  Ubuntu/Debian: ${BLUE}sudo apt install python3-venv${NC}\n"
-        printf "  Fedora:        ${BLUE}sudo dnf install python3-venv${NC}\n"
-        printf "  Arch:          ${BLUE}sudo pacman -S python${NC} (venv included)\n"
-        exit 1
-    fi
-fi
-
-# Create virtual environment
+# Try to create virtual environment
 if python3 -m venv .venv >>"$LOG_FILE" 2>&1; then
     print_success "Virtual environment created"
 else
-    print_error "Failed to create virtual environment"
-    printf "\n${YELLOW}Error details:${NC}\n"
-    tail -n 20 "$LOG_FILE" 2>/dev/null || cat "$LOG_FILE"
-    printf "\n"
-    
-    # Check if it's the common ensurepip issue
+    # Check if it's the ensurepip/python3-venv issue
     if grep -q "ensurepip" "$LOG_FILE" 2>/dev/null; then
-        print_warning "python3-venv package appears to be missing"
+        print_warning "python3-venv package is missing"
         venv_package=$(get_venv_package)
-        printf "\nInstall it with:\n"
-        printf "  ${BLUE}sudo apt install %s${NC}\n\n" "$venv_package"
+        
+        print_info "Installing $venv_package automatically..."
+        if install_package "$venv_package"; then
+            print_success "$venv_package installed"
+            
+            # Try creating venv again
+            print_info "Retrying virtual environment creation..."
+            if python3 -m venv .venv >>"$LOG_FILE" 2>&1; then
+                print_success "Virtual environment created"
+            else
+                print_error "Still failed to create virtual environment"
+                printf "\n${YELLOW}Error details:${NC}\n"
+                tail -n 20 "$LOG_FILE" 2>/dev/null || cat "$LOG_FILE"
+                exit 1
+            fi
+        else
+            print_error "Failed to install $venv_package"
+            printf "\nPlease install manually:\n"
+            printf "  Ubuntu/Debian: ${BLUE}sudo apt install %s${NC}\n" "$venv_package"
+            printf "  Fedora:        ${BLUE}sudo dnf install python3-venv${NC}\n"
+            printf "  Arch:          ${BLUE}sudo pacman -S python${NC} (venv included)\n"
+            printf "\nThen run the installer again.\n"
+            exit 1
+        fi
+    else
+        # Different error
+        print_error "Failed to create virtual environment"
+        printf "\n${YELLOW}Error details:${NC}\n"
+        tail -n 20 "$LOG_FILE" 2>/dev/null || cat "$LOG_FILE"
+        printf "\n"
+        exit 1
     fi
-    exit 1
 fi
 
 # Upgrade pip
