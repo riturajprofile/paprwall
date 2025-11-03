@@ -7,146 +7,8 @@ set -e
 # Colors
 RED='\033[0;31m'
 GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-NC='\033[0m'
-
-# Configuration
-REPO_URL="https://github.com/riturajprofile/paprwall.git"
-INSTALL_DIR="$HOME/.paprwall"
-TEMP_DIR="/tmp/paprwall-install-$$"
-
-echo -e "${BLUE}╔════════════════════════════════════════╗${NC}"
-echo -e "${BLUE}║   Paprwall Installation Script v1.0   ║${NC}"
-echo -e "${BLUE}╚════════════════════════════════════════╝${NC}"
-echo ""
-
-# Check if running on Linux
-if [[ "$OSTYPE" != "linux-gnu"* ]]; then
-    echo -e "${RED}✗${NC} This script only works on Linux systems"
-    exit 1
-fi
-echo -e "${GREEN}✓${NC} Running on Linux"
-
-# Check if Python 3.8+ is installed
-if ! command -v python3 &> /dev/null; then
-    echo -e "${RED}✗${NC} Python 3 is not installed"
-    echo ""
-    echo "Install Python:"
-    echo "  Ubuntu/Debian: sudo apt install python3 python3-pip"
-    echo "  Fedora: sudo dnf install python3 python3-pip"
-    echo "  Arch: sudo pacman -S python python-pip"
-    exit 1
-fi
-
-PYTHON_VERSION=$(python3 -c 'import sys; print(".".join(map(str, sys.version_info[:2])))')
-echo -e "${GREEN}✓${NC} Found Python $PYTHON_VERSION"
-
-# Check if git is installed
-if ! command -v git &> /dev/null; then
-    echo -e "${RED}✗${NC} Git is not installed"
-    echo ""
-    echo "Install Git:"
-    echo "  Ubuntu/Debian: sudo apt install git"
-    echo "  Fedora: sudo dnf install git"
-    echo "  Arch: sudo pacman -S git"
-    exit 1
-fi
-echo -e "${GREEN}✓${NC} Found Git"
-
-# Check and install GTK dependencies (non-fatal, ask user, continue on failure)
-if ! python3 -c "import gi" 2>/dev/null; then
-    echo -e "${YELLOW}⚠${NC} PyGObject (GTK) not found - GUI will not work without it"
-    echo ""
-
-    # Detect package manager
-    INSTALL_CMD=""
-    PACKAGES=""
-    if command -v apt-get &> /dev/null; then
-        INSTALL_CMD="apt-get"
-        PACKAGES="python3-gi python3-gi-cairo gir1.2-gtk-3.0"
-    elif command -v dnf &> /dev/null; then
-        INSTALL_CMD="dnf"
-        PACKAGES="python3-gobject gtk3"
-    elif command -v pacman &> /dev/null; then
-        INSTALL_CMD="pacman"
-        PACKAGES="python-gobject gtk3"
-    fi
-
-    # Respect env overrides for automation
-    AUTO_INSTALL="${PAPRWALL_AUTO_INSTALL:-}"
-
-    if [ -n "$INSTALL_CMD" ]; then
-        echo "To enable GUI, these packages need to be installed:"
-        echo "  $PACKAGES"
-        echo ""
-
-        DO_INSTALL="n"
-        if [ -n "$AUTO_INSTALL" ]; then
-            DO_INSTALL="y"
-            echo -e "${BLUE}ℹ${NC} PAPRWALL_AUTO_INSTALL=1 detected — installing GTK dependencies automatically"
-        elif [ -t 0 ] && [ -z "$SUDO_USER" ]; then
-            # Interactive and not running via sudo: ask user
-            read -p "Do you want to install GTK dependencies now? (Y/n): " -n 1 -r
-            echo
-            if [[ ! $REPLY =~ ^[Nn]$ ]]; then DO_INSTALL="y"; fi
-        else
-            echo -e "${BLUE}ℹ${NC} Non-interactive or sudo session — skipping automatic install"
-            echo "    Tip: export PAPRWALL_AUTO_INSTALL=1 to auto-install system packages"
-        fi
-
-        if [[ "$DO_INSTALL" == "y" ]]; then
-            echo -e "${BLUE}ℹ${NC} Installing GTK packages..."
-
-            # Build the actual command based on package manager
-            CMD=""
-            if [ "$INSTALL_CMD" = "apt-get" ]; then
-                if command -v sudo &>/dev/null; then
-                    CMD="sudo apt-get update -qq && sudo apt-get install -y $PACKAGES"
-                else
-                    CMD="apt-get update -qq && apt-get install -y $PACKAGES"
-                fi
-            elif [ "$INSTALL_CMD" = "dnf" ]; then
-                if command -v sudo &>/dev/null; then
-                    CMD="sudo dnf install -y $PACKAGES -q"
-                else
-                    CMD="dnf install -y $PACKAGES -q"
-                fi
-            elif [ "$INSTALL_CMD" = "pacman" ]; then
-                if command -v sudo &>/dev/null; then
-                    CMD="sudo pacman -S --noconfirm $PACKAGES"
-                else
-                    CMD="pacman -S --noconfirm $PACKAGES"
-                fi
-            fi
-
-            # Run install safely (do not abort installer if it fails)
-            set +e
-            bash -c "$CMD"
-            RC=$?
-            set -e
-
-            if [ $RC -eq 0 ]; then
-                echo -e "${GREEN}✓${NC} GTK packages installed successfully"
-            else
-                echo -e "${YELLOW}⚠${NC} Failed to install GTK packages (exit $RC). Continuing without GUI."
-            fi
-        else
-            echo -e "${BLUE}ℹ${NC} Skipping GTK installation — continuing with CLI-only mode"
-        fi
-    else
-        echo -e "${RED}✗${NC} Could not detect package manager"
-        echo "Please manually install: python3-gi python3-gi-cairo gir1.2-gtk-3.0 (or equivalents)"
-        echo -e "${BLUE}ℹ${NC} Continuing with CLI-only installation..."
-        sleep 2
-    fi
-else
-    echo -e "${GREEN}✓${NC} GTK dependencies found"
-fi
-
-echo ""
-echo -e "${BLUE}ℹ${NC} Installing Paprwall..."
-echo ""
+LOG_FILE="/tmp/paprwall-install.log"
+: > "$LOG_FILE"
 
 # Remove old installation if exists
 if [ -d "$INSTALL_DIR" ]; then
@@ -177,76 +39,34 @@ echo -e "${GREEN}✓${NC} Files copied to $INSTALL_DIR"
 # Clean up
 rm -rf "$TEMP_DIR"
 
-# Install package (robust pip handling)
+# Begin installation modes
 cd "$INSTALL_DIR"
-echo -e "${BLUE}ℹ${NC} Installing Python package..."
-
-# Ensure pip exists, offer to install via package manager if missing
-if ! python3 -m pip --version >/dev/null 2>&1; then
-    echo -e "${YELLOW}⚠${NC} python3-pip is not installed"
-    PIP_INSTALL_CMD=""
-    if command -v apt-get >/dev/null 2>&1; then
-        PIP_INSTALL_CMD="apt-get install -y python3-pip"
-    elif command -v dnf >/dev/null 2>&1; then
-        PIP_INSTALL_CMD="dnf install -y python3-pip"
-    elif command -v pacman >/dev/null 2>&1; then
-        PIP_INSTALL_CMD="pacman -S --noconfirm python-pip"
-    fi
-
-    if [ -n "$PIP_INSTALL_CMD" ]; then
-        DO_PIP_INSTALL="n"
-        if [ -n "$PAPRWALL_AUTO_INSTALL" ]; then
-            DO_PIP_INSTALL="y"
-            echo -e "${BLUE}ℹ${NC} PAPRWALL_AUTO_INSTALL=1 detected — installing python3-pip automatically"
-        elif [ -t 0 ] && [ -z "$SUDO_USER" ]; then
-            read -p "Install python3-pip now? (Y/n): " -n 1 -r; echo
-            if [[ ! $REPLY =~ ^[Nn]$ ]]; then DO_PIP_INSTALL="y"; fi
-        else
-            echo -e "${BLUE}ℹ${NC} Non-interactive or sudo session — not installing python3-pip automatically"
-            echo "    Tip: export PAPRWALL_AUTO_INSTALL=1 to auto-install system packages"
-        fi
-
-        if [[ "$DO_PIP_INSTALL" == "y" ]]; then
-            if command -v sudo >/dev/null 2>&1; then
-                bash -c "sudo $PIP_INSTALL_CMD"
-            else
-                bash -c "$PIP_INSTALL_CMD"
-            fi
-        fi
-    fi
-fi
-
-# Ensure pip exists and is up to date for this interpreter
-set +e
-python3 -m ensurepip --upgrade >/dev/null 2>&1
-python3 -m pip install --upgrade pip >/tmp/paprwall-install.log 2>&1
-set -e
-
-PIP_CMD="python3 -m pip"
-
-# Decide whether to use --user
-USER_FLAG="--user"
-if [ -n "$VIRTUAL_ENV" ] || [ "$(id -u)" -eq 0 ]; then
-    USER_FLAG=""
-fi
 
 # Helper: install into dedicated virtualenv and create wrappers
 install_in_venv() {
     local VENV_DIR="$INSTALL_DIR/.venv"
     echo -e "${BLUE}ℹ${NC} Creating virtual environment at $VENV_DIR"
+    # Ensure venv module available on Debian/Ubuntu
+    if ! python3 -m venv --help >/dev/null 2>&1; then
+        echo -e "${YELLOW}⚠${NC} python3-venv not available; please install it via your package manager"
+        return 1
+    fi
     python3 -m venv "$VENV_DIR" || return 1
-    "$VENV_DIR/bin/python" -m pip install --upgrade pip >> /tmp/paprwall-install.log 2>&1 || return 1
+    "$VENV_DIR/bin/python" -m ensurepip --upgrade >> "$LOG_FILE" 2>&1 || true
+    "$VENV_DIR/bin/python" -m pip install --upgrade pip >> "$LOG_FILE" 2>&1 || return 1
     echo -e "${BLUE}ℹ${NC} Installing Paprwall into virtualenv..."
-    "$VENV_DIR/bin/pip" install . >> /tmp/paprwall-install.log 2>&1 || return 1
+    "$VENV_DIR/bin/pip" install . >> "$LOG_FILE" 2>&1 || return 1
     # Create wrapper scripts in ~/.local/bin
     mkdir -p "$HOME/.local/bin"
-    cat > "$HOME/.local/bin/paprwall" <<WRAP
+    cat > "$HOME/.local/bin/paprwall" <<'WRAP'
 #!/usr/bin/env bash
+VENV_DIR="$HOME/.paprwall/.venv"
 exec "$VENV_DIR/bin/paprwall" "$@"
 WRAP
     chmod +x "$HOME/.local/bin/paprwall"
-    cat > "$HOME/.local/bin/paprwall-gui" <<WRAP2
+    cat > "$HOME/.local/bin/paprwall-gui" <<'WRAP2'
 #!/usr/bin/env bash
+VENV_DIR="$HOME/.paprwall/.venv"
 exec "$VENV_DIR/bin/paprwall-gui" "$@"
 WRAP2
     chmod +x "$HOME/.local/bin/paprwall-gui"
@@ -254,64 +74,89 @@ WRAP2
     return 0
 }
 
-# Try preferred install first
-set +e
-$PIP_CMD install -e . $USER_FLAG >> /tmp/paprwall-install.log 2>&1
-RC=$?
-set -e
-
-if [ $RC -ne 0 ]; then
-    echo -e "${YELLOW}⚠${NC} Initial pip install failed (code $RC). Trying alternative mode..."
-    # Flip the user flag and try again
-    ALT_FLAG="--user"
-    if [ -z "$USER_FLAG" ]; then ALT_FLAG="--user"; else ALT_FLAG=""; fi
-    set +e
-    $PIP_CMD install -e . $ALT_FLAG >> /tmp/paprwall-install.log 2>&1
-    RC2=$?
-    set -e
-    if [ $RC2 -ne 0 ]; then
-        # Check for PEP 668 externally-managed
-        if grep -q "externally-managed-environment" /tmp/paprwall-install.log 2>/dev/null; then
-            echo -e "${YELLOW}⚠${NC} Detected PEP 668 externally-managed environment. Falling back to virtualenv..."
-            if install_in_venv; then
-                echo -e "${GREEN}✓${NC} Package installed via virtualenv"
+install_via_pip_user() {
+    # Ensure pip exists, offer to install via package manager if missing
+    if ! python3 -m pip --version >/dev/null 2>&1; then
+        echo -e "${YELLOW}⚠${NC} python3-pip is not installed"
+        local PIP_INSTALL_CMD=""
+        if command -v apt-get >/dev/null 2>&1; then
+            PIP_INSTALL_CMD="apt-get install -y python3-pip"
+        elif command -v dnf >/dev/null 2>&1; then
+            PIP_INSTALL_CMD="dnf install -y python3-pip"
+        elif command -v pacman >/dev/null 2>&1; then
+            PIP_INSTALL_CMD="pacman -S --noconfirm python-pip"
+        fi
+        if [ -n "$PIP_INSTALL_CMD" ]; then
+            local DO_PIP_INSTALL="n"
+            if [ -n "$PAPRWALL_AUTO_INSTALL" ]; then
+                DO_PIP_INSTALL="y"
+                echo -e "${BLUE}ℹ${NC} PAPRWALL_AUTO_INSTALL=1 detected — installing python3-pip automatically"
+            elif [ -t 0 ] && [ -z "$SUDO_USER" ]; then
+                read -p "Install python3-pip now? (Y/n): " -n 1 -r; echo
+                if [[ ! $REPLY =~ ^[Nn]$ ]]; then DO_PIP_INSTALL="y"; fi
             else
-                echo -e "${RED}✗${NC} Failed to install via virtualenv"
-                echo "----- pip output (last 200 lines) -----"
-                tail -n 200 /tmp/paprwall-install.log || true
-                echo "---------------------------------------"
-                echo "Tips:"
-                echo "  - Try: python3 -m venv ~/paprwall-venv && source ~/paprwall-venv/bin/activate && pip install paprwall"
-                echo "  - Or install pipx and run: pipx install paprwall"
-                exit 1
+                echo -e "${BLUE}ℹ${NC} Non-interactive or sudo session — not installing python3-pip automatically"
+                echo "    Tip: export PAPRWALL_AUTO_INSTALL=1 to auto-install system packages"
             fi
-        else
-            echo -e "${RED}✗${NC} Failed to install package"
-            echo "----- pip output (last 200 lines) -----"
-            tail -n 200 /tmp/paprwall-install.log || true
-            echo "---------------------------------------"
-            echo "Tips:"
-            echo "  - If running with sudo, avoid --user or use a virtual environment"
-            echo "  - Ensure ~/.local/bin is on PATH for user installs"
+            if [[ "$DO_PIP_INSTALL" == "y" ]]; then
+                if command -v sudo >/dev/null 2>&1; then
+                    bash -c "sudo $PIP_INSTALL_CMD"
+                else
+                    bash -c "$PIP_INSTALL_CMD"
+                fi
+            fi
+        fi
+    fi
+    python3 -m ensurepip --upgrade >/dev/null 2>&1 || true
+    python3 -m pip install --upgrade pip >> "$LOG_FILE" 2>&1 || true
+    echo -e "${BLUE}ℹ${NC} Installing Paprwall into user site-packages (pip --user)"
+    set +e
+    python3 -m pip install -e . --user >> "$LOG_FILE" 2>&1
+    local RC=$?
+    set -e
+    return $RC
+}
+
+MODE="${PAPRWALL_INSTALL_MODE:-venv}" # venv | auto | pip-user | pip-system (discouraged)
+if [ "$MODE" = "venv" ]; then
+    if ! install_in_venv; then
+        echo -e "${RED}✗${NC} Virtualenv installation failed. Install python3-venv or try PAPRWALL_INSTALL_MODE=auto."
+        echo "----- install log (last 150 lines) -----"; tail -n 150 "$LOG_FILE" || true; echo "----------------------------------------"
+        exit 1
+    fi
+elif [ "$MODE" = "auto" ]; then
+    if ! install_in_venv; then
+        echo -e "${YELLOW}⚠${NC} Virtualenv failed, trying pip --user fallback..."
+        if ! install_via_pip_user; then
+            echo -e "${RED}✗${NC} pip --user installation failed"
+            echo "----- pip output (last 200 lines) -----"; tail -n 200 "$LOG_FILE" || true; echo "---------------------------------------"
             exit 1
         fi
-    else
-        echo -e "${GREEN}✓${NC} Package installed (alternative mode)"
+    fi
+elif [ "$MODE" = "pip-user" ]; then
+    if ! install_via_pip_user; then
+        echo -e "${RED}✗${NC} pip --user installation failed"
+        echo "----- pip output (last 200 lines) -----"; tail -n 200 "$LOG_FILE" || true; echo "---------------------------------------"
+        exit 1
+    fi
+elif [ "$MODE" = "pip-system" ]; then
+    echo -e "${YELLOW}⚠${NC} Installing into system site-packages (not recommended)"
+    set +e
+    python3 -m pip install -e . >> "$LOG_FILE" 2>&1
+    RC_SYS=$?
+    set -e
+    if [ $RC_SYS -ne 0 ]; then
+        echo -e "${RED}✗${NC} System pip install failed"
+        echo "----- pip output (last 200 lines) -----"; tail -n 200 "$LOG_FILE" || true; echo "---------------------------------------"
+        exit 1
     fi
 else
-    echo -e "${GREEN}✓${NC} Package installed"
-fi
-
-# Verify installation
-if command -v paprwall &> /dev/null; then
-    echo -e "${GREEN}✓${NC} Command 'paprwall' is available"
-else
-    echo -e "${YELLOW}⚠${NC} Command 'paprwall' not found in PATH"
-    echo ""
-    echo "Add to PATH by adding this to ~/.bashrc or ~/.zshrc:"
-    echo "  export PATH=\"\$HOME/.local/bin:\$PATH\""
-    echo ""
-    echo "Then run: source ~/.bashrc"
+    echo -e "${YELLOW}⚠${NC} Unknown PAPRWALL_INSTALL_MODE='$MODE', defaulting to venv"
+    if ! install_in_venv; then
+        echo -e "${RED}✗${NC} Virtualenv installation failed."
+        echo "----- install log (last 150 lines) -----"; tail -n 150 "$LOG_FILE" || true; echo "----------------------------------------"
+        exit 1
+    fi
 fi
 
 # Setup .env file
