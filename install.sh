@@ -187,9 +187,72 @@ install_in_venv() {
     cd "$INSTALL_DIR" || return 1
     printf "${BLUE}ℹ${NC} Creating virtual environment at %s/.venv\n" "$INSTALL_DIR"
     
+    # Check if venv module is available
     if ! python3 -m venv --help >/dev/null 2>&1; then
-        printf "${YELLOW}⚠${NC} python3-venv not available; please install it via your package manager\n"
-        return 1
+        printf "${YELLOW}⚠${NC} python3-venv not available\n"
+        
+        # Detect Python version and package name
+        PYTHON_VER=$(python3 -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')
+        VENV_PKG=""
+        VENV_INSTALL_CMD=""
+        
+        if command -v apt-get >/dev/null 2>&1; then
+            VENV_PKG="python${PYTHON_VER}-venv"
+            VENV_INSTALL_CMD="apt-get install -y $VENV_PKG"
+        elif command -v dnf >/dev/null 2>&1; then
+            VENV_PKG="python${PYTHON_VER}-venv"
+            VENV_INSTALL_CMD="dnf install -y $VENV_PKG"
+        elif command -v pacman >/dev/null 2>&1; then
+            VENV_PKG="python"
+            printf "${BLUE}ℹ${NC} On Arch, venv is included with python package\n"
+            return 1
+        fi
+        
+        if [ -n "$VENV_INSTALL_CMD" ]; then
+            printf "\n"
+            printf "To create virtual environments, %s needs to be installed.\n" "$VENV_PKG"
+            
+            DO_VENV_INSTALL="n"
+            if [ -n "$PAPRWALL_AUTO_INSTALL" ]; then
+                DO_VENV_INSTALL="y"
+                printf "${BLUE}ℹ${NC} PAPRWALL_AUTO_INSTALL=1 detected — installing %s automatically\n" "$VENV_PKG"
+            elif [ -t 0 ] && [ -z "$SUDO_USER" ]; then
+                printf "Install %s now? (Y/n): " "$VENV_PKG"
+                read -r REPLY
+                case "$REPLY" in
+                    [Nn]*) DO_VENV_INSTALL="n" ;;
+                    *) DO_VENV_INSTALL="y" ;;
+                esac
+            else
+                printf "${BLUE}ℹ${NC} Non-interactive or sudo session — not installing automatically\n"
+                printf "    Tip: export PAPRWALL_AUTO_INSTALL=1 to auto-install system packages\n"
+            fi
+            
+            if [ "$DO_VENV_INSTALL" = "y" ]; then
+                printf "${BLUE}ℹ${NC} Installing %s...\n" "$VENV_PKG"
+                if command -v sudo >/dev/null 2>&1; then
+                    if sudo sh -c "$VENV_INSTALL_CMD"; then
+                        printf "${GREEN}✓${NC} %s installed successfully\n" "$VENV_PKG"
+                    else
+                        printf "${RED}✗${NC} Failed to install %s\n" "$VENV_PKG"
+                        return 1
+                    fi
+                else
+                    if sh -c "$VENV_INSTALL_CMD"; then
+                        printf "${GREEN}✓${NC} %s installed successfully\n" "$VENV_PKG"
+                    else
+                        printf "${RED}✗${NC} Failed to install %s\n" "$VENV_PKG"
+                        return 1
+                    fi
+                fi
+            else
+                printf "${YELLOW}⚠${NC} Skipping %s installation\n" "$VENV_PKG"
+                return 1
+            fi
+        else
+            printf "${RED}✗${NC} Could not detect package manager\n"
+            return 1
+        fi
     fi
     
     python3 -m venv .venv || return 1
