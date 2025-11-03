@@ -29,6 +29,7 @@ dependencies = [
     "requests>=2.28.0",
     "Pillow>=10.0.0",
     "APScheduler>=3.10.0",
+    "tk>=0.1.0",
 ]
 
 [project.optional-dependencies]
@@ -47,3 +48,7 @@ Repository = "https://github.com/riturajprofile/paprwall"
 
 [project.scripts]
 paprwall = "paprwall.cli:main"
+wallpaper-manager = "paprwall.wallpaper_cli:main"
+
+[project.gui-scripts]
+wallpaper-gui = "paprwall.gui.wallpaper_manager_gui:main"
