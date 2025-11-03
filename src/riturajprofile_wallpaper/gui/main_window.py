@@ -1,5 +1,5 @@
 """
-Enhanced Main GUI window for Paprwall.
+Enhanced Main GUI window for Paprwall - Laptop Optimized.
 Modern design with tabs for Wallpapers, Themes, Sources, and Settings.
 """
 import sys
@@ -21,7 +21,7 @@ class MainWindow(Gtk.Window):
     
     def __init__(self):
         super().__init__(title="Paprwall - Wallpaper Manager")
-        self.set_default_size(1000, 750)
+        self.set_default_size(900, 600)
         self.set_position(Gtk.WindowPosition.CENTER)
         
         # Initialize components
@@ -38,7 +38,7 @@ class MainWindow(Gtk.Window):
         self.refresh_current_image()
     
     def apply_css(self):
-        """Apply modern custom CSS styling"""
+        """Apply modern custom CSS styling - optimized for laptops"""
         css_provider = Gtk.CssProvider()
         css = b"""
         window {
@@ -47,65 +47,66 @@ class MainWindow(Gtk.Window):
         
         .header-bar {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            padding: 25px;
+            padding: 15px 20px;
         }
         
         .header-title {
-            font-size: 28px;
+            font-size: 20px;
             font-weight: bold;
             color: white;
             text-shadow: 0 2px 4px rgba(0,0,0,0.2);
         }
         
         .header-subtitle {
-            font-size: 13px;
+            font-size: 11px;
             color: rgba(255, 255, 255, 0.95);
-            margin-top: 5px;
+            margin-top: 3px;
         }
         
         .card {
             background-color: white;
-            border-radius: 12px;
-            padding: 20px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-            margin: 10px;
+            border-radius: 8px;
+            padding: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            margin: 8px;
         }
         
         .preview-card {
             background-color: #f8f9fa;
-            border-radius: 12px;
-            padding: 20px;
-            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+            padding: 12px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
         }
         
         .info-label-title {
-            font-size: 15px;
+            font-size: 13px;
             font-weight: 600;
             color: #2c3e50;
         }
         
         .info-label-subtitle {
-            font-size: 13px;
+            font-size: 11px;
             color: #7f8c8d;
         }
         
         button {
-            padding: 12px 24px;
-            border-radius: 8px;
+            padding: 8px 16px;
+            border-radius: 6px;
             font-weight: 600;
-            min-height: 44px;
+            min-height: 36px;
+            font-size: 12px;
         }
         
         .primary-button {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             border: none;
-            box-shadow: 0 4px 8px rgba(102, 126, 234, 0.3);
+            box-shadow: 0 2px 6px rgba(102, 126, 234, 0.3);
         }
         
         .primary-button:hover {
             background: linear-gradient(135deg, #5568d3 0%, #65398b 100%);
-            box-shadow: 0 6px 12px rgba(102, 126, 234, 0.4);
+            box-shadow: 0 4px 8px rgba(102, 126, 234, 0.4);
         }
         
         .secondary-button {
@@ -121,33 +122,35 @@ class MainWindow(Gtk.Window):
         .status-bar {
             background-color: white;
             border-top: 1px solid #e8e8e8;
-            padding: 10px 20px;
+            padding: 6px 15px;
+            font-size: 11px;
         }
         
         notebook tab {
-            padding: 12px 24px;
+            padding: 8px 16px;
             font-weight: 600;
-            font-size: 13px;
+            font-size: 12px;
         }
         
         .theme-card {
             background-color: white;
-            border-radius: 8px;
-            padding: 15px;
-            margin: 8px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            border-radius: 6px;
+            padding: 10px;
+            margin: 6px;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
         }
         
         .setting-row {
-            padding: 15px;
+            padding: 12px;
             border-bottom: 1px solid #f0f0f0;
         }
         
         entry {
-            padding: 10px;
-            border-radius: 6px;
+            padding: 8px;
+            border-radius: 4px;
             border: 1px solid #ddd;
-            min-height: 40px;
+            min-height: 32px;
+            font-size: 12px;
         }
         """
         css_provider.load_from_data(css)
@@ -165,8 +168,8 @@ class MainWindow(Gtk.Window):
         main_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
         self.add(main_box)
         
-        # Header with gradient
-        header_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
+        # Compact header with gradient
+        header_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
         header_box.get_style_context().add_class("header-bar")
         main_box.pack_start(header_box, False, False, 0)
         
@@ -200,7 +203,7 @@ class MainWindow(Gtk.Window):
         settings_tab = self.create_settings_tab()
         notebook.append_page(settings_tab, Gtk.Label(label="⚙️  Settings"))
         
-        # Status bar
+        # Compact status bar
         self.statusbar = Gtk.Statusbar()
         self.statusbar.get_style_context().add_class("status-bar")
         main_box.pack_start(self.statusbar, False, False, 0)
@@ -211,26 +214,26 @@ class MainWindow(Gtk.Window):
         scroll = Gtk.ScrolledWindow()
         scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
         
-        content_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=15)
-        content_box.set_margin_top(20)
-        content_box.set_margin_bottom(20)
-        content_box.set_margin_start(20)
-        content_box.set_margin_end(20)
+        content_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
+        content_box.set_margin_top(12)
+        content_box.set_margin_bottom(12)
+        content_box.set_margin_start(12)
+        content_box.set_margin_end(12)
         scroll.add(content_box)
         
-        # Preview card
-        preview_card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=15)
+        # Preview card - optimized size
+        preview_card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
         preview_card.get_style_context().add_class("preview-card")
         content_box.pack_start(preview_card, True, True, 0)
         
-        # Image preview
+        # Image preview - smaller for laptops
         self.image_preview = Gtk.Image()
         self.image_preview.set_from_icon_name("image-x-generic", Gtk.IconSize.DIALOG)
-        self.image_preview.set_size_request(700, 450)
+        self.image_preview.set_size_request(560, 315)  # 16:9 ratio, reasonable size
         preview_card.pack_start(self.image_preview, True, True, 0)
         
-        # Info card
-        info_card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
+        # Compact info card
+        info_card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
         info_card.get_style_context().add_class("card")
         content_box.pack_start(info_card, False, False, 0)
         
@@ -246,10 +249,10 @@ class MainWindow(Gtk.Window):
         self.source_label.set_xalign(0)
         info_card.pack_start(self.source_label, False, False, 0)
         
-        # Control buttons
+        # Compact control buttons
         button_grid = Gtk.Grid()
-        button_grid.set_row_spacing(10)
-        button_grid.set_column_spacing(10)
+        button_grid.set_row_spacing(8)
+        button_grid.set_column_spacing(8)
         button_grid.set_column_homogeneous(True)
         content_box.pack_start(button_grid, False, False, 0)
         
@@ -259,7 +262,7 @@ class MainWindow(Gtk.Window):
         prev_btn.connect("clicked", self.on_previous)
         button_grid.attach(prev_btn, 0, 0, 1, 1)
         
-        self.fetch_btn = Gtk.Button(label="↻ Fetch New Wallpapers")
+        self.fetch_btn = Gtk.Button(label="↻ Fetch New")
         self.fetch_btn.get_style_context().add_class("primary-button")
         self.fetch_btn.connect("clicked", self.on_fetch)
         button_grid.attach(self.fetch_btn, 1, 0, 1, 1)
@@ -270,17 +273,17 @@ class MainWindow(Gtk.Window):
         button_grid.attach(next_btn, 2, 0, 1, 1)
         
         # Row 2: Actions
-        fullscreen_btn = Gtk.Button(label="⛶ Fullscreen Preview")
+        fullscreen_btn = Gtk.Button(label="⛶ Preview")
         fullscreen_btn.get_style_context().add_class("secondary-button")
         fullscreen_btn.connect("clicked", self.on_fullscreen)
         button_grid.attach(fullscreen_btn, 0, 1, 1, 1)
         
-        refresh_btn = Gtk.Button(label="↺ Refresh Current")
+        refresh_btn = Gtk.Button(label="↺ Refresh")
         refresh_btn.get_style_context().add_class("secondary-button")
         refresh_btn.connect("clicked", lambda b: self.refresh_current_image())
         button_grid.attach(refresh_btn, 1, 1, 1, 1)
         
-        open_folder_btn = Gtk.Button(label="📁 Open Folder")
+        open_folder_btn = Gtk.Button(label="📁 Folder")
         open_folder_btn.get_style_context().add_class("secondary-button")
         open_folder_btn.connect("clicked", self.on_open_folder)
         button_grid.attach(open_folder_btn, 2, 1, 1, 1)
@@ -292,14 +295,14 @@ class MainWindow(Gtk.Window):
         scroll = Gtk.ScrolledWindow()
         scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
         
-        content_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=15)
-        content_box.set_margin_top(20)
-        content_box.set_margin_bottom(20)
-        content_box.set_margin_start(20)
-        content_box.set_margin_end(20)
+        content_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
+        content_box.set_margin_top(12)
+        content_box.set_margin_bottom(12)
+        content_box.set_margin_start(12)
+        content_box.set_margin_end(12)
         scroll.add(content_box)
         
-        # Title
+        # Compact title
         title_label = Gtk.Label()
         title_label.set_markup('<span size="large" weight="bold">Choose Your Theme</span>')
         title_label.set_xalign(0)
@@ -307,45 +310,47 @@ class MainWindow(Gtk.Window):
         
         subtitle_label = Gtk.Label(label="Select a theme to change wallpaper style")
         subtitle_label.set_xalign(0)
-        content_box.pack_start(subtitle_label, False, False, 5)
+        subtitle_label.set_markup('<span size="small">Select a theme to change wallpaper style</span>')
+        content_box.pack_start(subtitle_label, False, False, 0)
         
-        # Themes grid
+        # Themes grid - 3 columns for laptop screens
         themes = [
-            ("🌿 Nature", "nature", "Natural landscapes and outdoor scenes"),
-            ("🏙️ City", "city", "Urban landscapes and cityscapes"),
-            ("✨ Minimal", "minimal", "Minimalist and clean designs"),
-            ("🚀 Space", "space", "Space and astronomy"),
-            ("🌊 Ocean", "ocean", "Ocean and coastal scenes"),
-            ("⛰️ Mountains", "mountains", "Mountain landscapes"),
-            ("🌅 Sunset", "sunset", "Sunset and sunrise scenes"),
-            ("🦁 Animals", "animals", "Wildlife and animals"),
-            ("🌲 Forest", "forest", "Forest and woodland scenes"),
-            ("🎨 Abstract", "abstract", "Abstract art and patterns"),
-            ("🌺 Flowers", "flowers", "Flowers and botanical scenes"),
-            ("🌑 Dark", "dark", "Dark and moody wallpapers"),
+            ("🌿 Nature", "nature", "Natural landscapes"),
+            ("🏙️ City", "city", "Urban scenes"),
+            ("✨ Minimal", "minimal", "Clean designs"),
+            ("🚀 Space", "space", "Astronomy"),
+            ("🌊 Ocean", "ocean", "Coastal scenes"),
+            ("⛰️ Mountains", "mountains", "Mountain views"),
+            ("🌅 Sunset", "sunset", "Golden hours"),
+            ("🦁 Animals", "animals", "Wildlife"),
+            ("🌲 Forest", "forest", "Woodlands"),
+            ("🎨 Abstract", "abstract", "Art & patterns"),
+            ("🌺 Flowers", "flowers", "Botanical"),
+            ("🌑 Dark", "dark", "Moody tones"),
         ]
         
         grid = Gtk.Grid()
-        grid.set_row_spacing(15)
-        grid.set_column_spacing(15)
+        grid.set_row_spacing(10)
+        grid.set_column_spacing(10)
         content_box.pack_start(grid, True, True, 0)
         
         row = 0
         col = 0
         for emoji_name, theme_id, description in themes:
-            theme_card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
+            theme_card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
             theme_card.get_style_context().add_class("theme-card")
-            theme_card.set_size_request(200, 150)
+            theme_card.set_size_request(160, 100)
             
             # Theme icon/name
             theme_label = Gtk.Label()
-            theme_label.set_markup(f'<span size="x-large">{emoji_name}</span>')
+            theme_label.set_markup(f'<span size="large">{emoji_name}</span>')
             theme_card.pack_start(theme_label, False, False, 0)
             
             # Description
             desc_label = Gtk.Label(label=description)
+            desc_label.set_markup(f'<span size="small">{description}</span>')
             desc_label.set_line_wrap(True)
-            desc_label.set_max_width_chars(25)
+            desc_label.set_max_width_chars(20)
             desc_label.set_justify(Gtk.Justification.CENTER)
             theme_card.pack_start(desc_label, True, True, 0)
             
@@ -369,11 +374,11 @@ class MainWindow(Gtk.Window):
         scroll = Gtk.ScrolledWindow()
         scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
         
-        content_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=20)
-        content_box.set_margin_top(20)
-        content_box.set_margin_bottom(20)
-        content_box.set_margin_start(20)
-        content_box.set_margin_end(20)
+        content_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
+        content_box.set_margin_top(12)
+        content_box.set_margin_bottom(12)
+        content_box.set_margin_start(12)
+        content_box.set_margin_end(12)
         scroll.add(content_box)
         
         # Title
@@ -383,6 +388,7 @@ class MainWindow(Gtk.Window):
         content_box.pack_start(title_label, False, False, 0)
         
         subtitle_label = Gtk.Label(label="Configure your wallpaper sources and API keys")
+        subtitle_label.set_markup('<span size="small">Configure your wallpaper sources and API keys</span>')
         subtitle_label.set_xalign(0)
         content_box.pack_start(subtitle_label, False, False, 0)
         
@@ -394,7 +400,7 @@ class MainWindow(Gtk.Window):
         ]
         
         for name, source_id, api_url in sources:
-            source_card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=15)
+            source_card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
             source_card.get_style_context().add_class("card")
             content_box.pack_start(source_card, False, False, 0)
             
@@ -403,11 +409,12 @@ class MainWindow(Gtk.Window):
             source_card.pack_start(header_box, False, False, 0)
             
             source_label = Gtk.Label()
-            source_label.set_markup(f'<span weight="bold" size="large">{name}</span>')
+            source_label.set_markup(f'<span weight="bold">{name}</span>')
             source_label.set_xalign(0)
             header_box.pack_start(source_label, True, True, 0)
             
             status_label = Gtk.Label(label="● Enabled")
+            status_label.set_markup('<span size="small">● Enabled</span>')
             status_label.set_xalign(1)
             header_box.pack_start(status_label, False, False, 0)
             
@@ -418,12 +425,12 @@ class MainWindow(Gtk.Window):
             source_card.pack_start(url_label, False, False, 0)
             
             # API Key entry
-            key_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
+            key_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
             source_card.pack_start(key_box, False, False, 0)
             
             key_entry = Gtk.Entry()
             key_entry.set_placeholder_text(f"Enter your {name} API key")
-            key_entry.set_visibility(False)  # Hide key
+            key_entry.set_visibility(False)
             key_box.pack_start(key_entry, True, True, 0)
             
             test_btn = Gtk.Button(label="Test")
@@ -443,11 +450,11 @@ class MainWindow(Gtk.Window):
         scroll = Gtk.ScrolledWindow()
         scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
         
-        content_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=20)
-        content_box.set_margin_top(20)
-        content_box.set_margin_bottom(20)
-        content_box.set_margin_start(20)
-        content_box.set_margin_end(20)
+        content_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
+        content_box.set_margin_top(12)
+        content_box.set_margin_bottom(12)
+        content_box.set_margin_start(12)
+        content_box.set_margin_end(12)
         scroll.add(content_box)
         
         # Title
@@ -462,7 +469,7 @@ class MainWindow(Gtk.Window):
         content_box.pack_start(settings_card, False, False, 0)
         
         # Rotation interval
-        interval_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=15)
+        interval_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
         interval_row.get_style_context().add_class("setting-row")
         settings_card.pack_start(interval_row, False, False, 0)
         
@@ -477,7 +484,7 @@ class MainWindow(Gtk.Window):
         interval_row.pack_start(interval_spin, False, False, 0)
         
         # Download location
-        location_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=15)
+        location_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
         location_row.get_style_context().add_class("setting-row")
         settings_card.pack_start(location_row, False, False, 0)
         
@@ -494,7 +501,7 @@ class MainWindow(Gtk.Window):
         location_row.pack_start(browse_btn, False, False, 0)
         
         # Auto-start
-        autostart_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=15)
+        autostart_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
         autostart_row.get_style_context().add_class("setting-row")
         settings_card.pack_start(autostart_row, False, False, 0)
         
@@ -512,9 +519,9 @@ class MainWindow(Gtk.Window):
         content_box.pack_start(save_settings_btn, False, False, 0)
         
         # About section
-        about_card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
+        about_card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
         about_card.get_style_context().add_class("card")
-        content_box.pack_start(about_card, False, False, 20)
+        content_box.pack_start(about_card, False, False, 10)
         
         about_title = Gtk.Label()
         about_title.set_markup('<span weight="bold">About Paprwall</span>')
@@ -522,6 +529,7 @@ class MainWindow(Gtk.Window):
         about_card.pack_start(about_title, False, False, 0)
         
         about_text = Gtk.Label(label="Version 1.0.0 • Created by riturajprofile")
+        about_text.set_markup('<span size="small">Version 1.0.0 • Created by riturajprofile</span>')
         about_text.set_xalign(0)
         about_card.pack_start(about_text, False, False, 0)
         
@@ -554,8 +562,8 @@ class MainWindow(Gtk.Window):
                     
                     orig_width = pixbuf.get_width()
                     orig_height = pixbuf.get_height()
-                    target_width = 700
-                    target_height = 450
+                    target_width = 560
+                    target_height = 315
                     
                     scale = min(target_width / orig_width, target_height / orig_height)
                     new_width = int(orig_width * scale)

@@ -3,10 +3,13 @@ Local image manager for user's own images.
 """
 import json
 from pathlib import Path
-from typing import List, Dict, Any
+from typing import List, Dict
 import random
+import logging
 from PIL import Image
-from riturajprofile_wallpaper import CONFIG_DIR
+from paprwall import CONFIG_DIR
+
+logger = logging.getLogger(__name__)
 
 
 class LocalImageManager:
@@ -28,6 +31,7 @@ class LocalImageManager:
         
         # Ensure local folder exists
         self.local_folder.mkdir(parents=True, exist_ok=True)
+        logger.info(f"Local images folder: {self.local_folder}")
     
     def scan_local_images(self) -> List[Dict]:
         """
@@ -37,13 +41,17 @@ class LocalImageManager:
         valid_images = []
         
         if not self.local_folder.exists():
+            logger.warning(f"Local folder does not exist: {self.local_folder}")
             return valid_images
         
+        scanned_count = 0
         for img_path in self.local_folder.glob('**/*'):
             if img_path.is_file() and img_path.suffix.lower() in self.SUPPORTED_FORMATS:
+                scanned_count += 1
                 if self.is_valid_wallpaper(img_path):
                     valid_images.append({
                         'path': str(img_path),
+                        'local_path': str(img_path),  # Add local_path for consistency
                         'filename': img_path.name,
                         'source': 'local',
                         'photographer': 'You',
@@ -54,6 +62,8 @@ class LocalImageManager:
                         'added_date': img_path.stat().st_mtime,
                         'id': img_path.stem
                     })
+        
+        logger.info(f"Scanned {scanned_count} images, {len(valid_images)} valid wallpapers")
         
         # Save metadata
         self._save_metadata(valid_images)
@@ -68,13 +78,19 @@ class LocalImageManager:
                 
                 # Check minimum width
                 if width < self.MIN_WIDTH:
+                    logger.debug(f"Image too small: {img_path.name} ({width}x{height})")
                     return False
                 
                 # Check aspect ratio
                 ratio = width / height
-                return self.MIN_RATIO <= ratio <= self.MAX_RATIO
+                if not (self.MIN_RATIO <= ratio <= self.MAX_RATIO):
+                    logger.debug(f"Invalid aspect ratio: {img_path.name} ({ratio:.2f})")
+                    return False
                 
-        except Exception:
+                return True
+                
+        except Exception as e:
+            logger.error(f"Failed to check image {img_path.name}: {e}")
             return False
     
     def get_random_images(self, count: int = 1) -> List[Dict]:
@@ -82,10 +98,13 @@ class LocalImageManager:
         images = self.scan_local_images()
         
         if not images:
+            logger.warning("No valid local images found")
             return []
         
         # Return random selection
-        return random.sample(images, min(count, len(images)))
+        selected = random.sample(images, min(count, len(images)))
+        logger.info(f"Selected {len(selected)} random local images")
+        return selected
     
     def add_image(self, source_path: Path) -> bool:
         """
@@ -98,7 +117,12 @@ class LocalImageManager:
             True if successful
         """
         try:
+            if not source_path.exists():
+                logger.error(f"Source image not found: {source_path}")
+                return False
+            
             if not self.is_valid_wallpaper(source_path):
+                logger.warning(f"Image does not meet wallpaper requirements: {source_path.name}")
                 return False
             
             # Copy to local folder
@@ -113,6 +137,7 @@ class LocalImageManager:
             # Copy file
             import shutil
             shutil.copy2(source_path, dest_path)
+            logger.info(f"Added image to local collection: {dest_path.name}")
             
             # Rescan to update metadata
             self.scan_local_images()
@@ -120,7 +145,7 @@ class LocalImageManager:
             return True
             
         except Exception as e:
-            print(f"Failed to add image: {e}")
+            logger.error(f"Failed to add image: {e}")
             return False
     
     def remove_image(self, filename: str) -> bool:
@@ -129,30 +154,41 @@ class LocalImageManager:
             img_path = self.local_folder / filename
             if img_path.exists():
                 img_path.unlink()
+                logger.info(f"Removed image: {filename}")
                 self.scan_local_images()
                 return True
+            logger.warning(f"Image not found: {filename}")
             return False
-        except Exception:
+        except Exception as e:
+            logger.error(f"Failed to remove image: {e}")
             return False
     
     def get_image_count(self) -> int:
         """Get count of valid local images"""
-        return len(self.scan_local_images())
+        count = len(self.scan_local_images())
+        logger.debug(f"Local image count: {count}")
+        return count
     
     def _save_metadata(self, images: List[Dict]):
         """Save local images metadata"""
         try:
             with open(self.metadata_file, 'w') as f:
-                json.dump(images, f, indent=2)
-        except Exception:
-            pass
+                json.dump({
+                    'images': images,
+                    'last_scan': datetime.now().isoformat(),
+                    'count': len(images)
+                }, f, indent=2)
+            logger.debug(f"Saved metadata for {len(images)} images")
+        except Exception as e:
+            logger.error(f"Failed to save metadata: {e}")
     
     def _load_metadata(self) -> List[Dict]:
         """Load local images metadata"""
         try:
             if self.metadata_file.exists():
                 with open(self.metadata_file, 'r') as f:
-                    return json.load(f)
-        except Exception:
-            pass
+                    data = json.load(f)
+                    return data.get('images', [])
+        except Exception as e:
+            logger.error(f"Failed to load metadata: {e}")
         return []

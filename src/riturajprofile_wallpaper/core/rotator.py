@@ -6,9 +6,9 @@ from pathlib import Path
 from typing import Optional, List, Dict
 import logging
 from datetime import datetime, timedelta
-from riturajprofile_wallpaper.core.wallpaper_setter import WallpaperSetter
-from riturajprofile_wallpaper.core.fetcher import ImageFetcher
-from riturajprofile_wallpaper import DATA_DIR
+from paprwall.core.wallpaper_setter import WallpaperSetter
+from paprwall.core.fetcher import ImageFetcher
+from paprwall import DATA_DIR
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +26,11 @@ class WallpaperRotator:
         self.last_fetch_attempt = None
         self.fetch_retry_count = 0
         
+        # Ensure data directory exists
+        DATA_DIR.mkdir(parents=True, exist_ok=True)
+        
         self._load_state()
+        logger.info(f"Rotator initialized with {len(self.images)} images")
     
     def _load_state(self):
         """Load rotation state from file"""
@@ -37,12 +41,21 @@ class WallpaperRotator:
                     self.current_index = state.get('current_index', 0)
                     self.images = state.get('images', [])
                     
+                    # Validate current index
+                    if self.images and self.current_index >= len(self.images):
+                        logger.warning(f"Invalid index {self.current_index}, resetting to 0")
+                        self.current_index = 0
+                    
                     # Load retry tracking
                     if 'last_fetch_attempt' in state:
                         self.last_fetch_attempt = datetime.fromisoformat(state['last_fetch_attempt'])
                     self.fetch_retry_count = state.get('fetch_retry_count', 0)
+                    
+                    logger.info(f"Loaded state: {len(self.images)} images, index={self.current_index}")
         except Exception as e:
             logger.error(f"Failed to load state: {e}")
+            self.current_index = 0
+            self.images = []
     
     def _save_state(self):
         """Save rotation state to file"""
@@ -50,7 +63,9 @@ class WallpaperRotator:
             state_data = {
                 'current_index': self.current_index,
                 'images': self.images,
-                'fetch_retry_count': self.fetch_retry_count
+                'fetch_retry_count': self.fetch_retry_count,
+                'image_count': len(self.images),
+                'last_updated': datetime.now().isoformat()
             }
             
             if self.last_fetch_attempt:
@@ -58,6 +73,7 @@ class WallpaperRotator:
             
             with open(self.state_file, 'w') as f:
                 json.dump(state_data, f, indent=2)
+            logger.debug("Saved rotation state")
         except Exception as e:
             logger.error(f"Failed to save state: {e}")
     
@@ -73,6 +89,7 @@ class WallpaperRotator:
         try:
             # Record attempt time
             self.last_fetch_attempt = datetime.now()
+            logger.info("Fetching new wallpapers...")
             
             # Fetch new images
             self.images = self.fetcher.fetch_daily_images()
@@ -96,6 +113,8 @@ class WallpaperRotator:
                 logger.info(f"Successfully fetched and set {len(self.images)} new wallpapers")
             elif result and is_retry:
                 logger.info(f"Retry successful! Fetched {len(self.images)} wallpapers")
+            else:
+                logger.error("Failed to set wallpaper after fetch")
             
             return result
             
@@ -133,13 +152,15 @@ class WallpaperRotator:
         """Switch to next wallpaper"""
         if not self.images:
             # Try to load today's images
+            logger.info("No images in memory, loading today's images")
             self.images = self.fetcher.get_today_images()
             
             if not self.images:
-                logger.warning("No images available")
+                logger.warning("No images available for next")
                 return False
         
         self.current_index = (self.current_index + 1) % len(self.images)
+        logger.info(f"Moving to next wallpaper: index {self.current_index}/{len(self.images)}")
         result = self.set_current()
         self._save_state()
         return result
@@ -147,20 +168,28 @@ class WallpaperRotator:
     def previous(self) -> bool:
         """Switch to previous wallpaper"""
         if not self.images:
+            logger.info("No images in memory, loading today's images")
             self.images = self.fetcher.get_today_images()
             
             if not self.images:
+                logger.warning("No images available for previous")
                 return False
         
         self.current_index = (self.current_index - 1) % len(self.images)
+        logger.info(f"Moving to previous wallpaper: index {self.current_index}/{len(self.images)}")
         result = self.set_current()
         self._save_state()
         return result
     
     def set_current(self) -> bool:
         """Set current indexed wallpaper"""
-        if not self.images or self.current_index >= len(self.images):
+        if not self.images:
+            logger.error("No images available to set")
             return False
+        
+        if self.current_index >= len(self.images):
+            logger.error(f"Invalid index {self.current_index} for {len(self.images)} images")
+            self.current_index = 0
         
         current_image = self.images[self.current_index]
         
@@ -173,21 +202,50 @@ class WallpaperRotator:
             logger.error("No path found in image data")
             return False
         
+        if not image_path.exists():
+            logger.error(f"Image file not found: {image_path}")
+            return False
+        
         # Set wallpaper
-        return self.setter.set_wallpaper(image_path)
+        logger.info(f"Setting wallpaper: {image_path.name}")
+        result = self.setter.set_wallpaper(image_path)
+        
+        if result:
+            logger.info("Wallpaper set successfully")
+        else:
+            logger.error("Failed to set wallpaper")
+        
+        return result
     
     def set_specific(self, image_path: Path) -> bool:
         """Set a specific image as wallpaper"""
+        if not image_path.exists():
+            logger.error(f"Image file not found: {image_path}")
+            return False
+        
+        logger.info(f"Setting specific wallpaper: {image_path.name}")
         return self.setter.set_wallpaper(image_path)
     
     def get_current_image(self) -> Optional[Dict]:
         """Get current image metadata"""
         if self.images and 0 <= self.current_index < len(self.images):
             return self.images[self.current_index]
+        logger.debug("No current image available")
         return None
     
     def get_all_images(self) -> List[Dict]:
         """Get all available images"""
         if not self.images:
+            logger.info("Loading today's images")
             self.images = self.fetcher.get_today_images()
         return self.images
+    
+    def get_status(self) -> Dict:
+        """Get current rotation status"""
+        return {
+            'image_count': len(self.images),
+            'current_index': self.current_index,
+            'current_image': self.get_current_image(),
+            'fetch_retry_count': self.fetch_retry_count,
+            'last_fetch': self.last_fetch_attempt.isoformat() if self.last_fetch_attempt else None
+        }

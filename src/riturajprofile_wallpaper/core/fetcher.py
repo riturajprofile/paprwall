@@ -6,10 +6,10 @@ from datetime import datetime
 from pathlib import Path
 from typing import List, Dict
 import logging
-from riturajprofile_wallpaper import IMAGES_DIR
-from riturajprofile_wallpaper.api.source_manager import SourceManager
-from riturajprofile_wallpaper.core.local_images import LocalImageManager
-from riturajprofile_wallpaper.core.attribution import AttributionManager
+from paprwall import IMAGES_DIR
+from paprwall.api.source_manager import SourceManager
+from paprwall.core.local_images import LocalImageManager
+from paprwall.core.attribution import AttributionManager
 
 logger = logging.getLogger(__name__)
 
@@ -69,13 +69,23 @@ class ImageFetcher:
                 for idx, img_data in enumerate(api_images):
                     try:
                         # Generate filename
-                        source = img_data['source']
+                        source = img_data.get('source', 'unknown')
                         filename = f"{source}_{idx + 1}.jpg"
                         local_path = today_dir / filename
                         
                         # Download image
+                        if source not in self.source_manager.clients:
+                            logger.warning(f"No client found for source: {source}")
+                            continue
+                        
                         client = self.source_manager.clients[source]
-                        if client.download_image(img_data['download_url'], local_path):
+                        download_url = img_data.get('download_url')
+                        
+                        if not download_url:
+                            logger.warning(f"No download URL for image from {source}")
+                            continue
+                        
+                        if client.download_image(download_url, local_path):
                             # Add attribution overlay if enabled
                             final_path = self.attribution_manager.create_desktop_overlay(
                                 local_path, img_data
@@ -91,6 +101,8 @@ class ImageFetcher:
                             
                             all_images.append(img_data)
                             logger.info(f"Downloaded: {filename}")
+                        else:
+                            logger.warning(f"Failed to download: {filename}")
                     
                     except Exception as e:
                         logger.error(f"Failed to download image: {e}")
@@ -122,9 +134,12 @@ class ImageFetcher:
             try:
                 with open(json_file, 'r') as f:
                     img_data = json.load(f)
-                    images.append(img_data)
-            except Exception:
-                pass
+                    # Verify image file exists
+                    img_path = img_data.get('local_path') or img_data.get('path')
+                    if img_path and Path(img_path).exists():
+                        images.append(img_data)
+            except Exception as e:
+                logger.error(f"Failed to load image metadata from {json_file}: {e}")
         
         return images
     
@@ -133,18 +148,28 @@ class ImageFetcher:
         keep_days = self.config.get_preference('keep_days', 7)
         
         if not self.config.get_preference('auto_delete_old', True):
+            logger.info("Auto-delete is disabled, skipping cleanup")
             return
         
         from datetime import timedelta
         cutoff_date = datetime.now() - timedelta(days=keep_days)
         
+        cleaned_count = 0
         for date_dir in self.images_dir.iterdir():
             if date_dir.is_dir():
                 try:
+                    # Only process date-formatted directories
                     dir_date = datetime.strptime(date_dir.name, '%Y-%m-%d')
                     if dir_date < cutoff_date:
                         import shutil
                         shutil.rmtree(date_dir)
+                        cleaned_count += 1
                         logger.info(f"Cleaned up old images: {date_dir.name}")
+                except ValueError:
+                    # Not a date directory, skip
+                    continue
                 except Exception as e:
                     logger.error(f"Failed to cleanup {date_dir}: {e}")
+        
+        if cleaned_count > 0:
+            logger.info(f"Cleanup complete: removed {cleaned_count} old date folder(s)")

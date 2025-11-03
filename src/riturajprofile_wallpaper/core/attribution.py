@@ -2,13 +2,15 @@
 Attribution manager with secret key functionality.
 """
 import json
-import hashlib
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, Any
+from typing import Dict
+import logging
 from PIL import Image, ImageDraw, ImageFont
-from riturajprofile_wallpaper import CONFIG_DIR
-from riturajprofile_wallpaper.config.default_keys import ATTRIBUTION_SECRET_KEY
+from paprwall import CONFIG_DIR
+from paprwall.config.default_keys import ATTRIBUTION_SECRET_KEY
+
+logger = logging.getLogger(__name__)
 
 
 class AttributionManager:
@@ -30,7 +32,9 @@ class AttributionManager:
     
     def verify_secret_key(self, input_key: str) -> bool:
         """Verify if secret key matches"""
-        return input_key == self.SECRET_KEY
+        if not input_key:
+            return False
+        return input_key.strip() == self.SECRET_KEY
     
     def disable_attribution(self, secret_key: str) -> bool:
         """Disable attribution overlay if secret key is correct"""
@@ -39,30 +43,35 @@ class AttributionManager:
             config['attribution_disabled'] = True
             config['disabled_at'] = datetime.now().isoformat()
             self.config.set_attribution_config(config)
+            logger.info("Attribution overlay disabled with secret key")
             return True
+        logger.warning("Invalid secret key attempt")
         return False
     
     def enable_attribution(self):
         """Re-enable attribution overlay"""
         config = self.config.get_attribution_config()
         config['attribution_disabled'] = False
+        if 'disabled_at' in config:
+            del config['disabled_at']
         self.config.set_attribution_config(config)
+        logger.info("Attribution overlay re-enabled")
     
     def create_attribution_text(self, image_data: Dict) -> str:
         """
         Create attribution text for image.
-        Format: "Photo by [Author] from [Source] | Wallpaper by riturajprofile"
+        Format: "Photo by [Author] from [Source] | Wallpaper by Paprwall"
         """
         source = image_data.get('source', 'unknown')
         
         if source == 'local':
-            return "Wallpaper by riturajprofile"
+            return "Paprwall • Your Personal Wallpaper"
         
         photographer = image_data.get('photographer', 'Unknown')
         source_name = source.capitalize()
         
-        # Always credit riturajprofile
-        return f"Photo by {photographer} from {source_name} | Wallpaper by riturajprofile"
+        # Always credit Paprwall
+        return f"Photo by {photographer} from {source_name} • Paprwall"
     
     def create_desktop_overlay(self, image_path: Path, image_data: Dict) -> Path:
         """
@@ -77,32 +86,55 @@ class AttributionManager:
             Path to image (with or without overlay)
         """
         if not self.should_show_attribution():
+            logger.debug("Attribution disabled, skipping overlay")
             return image_path  # Return original without overlay
         
         try:
+            # Open image
             img = Image.open(image_path)
-            draw = ImageDraw.Draw(img, 'RGBA')
+            
+            # Convert to RGBA for transparency support
+            if img.mode != 'RGBA':
+                img = img.convert('RGBA')
             
             # Get attribution text
             attribution_text = self.create_attribution_text(image_data)
             
             # Load font
-            try:
-                font = ImageFont.truetype('/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf', 16)
-            except:
+            font_size = 14
+            font = None
+            font_paths = [
+                '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf',
+                '/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf',
+                '/usr/share/fonts/TTF/DejaVuSans.ttf',
+            ]
+            
+            for font_path in font_paths:
+                try:
+                    if Path(font_path).exists():
+                        font = ImageFont.truetype(font_path, font_size)
+                        break
+                except:
+                    continue
+            
+            if font is None:
+                logger.warning("Could not load TrueType font, using default")
                 font = ImageFont.load_default()
             
-            # Calculate position (bottom-right with padding)
+            # Get config preferences
             config = self.config.get_attribution_config()
             position_type = config.get('position', 'bottom-right')
             opacity = config.get('opacity', 0.7)
+            
+            # Create drawing context for text measurement
+            draw = ImageDraw.Draw(img)
             
             # Get text bounding box
             bbox = draw.textbbox((0, 0), attribution_text, font=font)
             text_width = bbox[2] - bbox[0]
             text_height = bbox[3] - bbox[1]
             
-            padding = 10
+            padding = 12
             img_width, img_height = img.size
             
             # Calculate position based on preference
@@ -119,34 +151,41 @@ class AttributionManager:
                 x = padding
                 y = padding
             
-            # Draw semi-transparent background
-            background = [
+            # Create overlay with semi-transparent background
+            overlay = Image.new('RGBA', img.size, (0, 0, 0, 0))
+            overlay_draw = ImageDraw.Draw(overlay)
+            
+            # Draw semi-transparent background rectangle
+            background_coords = [
                 x - padding,
                 y - padding,
                 x + text_width + padding,
                 y + text_height + padding
             ]
-            overlay = Image.new('RGBA', img.size, (255, 255, 255, 0))
-            overlay_draw = ImageDraw.Draw(overlay)
-            overlay_draw.rectangle(background, fill=(0, 0, 0, int(255 * opacity)))
+            overlay_draw.rectangle(
+                background_coords,
+                fill=(0, 0, 0, int(255 * opacity))
+            )
             
-            # Composite overlay
-            img = img.convert('RGBA')
+            # Composite overlay with image
             img = Image.alpha_composite(img, overlay)
             
-            # Draw white text
+            # Draw white text on top
             final_draw = ImageDraw.Draw(img)
             final_draw.text((x, y), attribution_text, fill=(255, 255, 255, 255), font=font)
             
             # Save with overlay
             overlay_path = image_path.with_stem(image_path.stem + '_overlay')
-            img = img.convert('RGB')
-            img.save(overlay_path, quality=95)
             
+            # Convert back to RGB for JPEG
+            img = img.convert('RGB')
+            img.save(overlay_path, 'JPEG', quality=95, optimize=True)
+            
+            logger.debug(f"Created overlay: {overlay_path.name}")
             return overlay_path
             
         except Exception as e:
-            print(f"Failed to create overlay: {e}")
+            logger.error(f"Failed to create overlay: {e}")
             return image_path
     
     def get_gui_attribution_html(self, image_data: Dict) -> str:
@@ -161,7 +200,7 @@ class AttributionManager:
             <div style="padding: 10px;">
                 <h3 style="margin: 5px 0;">Your Image</h3>
                 <p style="margin: 5px 0;">From: Local Collection</p>
-                <p style="margin: 5px 0; font-style: italic; color: #666;">Wallpaper by riturajprofile</p>
+                <p style="margin: 5px 0; font-style: italic; color: #666;">Paprwall • Personal Wallpaper Manager</p>
             </div>
             """
         
@@ -174,6 +213,6 @@ class AttributionManager:
         <div style="padding: 10px;">
             <h3 style="margin: 5px 0;">Photo by <a href="{photographer_url}">{photographer}</a></h3>
             <p style="margin: 5px 0;">Source: <a href="{source_url}">{source_name}</a></p>
-            <p style="margin: 5px 0; font-style: italic; color: #666;">Wallpaper by riturajprofile</p>
+            <p style="margin: 5px 0; font-style: italic; color: #666;">Paprwall • Wallpaper Manager</p>
         </div>
         """
