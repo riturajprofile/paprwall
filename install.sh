@@ -195,6 +195,7 @@ install_in_venv() {
         PYTHON_VER=$(python3 -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')
         VENV_PKG=""
         VENV_INSTALL_CMD=""
+        SKIP_INSTALL=0
         
         if command -v apt-get >/dev/null 2>&1; then
             VENV_PKG="python${PYTHON_VER}-venv"
@@ -203,21 +204,27 @@ install_in_venv() {
             VENV_PKG="python${PYTHON_VER}-venv"
             VENV_INSTALL_CMD="dnf install -y $VENV_PKG"
         elif command -v pacman >/dev/null 2>&1; then
-            VENV_PKG="python"
-            printf "${BLUE}ℹ${NC} On Arch, venv is included with python package\n"
+            # On Arch, venv should be included but might need python package reinstall
+            printf "${BLUE}ℹ${NC} On Arch, venv is usually included with python package\n"
+            printf "${YELLOW}⚠${NC} If venv is missing, try: sudo pacman -S python\n"
+            SKIP_INSTALL=1
+        fi
+        
+        if [ "$SKIP_INSTALL" -eq 1 ]; then
             return 1
         fi
         
         if [ -n "$VENV_INSTALL_CMD" ]; then
             printf "\n"
-            printf "To create virtual environments, %s needs to be installed.\n" "$VENV_PKG"
+            printf "${RED}✗${NC} To create virtual environments, %s needs to be installed.\n" "$VENV_PKG"
+            printf "\n"
             
             DO_VENV_INSTALL="n"
             if [ -n "$PAPRWALL_AUTO_INSTALL" ]; then
                 DO_VENV_INSTALL="y"
                 printf "${BLUE}ℹ${NC} PAPRWALL_AUTO_INSTALL=1 detected — installing %s automatically\n" "$VENV_PKG"
             elif [ -t 0 ] && [ -z "$SUDO_USER" ]; then
-                printf "Install %s now? (Y/n): " "$VENV_PKG"
+                printf "Do you want to install %s now? (Y/n): " "$VENV_PKG"
                 read -r REPLY
                 case "$REPLY" in
                     [Nn]*) DO_VENV_INSTALL="n" ;;
