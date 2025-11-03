@@ -52,7 +52,38 @@ Supports all major Linux desktop environments:
 
 ## 📥 Installation
 
-### Method 1: Install from PyPI (Recommended)
+### Quick Install (Recommended)
+
+Install Paprwall with a single command:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/riturajprofile/paprwall/main/install.sh | bash
+```
+
+**Features:**
+- ✅ Automatically installs all dependencies
+- ✅ Sets up configuration
+- ✅ Enables auto-start service
+- ✅ Works on Ubuntu, Fedora, and Arch Linux
+
+**Optional: Download your private .env from GitHub:**
+```bash
+# Set your GitHub token as an environment variable
+export PAPRWALL_GITHUB_TOKEN="ghp_your_token_here"
+curl -fsSL https://raw.githubusercontent.com/riturajprofile/paprwall/main/install.sh | bash
+```
+
+### Uninstall
+
+To completely remove Paprwall:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/riturajprofile/paprwall/main/uninstall.sh | bash
+```
+
+---
+
+### Alternative: Install from PyPI
 
 ```bash
 # Install the package
@@ -62,9 +93,7 @@ pip install paprwall
 pipx install paprwall
 ```
 
-**The auto-start service is automatically enabled during installation!**
-
-### Method 2: Install from Source
+### Alternative: Install from Source
 
 ```bash
 # Clone the repository
@@ -73,12 +102,7 @@ cd paprwall
 
 # Install in development mode
 pip install -e .
-
-# Or build and install
-pip install .
 ```
-
-**Auto-start is configured automatically on installation.**
 
 ### System Dependencies
 
@@ -386,13 +410,13 @@ This app properly credits all image sources to comply with API terms:
 
 ### Remove Desktop Overlay
 
-If you prefer a clean desktop without attribution text:
+If you prefer a clean desktop without attribution text, you can remove the overlay through the GUI:
 
 1. Open GUI → Settings → Attribution
-2. Enter secret key: `riturajprofile@162`
+2. Enter the attribution key when prompted
 3. Click "Verify & Remove"
 
-**Note:** Credits will still appear in the GUI to respect photographers.
+**Note:** Photographer credits will always remain visible in the GUI to respect the artists.
 
 ---
 
@@ -617,14 +641,6 @@ For the complete license text, see the [LICENSE](LICENSE) file or visit https://
 - **Unsplash** - For the amazing photographer community
 - **Pexels** - For curated stock photos
 - All the photographers whose work makes this app possible
-
----
-
-## 📊 Attribution Secret Key
-
-**Secret Key**: `riturajprofile@162`
-
-Use this key in Settings → Attribution to remove the desktop overlay credit. Note that photographer credits will always remain visible in the GUI to respect the artists.
 
 ---
 
