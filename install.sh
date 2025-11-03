@@ -51,21 +51,6 @@ command_exists() {
     command -v "$1" >/dev/null 2>&1
 }
 
-# Ask yes/no question (default: yes)
-ask_yes_no() {
-    prompt="$1"
-    if [ ! -t 0 ]; then
-        # Non-interactive mode
-        return 0
-    fi
-    printf "%s (Y/n): " "$prompt"
-    read -r response
-    case "$response" in
-        [Nn]*) return 1 ;;
-        *) return 0 ;;
-    esac
-}
-
 # Detect package manager
 detect_package_manager() {
     if command_exists apt-get; then
@@ -221,15 +206,11 @@ if ! python3 -c "import gi" 2>/dev/null; then
     print_warning "GTK dependencies not found (GUI will not work)"
     gtk_packages=$(get_gtk_packages)
     
-    if ask_yes_no "Install GTK dependencies for GUI support?"; then
-        print_info "Installing: $gtk_packages"
-        if install_package "$gtk_packages"; then
-            print_success "GTK dependencies installed"
-        else
-            print_warning "Failed to install GTK. GUI may not work."
-        fi
+    print_info "Installing GTK dependencies: $gtk_packages"
+    if install_package "$gtk_packages"; then
+        print_success "GTK dependencies installed"
     else
-        print_info "Skipping GTK installation. CLI-only mode."
+        print_warning "Failed to install GTK. GUI may not work (CLI will still work)."
     fi
 else
     print_success "GTK dependencies found"
@@ -248,22 +229,19 @@ printf "\n"
 
 # Remove old installation
 if [ -d "$INSTALL_DIR" ]; then
-    print_warning "Found existing installation"
-    if ask_yes_no "Remove old installation and update?"; then
-        rm -rf "$INSTALL_DIR"
-        print_success "Removed old installation"
-    else
-        print_error "Installation cancelled"
-        exit 1
-    fi
+    print_warning "Found existing installation - updating..."
+    rm -rf "$INSTALL_DIR"
+    print_success "Removed old installation"
 fi
 
 # Clone repository
 print_info "Cloning repository..."
-if git clone --depth 1 "$REPO_URL" "$INSTALL_DIR" >>$LOG_FILE 2>&1; then
+if git clone --depth 1 "$REPO_URL" "$INSTALL_DIR" >>"$LOG_FILE" 2>&1; then
     print_success "Repository cloned"
 else
     print_error "Failed to clone repository"
+    printf "\n${YELLOW}Error details:${NC}\n"
+    tail -n 20 "$LOG_FILE" 2>/dev/null || cat "$LOG_FILE"
     exit 1
 fi
 
@@ -275,48 +253,56 @@ cd "$INSTALL_DIR" || exit 1
 
 print_info "Creating virtual environment..."
 
-# Check if venv is available
+# Check if venv is available, install if missing
 if ! python3 -m venv --help >/dev/null 2>&1; then
     print_warning "python3-venv module not available"
     venv_package=$(get_venv_package)
     
-    if ask_yes_no "Install $venv_package?"; then
-        if install_package "$venv_package"; then
-            print_success "$venv_package installed"
-        else
-            print_error "Failed to install $venv_package"
-            exit 1
-        fi
+    print_info "Installing $venv_package automatically..."
+    if install_package "$venv_package"; then
+        print_success "$venv_package installed"
     else
-        print_error "Cannot continue without python3-venv"
-        printf "\nInstall manually:\n"
-        printf "  Ubuntu/Debian: sudo apt install python3-venv\n"
-        printf "  Fedora:        sudo dnf install python3-venv\n"
-        printf "  Arch:          venv is included with python\n"
+        print_error "Failed to install $venv_package"
+        printf "\nPlease install manually:\n"
+        printf "  Ubuntu/Debian: ${BLUE}sudo apt install python3-venv${NC}\n"
+        printf "  Fedora:        ${BLUE}sudo dnf install python3-venv${NC}\n"
+        printf "  Arch:          ${BLUE}sudo pacman -S python${NC} (venv included)\n"
         exit 1
     fi
 fi
 
 # Create virtual environment
-if python3 -m venv .venv >>$LOG_FILE 2>&1; then
+if python3 -m venv .venv >>"$LOG_FILE" 2>&1; then
     print_success "Virtual environment created"
 else
     print_error "Failed to create virtual environment"
+    printf "\n${YELLOW}Error details:${NC}\n"
+    tail -n 20 "$LOG_FILE" 2>/dev/null || cat "$LOG_FILE"
+    printf "\n"
+    
+    # Check if it's the common ensurepip issue
+    if grep -q "ensurepip" "$LOG_FILE" 2>/dev/null; then
+        print_warning "python3-venv package appears to be missing"
+        venv_package=$(get_venv_package)
+        printf "\nInstall it with:\n"
+        printf "  ${BLUE}sudo apt install %s${NC}\n\n" "$venv_package"
+    fi
     exit 1
 fi
 
 # Upgrade pip
 print_info "Upgrading pip..."
-.venv/bin/python -m pip install --upgrade pip >>$LOG_FILE 2>&1 || true
+.venv/bin/python -m pip install --upgrade pip >>"$LOG_FILE" 2>&1 || true
 
 # Install package
 print_info "Installing Paprwall..."
-if .venv/bin/pip install . >>$LOG_FILE 2>&1; then
+if .venv/bin/pip install . >>"$LOG_FILE" 2>&1; then
     print_success "Paprwall installed"
 else
     print_error "Installation failed"
-    printf "\n--- Last 50 lines of log ---\n"
-    tail -n 50 "$LOG_FILE" 2>/dev/null || true
+    printf "\n${YELLOW}Last 50 lines of log:${NC}\n"
+    tail -n 50 "$LOG_FILE" 2>/dev/null || cat "$LOG_FILE"
+    printf "\n"
     exit 1
 fi
 
