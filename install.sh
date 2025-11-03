@@ -140,6 +140,83 @@ if [ -f ".env.example" ]; then
     echo -e "${GREEN}✓${NC} Created .env configuration file"
 fi
 
+# Optionally fetch .env from a PRIVATE GitHub repo
+# Supports:
+#  - Env vars: GITHUB_ENV_URL or PAPRWALL_ENV_URL
+#  - Token from: GITHUB_TOKEN or PAPRWALL_GITHUB_TOKEN (or prompt)
+#  - GitHub links: raw.githubusercontent.com or github.com/.../blob/... (auto-converted)
+maybe_fetch_private_env() {
+    # Default PRIVATE .env location (hardcoded as requested)
+    local DEFAULT_ENV_URL="https://github.com/riturajprofile/env-setup/blob/main/.env"
+    # Allow overrides via env if needed
+    local INPUT_URL="${GITHUB_ENV_URL:-${PAPRWALL_ENV_URL:-$DEFAULT_ENV_URL}}"
+
+    # Sarcastic developer check instead of asking for URL
+    echo ""
+    read -p "Are you the developer of this app? Then you totally have a GitHub token handy, right? (y/N): " -n 1 -r
+    echo
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        return 0
+    fi
+
+    # Convert regular GitHub 'blob' link to a raw link if needed
+    normalize_github_url() {
+        local url="$1"
+        if echo "$url" | grep -qE '^https://github.com/.+/.+/blob/.+'; then
+            # github.com/<owner>/<repo>/blob/<branch>/<path> -> raw.githubusercontent.com/<owner>/<repo>/<branch>/<path>
+            echo "$url" | sed -E 's#https://github.com/([^/]+)/([^/]+)/blob/([^/]+)/(.*)#https://raw.githubusercontent.com/\1/\2/\3/\4#'
+        elif echo "$url" | grep -qE '^https://github.com/.+/.+/raw/.+'; then
+            # github.com/<owner>/<repo>/raw/<branch>/<path> -> raw.githubusercontent.com/<owner>/<repo>/<branch>/<path>
+            echo "$url" | sed -E 's#https://github.com/([^/]+)/([^/]+)/raw/([^/]+)/(.*)#https://raw.githubusercontent.com/\1/\2/\3/\4#'
+        else
+            echo "$url"
+        fi
+    }
+
+    RAW_URL="$(normalize_github_url "$INPUT_URL")"
+    echo -e "${BLUE}ℹ${NC} Using .env source: $RAW_URL"
+
+    # Determine if URL is GitHub API contents endpoint
+    local IS_API_URL=0
+    if echo "$RAW_URL" | grep -q 'api.github.com/repos'; then
+        IS_API_URL=1
+    fi
+
+    # Resolve token from env or prompt
+    local GH_TOKEN="${GITHUB_TOKEN:-${PAPRWALL_GITHUB_TOKEN:-}}"
+    if [ -z "$GH_TOKEN" ]; then
+        echo ""
+        echo "To access a PRIVATE repo, a GitHub token with 'repo' scope is required."
+        echo "The token is used only for this download and will not be stored."
+        read -s -r -p "Enter GitHub token (input hidden): " GH_TOKEN
+        echo
+    else
+        echo -e "${BLUE}ℹ${NC} Using GitHub token from environment"
+    fi
+
+    # Build curl command
+    local CURL_HEADERS=("-H" "Authorization: token ${GH_TOKEN}")
+    if [ $IS_API_URL -eq 1 ]; then
+        CURL_HEADERS+=("-H" "Accept: application/vnd.github.v3.raw")
+    fi
+
+    echo -e "${BLUE}ℹ${NC} Downloading private .env from GitHub (private repo)..."
+    if curl -fsSL "${CURL_HEADERS[@]}" "$RAW_URL" -o .env.tmp 2>/dev/null && [ -s .env.tmp ]; then
+        mv .env.tmp .env
+        echo -e "${GREEN}✓${NC} Downloaded and set .env from GitHub"
+    else
+        rm -f .env.tmp 2>/dev/null || true
+        echo -e "${YELLOW}⚠${NC} Failed to download .env from provided URL. Keeping existing .env"
+        echo -e "${YELLOW}   URL tried:${NC} $RAW_URL"
+    fi
+
+    # Do not keep token in memory
+    unset GH_TOKEN
+}
+
+# Attempt to fetch private .env if requested or configured
+maybe_fetch_private_env
+
 echo ""
 echo -e "${GREEN}╔════════════════════════════════════════╗${NC}"
 echo -e "${GREEN}║   Installation Complete! 🎉           ║${NC}"
