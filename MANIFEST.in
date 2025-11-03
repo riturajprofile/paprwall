@@ -1,5 +1,5 @@
 include README.md
 include LICENSE
 include requirements.txt
+include .env.example
 recursive-include src/riturajprofile_wallpaper *.py
-recursive-include systemd *.service
