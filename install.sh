@@ -177,15 +177,53 @@ echo -e "${GREEN}✓${NC} Files copied to $INSTALL_DIR"
 # Clean up
 rm -rf "$TEMP_DIR"
 
-# Install package
+# Install package (robust pip handling)
 cd "$INSTALL_DIR"
 echo -e "${BLUE}ℹ${NC} Installing Python package..."
-if pip3 install -e . --user > /tmp/paprwall-install.log 2>&1; then
-    echo -e "${GREEN}✓${NC} Package installed"
+
+# Ensure pip exists and is up to date for this interpreter
+set +e
+python3 -m ensurepip --upgrade >/dev/null 2>&1
+python3 -m pip install --upgrade pip >/tmp/paprwall-install.log 2>&1
+set -e
+
+PIP_CMD="python3 -m pip"
+
+# Decide whether to use --user
+USER_FLAG="--user"
+if [ -n "$VIRTUAL_ENV" ] || [ "$(id -u)" -eq 0 ]; then
+    USER_FLAG=""
+fi
+
+# Try preferred install first
+set +e
+$PIP_CMD install -e . $USER_FLAG >> /tmp/paprwall-install.log 2>&1
+RC=$?
+set -e
+
+if [ $RC -ne 0 ]; then
+    echo -e "${YELLOW}⚠${NC} Initial pip install failed (code $RC). Trying alternative mode..."
+    # Flip the user flag and try again
+    ALT_FLAG="--user"
+    if [ -z "$USER_FLAG" ]; then ALT_FLAG=""; else ALT_FLAG=""; fi
+    set +e
+    $PIP_CMD install -e . $ALT_FLAG >> /tmp/paprwall-install.log 2>&1
+    RC2=$?
+    set -e
+    if [ $RC2 -ne 0 ]; then
+        echo -e "${RED}✗${NC} Failed to install package"
+        echo "----- pip output (last 200 lines) -----"
+        tail -n 200 /tmp/paprwall-install.log || true
+        echo "---------------------------------------"
+        echo "Tips:"
+        echo "  - If running with sudo, avoid --user or use a virtual environment"
+        echo "  - Ensure ~/.local/bin is on PATH for user installs"
+        exit 1
+    else
+        echo -e "${GREEN}✓${NC} Package installed (alternative mode)"
+    fi
 else
-    echo -e "${RED}✗${NC} Failed to install package"
-    cat /tmp/paprwall-install.log
-    exit 1
+    echo -e "${GREEN}✓${NC} Package installed"
 fi
 
 # Verify installation
