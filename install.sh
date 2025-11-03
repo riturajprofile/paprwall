@@ -181,6 +181,41 @@ rm -rf "$TEMP_DIR"
 cd "$INSTALL_DIR"
 echo -e "${BLUE}ℹ${NC} Installing Python package..."
 
+# Ensure pip exists, offer to install via package manager if missing
+if ! python3 -m pip --version >/dev/null 2>&1; then
+    echo -e "${YELLOW}⚠${NC} python3-pip is not installed"
+    PIP_INSTALL_CMD=""
+    if command -v apt-get >/dev/null 2>&1; then
+        PIP_INSTALL_CMD="apt-get install -y python3-pip"
+    elif command -v dnf >/dev/null 2>&1; then
+        PIP_INSTALL_CMD="dnf install -y python3-pip"
+    elif command -v pacman >/dev/null 2>&1; then
+        PIP_INSTALL_CMD="pacman -S --noconfirm python-pip"
+    fi
+
+    if [ -n "$PIP_INSTALL_CMD" ]; then
+        DO_PIP_INSTALL="n"
+        if [ -n "$PAPRWALL_AUTO_INSTALL" ]; then
+            DO_PIP_INSTALL="y"
+            echo -e "${BLUE}ℹ${NC} PAPRWALL_AUTO_INSTALL=1 detected — installing python3-pip automatically"
+        elif [ -t 0 ] && [ -z "$SUDO_USER" ]; then
+            read -p "Install python3-pip now? (Y/n): " -n 1 -r; echo
+            if [[ ! $REPLY =~ ^[Nn]$ ]]; then DO_PIP_INSTALL="y"; fi
+        else
+            echo -e "${BLUE}ℹ${NC} Non-interactive or sudo session — not installing python3-pip automatically"
+            echo "    Tip: export PAPRWALL_AUTO_INSTALL=1 to auto-install system packages"
+        fi
+
+        if [[ "$DO_PIP_INSTALL" == "y" ]]; then
+            if command -v sudo >/dev/null 2>&1; then
+                bash -c "sudo $PIP_INSTALL_CMD"
+            else
+                bash -c "$PIP_INSTALL_CMD"
+            fi
+        fi
+    fi
+fi
+
 # Ensure pip exists and is up to date for this interpreter
 set +e
 python3 -m ensurepip --upgrade >/dev/null 2>&1
@@ -195,6 +230,30 @@ if [ -n "$VIRTUAL_ENV" ] || [ "$(id -u)" -eq 0 ]; then
     USER_FLAG=""
 fi
 
+# Helper: install into dedicated virtualenv and create wrappers
+install_in_venv() {
+    local VENV_DIR="$INSTALL_DIR/.venv"
+    echo -e "${BLUE}ℹ${NC} Creating virtual environment at $VENV_DIR"
+    python3 -m venv "$VENV_DIR" || return 1
+    "$VENV_DIR/bin/python" -m pip install --upgrade pip >> /tmp/paprwall-install.log 2>&1 || return 1
+    echo -e "${BLUE}ℹ${NC} Installing Paprwall into virtualenv..."
+    "$VENV_DIR/bin/pip" install . >> /tmp/paprwall-install.log 2>&1 || return 1
+    # Create wrapper scripts in ~/.local/bin
+    mkdir -p "$HOME/.local/bin"
+    cat > "$HOME/.local/bin/paprwall" <<WRAP
+#!/usr/bin/env bash
+exec "$VENV_DIR/bin/paprwall" "$@"
+WRAP
+    chmod +x "$HOME/.local/bin/paprwall"
+    cat > "$HOME/.local/bin/paprwall-gui" <<WRAP2
+#!/usr/bin/env bash
+exec "$VENV_DIR/bin/paprwall-gui" "$@"
+WRAP2
+    chmod +x "$HOME/.local/bin/paprwall-gui"
+    echo -e "${GREEN}✓${NC} Installed into virtualenv and created wrappers in ~/.local/bin"
+    return 0
+}
+
 # Try preferred install first
 set +e
 $PIP_CMD install -e . $USER_FLAG >> /tmp/paprwall-install.log 2>&1
@@ -205,20 +264,37 @@ if [ $RC -ne 0 ]; then
     echo -e "${YELLOW}⚠${NC} Initial pip install failed (code $RC). Trying alternative mode..."
     # Flip the user flag and try again
     ALT_FLAG="--user"
-    if [ -z "$USER_FLAG" ]; then ALT_FLAG=""; else ALT_FLAG=""; fi
+    if [ -z "$USER_FLAG" ]; then ALT_FLAG="--user"; else ALT_FLAG=""; fi
     set +e
     $PIP_CMD install -e . $ALT_FLAG >> /tmp/paprwall-install.log 2>&1
     RC2=$?
     set -e
     if [ $RC2 -ne 0 ]; then
-        echo -e "${RED}✗${NC} Failed to install package"
-        echo "----- pip output (last 200 lines) -----"
-        tail -n 200 /tmp/paprwall-install.log || true
-        echo "---------------------------------------"
-        echo "Tips:"
-        echo "  - If running with sudo, avoid --user or use a virtual environment"
-        echo "  - Ensure ~/.local/bin is on PATH for user installs"
-        exit 1
+        # Check for PEP 668 externally-managed
+        if grep -q "externally-managed-environment" /tmp/paprwall-install.log 2>/dev/null; then
+            echo -e "${YELLOW}⚠${NC} Detected PEP 668 externally-managed environment. Falling back to virtualenv..."
+            if install_in_venv; then
+                echo -e "${GREEN}✓${NC} Package installed via virtualenv"
+            else
+                echo -e "${RED}✗${NC} Failed to install via virtualenv"
+                echo "----- pip output (last 200 lines) -----"
+                tail -n 200 /tmp/paprwall-install.log || true
+                echo "---------------------------------------"
+                echo "Tips:"
+                echo "  - Try: python3 -m venv ~/paprwall-venv && source ~/paprwall-venv/bin/activate && pip install paprwall"
+                echo "  - Or install pipx and run: pipx install paprwall"
+                exit 1
+            fi
+        else
+            echo -e "${RED}✗${NC} Failed to install package"
+            echo "----- pip output (last 200 lines) -----"
+            tail -n 200 /tmp/paprwall-install.log || true
+            echo "---------------------------------------"
+            echo "Tips:"
+            echo "  - If running with sudo, avoid --user or use a virtual environment"
+            echo "  - Ensure ~/.local/bin is on PATH for user installs"
+            exit 1
+        fi
     else
         echo -e "${GREEN}✓${NC} Package installed (alternative mode)"
     fi
