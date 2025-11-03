@@ -7,7 +7,148 @@ set -e
 # Colors
 RED='\033[0;31m'
 GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m'
+
+# Configuration
+REPO_URL="https://github.com/riturajprofile/paprwall.git"
+INSTALL_DIR="$HOME/.paprwall"
+TEMP_DIR="/tmp/paprwall-install-$$"
 LOG_FILE="/tmp/paprwall-install.log"
+
+echo -e "${BLUE}╔════════════════════════════════════════╗${NC}"
+echo -e "${BLUE}║   Paprwall Installation Script v1.0   ║${NC}"
+echo -e "${BLUE}╚════════════════════════════════════════╝${NC}"
+echo ""
+
+# Check if running on Linux
+if [[ "$OSTYPE" != "linux-gnu"* ]]; then
+    echo -e "${RED}✗${NC} This script only works on Linux systems"
+    exit 1
+fi
+echo -e "${GREEN}✓${NC} Running on Linux"
+
+# Check if Python 3.8+ is installed
+if ! command -v python3 &> /dev/null; then
+    echo -e "${RED}✗${NC} Python 3 is not installed"
+    echo ""
+    echo "Install Python:"
+    echo "  Ubuntu/Debian: sudo apt install python3 python3-pip"
+    echo "  Fedora: sudo dnf install python3 python3-pip"
+    echo "  Arch: sudo pacman -S python python-pip"
+    exit 1
+fi
+
+PYTHON_VERSION=$(python3 -c 'import sys; print(".".join(map(str, sys.version_info[:2])))')
+echo -e "${GREEN}✓${NC} Found Python $PYTHON_VERSION"
+
+# Check if git is installed
+if ! command -v git &> /dev/null; then
+    echo -e "${RED}✗${NC} Git is not installed"
+    echo ""
+    echo "Install Git:"
+    echo "  Ubuntu/Debian: sudo apt install git"
+    echo "  Fedora: sudo dnf install git"
+    echo "  Arch: sudo pacman -S git"
+    exit 1
+fi
+echo -e "${GREEN}✓${NC} Found Git"
+
+# Check and install GTK dependencies (non-fatal, ask user, continue on failure)
+if ! python3 -c "import gi" 2>/dev/null; then
+    echo -e "${YELLOW}⚠${NC} PyGObject (GTK) not found - GUI will not work without it"
+    echo ""
+
+    # Detect package manager
+    INSTALL_CMD=""
+    PACKAGES=""
+    if command -v apt-get &> /dev/null; then
+        INSTALL_CMD="apt-get"
+        PACKAGES="python3-gi python3-gi-cairo gir1.2-gtk-3.0"
+    elif command -v dnf &> /dev/null; then
+        INSTALL_CMD="dnf"
+        PACKAGES="python3-gobject gtk3"
+    elif command -v pacman &> /dev/null; then
+        INSTALL_CMD="pacman"
+        PACKAGES="python-gobject gtk3"
+    fi
+
+    # Respect env overrides for automation
+    AUTO_INSTALL="${PAPRWALL_AUTO_INSTALL:-}"
+
+    if [ -n "$INSTALL_CMD" ]; then
+        echo "To enable GUI, these packages need to be installed:"
+        echo "  $PACKAGES"
+        echo ""
+
+        DO_INSTALL="n"
+        if [ -n "$AUTO_INSTALL" ]; then
+            DO_INSTALL="y"
+            echo -e "${BLUE}ℹ${NC} PAPRWALL_AUTO_INSTALL=1 detected — installing GTK dependencies automatically"
+        elif [ -t 0 ] && [ -z "$SUDO_USER" ]; then
+            # Interactive and not running via sudo: ask user
+            read -p "Do you want to install GTK dependencies now? (Y/n): " -n 1 -r
+            echo
+            if [[ ! $REPLY =~ ^[Nn]$ ]]; then DO_INSTALL="y"; fi
+        else
+            echo -e "${BLUE}ℹ${NC} Non-interactive or sudo session — skipping automatic install"
+            echo "    Tip: export PAPRWALL_AUTO_INSTALL=1 to auto-install system packages"
+        fi
+
+        if [[ "$DO_INSTALL" == "y" ]]; then
+            echo -e "${BLUE}ℹ${NC} Installing GTK packages..."
+
+            # Build the actual command based on package manager
+            CMD=""
+            if [ "$INSTALL_CMD" = "apt-get" ]; then
+                if command -v sudo &>/dev/null; then
+                    CMD="sudo apt-get update -qq && sudo apt-get install -y $PACKAGES"
+                else
+                    CMD="apt-get update -qq && apt-get install -y $PACKAGES"
+                fi
+            elif [ "$INSTALL_CMD" = "dnf" ]; then
+                if command -v sudo &>/dev/null; then
+                    CMD="sudo dnf install -y $PACKAGES -q"
+                else
+                    CMD="dnf install -y $PACKAGES -q"
+                fi
+            elif [ "$INSTALL_CMD" = "pacman" ]; then
+                if command -v sudo &>/dev/null; then
+                    CMD="sudo pacman -S --noconfirm $PACKAGES"
+                else
+                    CMD="pacman -S --noconfirm $PACKAGES"
+                fi
+            fi
+
+            # Run install safely (do not abort installer if it fails)
+            set +e
+            bash -c "$CMD"
+            RC=$?
+            set -e
+
+            if [ $RC -eq 0 ]; then
+                echo -e "${GREEN}✓${NC} GTK packages installed successfully"
+            else
+                echo -e "${YELLOW}⚠${NC} Failed to install GTK packages (exit $RC). Continuing without GUI."
+            fi
+        else
+            echo -e "${BLUE}ℹ${NC} Skipping GTK installation — continuing with CLI-only mode"
+        fi
+    else
+        echo -e "${RED}✗${NC} Could not detect package manager"
+        echo "Please manually install: python3-gi python3-gi-cairo gir1.2-gtk-3.0 (or equivalents)"
+        echo -e "${BLUE}ℹ${NC} Continuing with CLI-only installation..."
+        sleep 2
+    fi
+else
+    echo -e "${GREEN}✓${NC} GTK dependencies found"
+fi
+
+echo ""
+echo -e "${BLUE}ℹ${NC} Installing Paprwall..."
+echo ""
+
 : > "$LOG_FILE"
 
 # Remove old installation if exists
