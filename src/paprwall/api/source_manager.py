@@ -42,6 +42,7 @@ class SourceManager:
         distribution = self.calculate_distribution(total_count, enabled_sources, weights)
         
         all_images = []
+        failed = {}
         for source, count in distribution.items():
             if count > 0 and source in self.clients:
                 try:
@@ -50,6 +51,22 @@ class SourceManager:
                     all_images.extend(images)
                 except Exception as e:
                     logger.error(f"Failed to fetch from {source}: {e}")
+                    failed[source] = count
+        
+        # If some sources failed, try to top-up from other working sources
+        remaining = total_count - len(all_images)
+        if remaining > 0:
+            for source in [s for s in enabled_sources if s in self.clients and s not in failed]:
+                if remaining <= 0:
+                    break
+                try:
+                    logger.info(f"Topping up {remaining} image(s) from {source}")
+                    images = self.clients[source].fetch_images(remaining)
+                    all_images.extend(images)
+                    remaining = total_count - len(all_images)
+                except Exception as e:
+                    logger.error(f"Top-up fetch failed from {source}: {e}")
+                    continue
         
         return all_images
     

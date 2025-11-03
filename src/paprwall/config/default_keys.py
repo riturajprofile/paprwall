@@ -40,9 +40,9 @@ DEFAULT_SOURCES = {
     "preferences": {
         "pixabay": {
             "enabled": True,
-            "categories": ["nature", "landscape"],
+            "categories": ["nature", "places"],  # Pixabay accepts a single category; code picks first valid
             "safe_search": True,
-            "theme": "nature"  # Options: nature, landscape, city, abstract, minimal, animals, space, ocean, mountains, sunset
+            "theme": "nature"  # Options: nature, city, abstract, minimal, animals, space, ocean, mountains, sunset
         },
         "unsplash": {
             "enabled": True,
