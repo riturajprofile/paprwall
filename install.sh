@@ -44,18 +44,18 @@ cd "$INSTALL_DIR"
 
 # Helper: install into dedicated virtualenv and create wrappers
 install_in_venv() {
-    local VENV_DIR="$INSTALL_DIR/.venv"
-    echo -e "${BLUE}ℹ${NC} Creating virtual environment at $VENV_DIR"
+    cd "$INSTALL_DIR" || return 1
+    echo -e "${BLUE}ℹ${NC} Creating virtual environment at $INSTALL_DIR/.venv"
     # Ensure venv module available on Debian/Ubuntu
     if ! python3 -m venv --help >/dev/null 2>&1; then
         echo -e "${YELLOW}⚠${NC} python3-venv not available; please install it via your package manager"
         return 1
     fi
-    python3 -m venv "$VENV_DIR" || return 1
-    "$VENV_DIR/bin/python" -m ensurepip --upgrade >> "$LOG_FILE" 2>&1 || true
-    "$VENV_DIR/bin/python" -m pip install --upgrade pip >> "$LOG_FILE" 2>&1 || return 1
+    python3 -m venv .venv || return 1
+    .venv/bin/python -m ensurepip --upgrade >> "$LOG_FILE" 2>&1 || true
+    .venv/bin/python -m pip install --upgrade pip >> "$LOG_FILE" 2>&1 || return 1
     echo -e "${BLUE}ℹ${NC} Installing Paprwall into virtualenv..."
-    "$VENV_DIR/bin/pip" install . >> "$LOG_FILE" 2>&1 || return 1
+    .venv/bin/pip install . >> "$LOG_FILE" 2>&1 || return 1
     # Create wrapper scripts in ~/.local/bin
     mkdir -p "$HOME/.local/bin"
     cat > "$HOME/.local/bin/paprwall" <<'WRAP'
