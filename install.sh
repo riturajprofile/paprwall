@@ -63,11 +63,8 @@ if ! python3 -c "import gi" 2>/dev/null; then
     echo "  Fedora: sudo dnf install python3-gobject gtk3"
     echo "  Arch: sudo pacman -S python-gobject gtk3"
     echo ""
-    read -p "Continue without GUI? (y/N): " -n 1 -r
-    echo
-    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-        exit 1
-    fi
+    echo -e "${BLUE}ℹ${NC} Continuing with CLI-only installation..."
+    sleep 2
 else
     echo -e "${GREEN}✓${NC} GTK dependencies found"
 fi
@@ -79,15 +76,9 @@ echo ""
 # Remove old installation if exists
 if [ -d "$INSTALL_DIR" ]; then
     echo -e "${YELLOW}⚠${NC} Found existing installation"
-    read -p "Remove and reinstall? (y/N): " -n 1 -r
-    echo
-    if [[ $REPLY =~ ^[Yy]$ ]]; then
-        rm -rf "$INSTALL_DIR"
-        echo -e "${GREEN}✓${NC} Removed old installation"
-    else
-        echo -e "${RED}✗${NC} Installation cancelled"
-        exit 1
-    fi
+    echo -e "${BLUE}ℹ${NC} Removing old installation and updating..."
+    rm -rf "$INSTALL_DIR"
+    echo -e "${GREEN}✓${NC} Removed old installation"
 fi
 
 # Create temporary directory
@@ -151,12 +142,24 @@ maybe_fetch_private_env() {
     # Allow overrides via env if needed
     local INPUT_URL="${GITHUB_ENV_URL:-${PAPRWALL_ENV_URL:-$DEFAULT_ENV_URL}}"
 
-    # Sarcastic developer check instead of asking for URL
-    echo ""
-    read -p "Are you the developer of this app? Then you totally have a GitHub token handy, right? (y/N): " -n 1 -r
-    echo
-    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-        return 0
+    # Check if running in non-interactive mode (piped execution or sudo)
+    if [ ! -t 0 ] || [ -n "$SUDO_USER" ]; then
+        # Non-interactive or sudo: skip unless env var is set
+        if [ "$INPUT_URL" = "$DEFAULT_ENV_URL" ]; then
+            echo ""
+            echo -e "${BLUE}ℹ${NC} Skipping private .env download (non-interactive mode)"
+            echo "    To enable: export PAPRWALL_GITHUB_TOKEN='your_token'"
+            echo "    Then re-run: curl -fsSL ...install.sh | bash"
+            return 0
+        fi
+    else
+        # Interactive: ask user
+        echo ""
+        read -p "Are you the developer of this app? Then you totally have a GitHub token handy, right? (y/N): " -n 1 -r
+        echo
+        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+            return 0
+        fi
     fi
 
     # Convert regular GitHub 'blob' link to a raw link if needed
