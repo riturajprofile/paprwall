@@ -38,9 +38,6 @@ dev = [
     "flake8>=6.0.0",
     "mypy>=1.0.0",
 ]
-gui = [
-    "PyGObject>=3.42.0",
-]
 
 [project.urls]
 Homepage = "https://github.com/riturajprofile/paprwall"
@@ -50,6 +47,3 @@ Repository = "https://github.com/riturajprofile/paprwall"
 
 [project.scripts]
 paprwall = "paprwall.cli:main"
-
-[project.gui-scripts]
-paprwall-gui = "paprwall.gui.main_window:main"

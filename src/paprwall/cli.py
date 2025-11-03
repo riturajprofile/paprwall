@@ -52,15 +52,11 @@ def main():
     # Initialize config
     config = ConfigManager()
     
-    # Handle GUI launch
+    # Handle GUI launch (removed - CLI only)
     if args.gui:
-        try:
-            from paprwall.gui.main_window import main as gui_main
-            return gui_main()
-        except ImportError as e:
-            logger.error(f"Failed to launch GUI: {e}")
-            logger.error("Make sure PyGObject is installed: pip install PyGObject")
-            return 1
+        logger.error("GUI has been removed. Paprwall is now CLI-only.")
+        logger.info("Use --fetch, --next, --prev, --current, etc. for wallpaper management")
+        return 1
     
     # Handle fetch
     if args.fetch:
