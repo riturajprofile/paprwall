@@ -5,6 +5,7 @@ import subprocess
 from pathlib import Path
 import logging
 import os
+import shutil
 
 logger = logging.getLogger(__name__)
 
@@ -48,6 +49,19 @@ class WallpaperSetter:
             return 'mate'
         elif 'cinnamon' in session:
             return 'cinnamon'
+
+        # Probe for known tools even if env vars are missing (common in minimal shells)
+        try:
+            if shutil.which('gsettings'):
+                return 'gnome'
+            if shutil.which('qdbus'):
+                return 'kde'
+            if shutil.which('xfconf-query'):
+                return 'xfce'
+            if shutil.which('pcmanfm') or shutil.which('pcmanfm-qt'):
+                return 'lxde'
+        except Exception:
+            pass
         
         logger.warning("Could not detect desktop environment")
         return 'unknown'

@@ -5,7 +5,7 @@ with multi-source support and local images.
 
 __version__ = "1.0.0"
 __author__ = "riturajprofile"
-__email__ = "riturajprofile@example.com"
+__email__ = "riturajprofile@gmail.com"
 
 from pathlib import Path
 import os
