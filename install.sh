@@ -253,35 +253,48 @@ cd "$INSTALL_DIR" || exit 1
 
 print_info "Creating virtual environment..."
 
-# Try to create virtual environment
-if python3 -m venv .venv >>"$LOG_FILE" 2>&1; then
+# Try to create virtual environment with system site packages (for GTK access)
+if python3 -m venv --system-site-packages .venv >>"$LOG_FILE" 2>&1; then
     print_success "Virtual environment created"
 else
     # Check if it's the ensurepip/python3-venv issue
     if grep -q "ensurepip" "$LOG_FILE" 2>/dev/null; then
         print_warning "python3-venv package is missing"
+        
+        # Remove failed venv directory
+        rm -rf .venv
+        
         venv_package=$(get_venv_package)
         
         print_info "Installing $venv_package automatically..."
+        print_info "You may be prompted for your sudo password..."
+        
         if install_package "$venv_package"; then
             print_success "$venv_package installed"
             
-            # Try creating venv again
+            # Wait a moment for package to be fully registered
+            sleep 1
+            
+            # Try creating venv again with system site packages
             print_info "Retrying virtual environment creation..."
-            if python3 -m venv .venv >>"$LOG_FILE" 2>&1; then
+            if python3 -m venv --system-site-packages .venv >>"$LOG_FILE" 2>&1; then
                 print_success "Virtual environment created"
             else
                 print_error "Still failed to create virtual environment"
                 printf "\n${YELLOW}Error details:${NC}\n"
                 tail -n 20 "$LOG_FILE" 2>/dev/null || cat "$LOG_FILE"
+                printf "\n"
+                printf "${RED}Please try manually:${NC}\n"
+                printf "  ${BLUE}sudo apt update${NC}\n"
+                printf "  ${BLUE}sudo apt install -y %s${NC}\n" "$venv_package"
+                printf "\nThen run the installer again.\n"
                 exit 1
             fi
         else
             print_error "Failed to install $venv_package"
-            printf "\nPlease install manually:\n"
-            printf "  Ubuntu/Debian: ${BLUE}sudo apt install %s${NC}\n" "$venv_package"
-            printf "  Fedora:        ${BLUE}sudo dnf install python3-venv${NC}\n"
-            printf "  Arch:          ${BLUE}sudo pacman -S python${NC} (venv included)\n"
+            printf "\n${RED}Please install manually:${NC}\n"
+            printf "  ${BLUE}sudo apt update${NC}\n"
+            printf "  ${BLUE}sudo apt install -y %s${NC}\n" "$venv_package"
             printf "\nThen run the installer again.\n"
             exit 1
         fi
@@ -365,10 +378,52 @@ case ":$PATH:" in
         ;;
     *)
         print_warning "$BIN_DIR is not in your PATH"
-        printf "\nAdd this line to your ~/.bashrc or ~/.zshrc:\n"
-        printf "  ${BLUE}export PATH=\"\$HOME/.local/bin:\$PATH\"${NC}\n"
-        printf "\nThen reload your shell:\n"
-        printf "  ${BLUE}source ~/.bashrc${NC}  # or source ~/.zshrc\n"
+        print_info "Adding $BIN_DIR to PATH automatically..."
+        
+        # Detect shell and add to appropriate config file
+        PATH_LINE='export PATH="$HOME/.local/bin:$PATH"'
+        ADDED=0
+        
+        # Check for zsh
+        if [ -n "$ZSH_VERSION" ] || [ -f "$HOME/.zshrc" ]; then
+            if ! grep -q '.local/bin' "$HOME/.zshrc" 2>/dev/null; then
+                echo "" >> "$HOME/.zshrc"
+                echo "# Added by Paprwall installer" >> "$HOME/.zshrc"
+                echo "$PATH_LINE" >> "$HOME/.zshrc"
+                print_success "Added to ~/.zshrc"
+                ADDED=1
+            fi
+        fi
+        
+        # Check for bash
+        if [ -n "$BASH_VERSION" ] || [ -f "$HOME/.bashrc" ]; then
+            if ! grep -q '.local/bin' "$HOME/.bashrc" 2>/dev/null; then
+                echo "" >> "$HOME/.bashrc"
+                echo "# Added by Paprwall installer" >> "$HOME/.bashrc"
+                echo "$PATH_LINE" >> "$HOME/.bashrc"
+                print_success "Added to ~/.bashrc"
+                ADDED=1
+            fi
+        fi
+        
+        # Also add to .profile as fallback
+        if [ -f "$HOME/.profile" ]; then
+            if ! grep -q '.local/bin' "$HOME/.profile" 2>/dev/null; then
+                echo "" >> "$HOME/.profile"
+                echo "# Added by Paprwall installer" >> "$HOME/.profile"
+                echo "$PATH_LINE" >> "$HOME/.profile"
+                print_success "Added to ~/.profile"
+                ADDED=1
+            fi
+        fi
+        
+        if [ $ADDED -eq 1 ]; then
+            printf "\n${GREEN}✓${NC} PATH updated! Run this to use commands immediately:\n"
+            printf "  ${BLUE}source ~/.zshrc${NC}  # or source ~/.bashrc\n"
+            printf "\nOr simply open a new terminal.\n"
+        else
+            print_info "PATH already configured in shell config"
+        fi
         printf "\n"
         ;;
 esac
