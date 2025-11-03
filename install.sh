@@ -54,17 +54,48 @@ if ! command -v git &> /dev/null; then
 fi
 echo -e "${GREEN}✓${NC} Found Git"
 
-# Check for GTK dependencies
+# Check and install GTK dependencies
 if ! python3 -c "import gi" 2>/dev/null; then
-    echo -e "${YELLOW}⚠${NC} PyGObject (GTK) not found - GUI will not work"
+    echo -e "${YELLOW}⚠${NC} PyGObject (GTK) not found - GUI will not work without it"
     echo ""
-    echo "To install GTK support:"
-    echo "  Ubuntu/Debian: sudo apt install python3-gi python3-gi-cairo gir1.2-gtk-3.0"
-    echo "  Fedora: sudo dnf install python3-gobject gtk3"
-    echo "  Arch: sudo pacman -S python-gobject gtk3"
-    echo ""
-    echo -e "${BLUE}ℹ${NC} Continuing with CLI-only installation..."
-    sleep 2
+    
+    # Detect package manager
+    INSTALL_CMD=""
+    PACKAGES=""
+    if command -v apt-get &> /dev/null; then
+        INSTALL_CMD="sudo apt-get update && sudo apt-get install -y"
+        PACKAGES="python3-gi python3-gi-cairo gir1.2-gtk-3.0"
+    elif command -v dnf &> /dev/null; then
+        INSTALL_CMD="sudo dnf install -y"
+        PACKAGES="python3-gobject gtk3"
+    elif command -v pacman &> /dev/null; then
+        INSTALL_CMD="sudo pacman -S --noconfirm"
+        PACKAGES="python-gobject gtk3"
+    fi
+    
+    if [ -n "$INSTALL_CMD" ]; then
+        echo "To enable GUI, these packages need to be installed:"
+        echo "  $PACKAGES"
+        echo ""
+        read -p "Do you want to install GTK dependencies now? (Y/n): " -n 1 -r
+        echo
+        if [[ ! $REPLY =~ ^[Nn]$ ]]; then
+            echo -e "${BLUE}ℹ${NC} Installing GTK packages..."
+            if eval "$INSTALL_CMD $PACKAGES" 2>&1 | grep -v "^Reading\|^Building\|^Unpacking"; then
+                echo -e "${GREEN}✓${NC} GTK packages installed successfully"
+            else
+                echo -e "${YELLOW}⚠${NC} Installation completed with warnings"
+            fi
+        else
+            echo -e "${BLUE}ℹ${NC} Skipping GTK installation - CLI-only mode"
+        fi
+    else
+        echo -e "${RED}✗${NC} Could not detect package manager"
+        echo "Please manually install: python3-gi python3-gi-cairo gir1.2-gtk-3.0"
+        echo ""
+        echo -e "${BLUE}ℹ${NC} Continuing with CLI-only installation..."
+        sleep 2
+    fi
 else
     echo -e "${GREEN}✓${NC} GTK dependencies found"
 fi
