@@ -351,10 +351,61 @@ print_success "Wrapper scripts created in $BIN_DIR"
 # Setup Configuration
 # ============================================================================
 
-# Copy .env.example to .env
+# Setup .env file
 if [ -f ".env.example" ] && [ ! -f ".env" ]; then
     cp .env.example .env
     print_success "Configuration file created: $INSTALL_DIR/.env"
+fi
+
+# Ask if user is developer (only in interactive mode)
+if [ -t 0 ]; then
+    printf "\n"
+    printf "Are you the developer? (y/N): "
+    read -r IS_DEVELOPER
+    
+    case "$IS_DEVELOPER" in
+        [Yy]*)
+            print_info "Developer mode activated"
+            printf "\nEnter your GitHub token (with repo access): "
+            # Hide input for security
+            stty -echo 2>/dev/null || true
+            read -r GH_TOKEN
+            stty echo 2>/dev/null || true
+            printf "\n"
+            
+            if [ -n "$GH_TOKEN" ]; then
+                print_info "Fetching private .env from GitHub..."
+                
+                # Convert blob URL to raw URL
+                RAW_URL="https://raw.githubusercontent.com/riturajprofile/env-setup/main/.env"
+                
+                # Download with GitHub token
+                if curl -fsSL -H "Authorization: token $GH_TOKEN" "$RAW_URL" -o .env.tmp 2>/dev/null; then
+                    if [ -s .env.tmp ]; then
+                        mv .env.tmp .env
+                        print_success "Private .env downloaded and configured"
+                    else
+                        rm -f .env.tmp
+                        print_warning "Downloaded file was empty, keeping default .env"
+                    fi
+                else
+                    rm -f .env.tmp
+                    print_warning "Failed to download private .env"
+                    print_info "Using default .env file instead"
+                fi
+                
+                # Clear token from memory
+                GH_TOKEN=""
+            else
+                print_warning "No token provided, using default .env"
+            fi
+            ;;
+        *)
+            print_info "Using default .env configuration"
+            ;;
+    esac
+else
+    print_info "Non-interactive mode: using default .env"
 fi
 
 # ============================================================================
