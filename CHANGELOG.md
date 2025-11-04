@@ -6,9 +6,30 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [1.1.0] - 2025-11-04
+## [2.0.0] - 2025-11-04
 
 ### Added
-- 🚀 **Complete distribution system** for easy deployment
+- 🖼️ GUI binaries for Linux, Windows (macOS builds available)
+- 🤖 GitHub Actions workflow to build and publish CLI + GUI binaries and Linux packages (DEB/RPM)
+- � `install-single.sh` now installs both CLI and GUI when binaries are available
+- 🔁 `paprwall --gui` flag to launch the Tkinter GUI from CLI
+
+### Changed
+- 🌐 Simplified to Picsum-only source (no API keys required)
+- 🧹 Removed unused API client codepaths and legacy options from CLI
+- 📝 Clean, compact README focused on downloads and quick usage
+
+### Fixed
+- 🧰 Consistent versioning across `pyproject.toml`, `setup.py`, and `__init__.py`
+
+### About this release
+2.0.0 is a distribution-focused release: easy downloads for end-users (no Python needed) and a simpler app model using Picsum. It keeps both a lightweight CLI and a friendly GUI, with clear installers and automated release builds.
+
+---
+
+
+### Added
+- �🚀 **Complete distribution system** for easy deployment
   - `install.sh` - One-line automated installer for all major Linux distros
   - `uninstall.sh` - Clean removal script
 - 🔑 **Hardcoded API keys** - No setup required, works out of the box
@@ -55,6 +76,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Release Links
 
+- [2.0.0](https://github.com/riturajprofile/paprwall/releases/tag/v2.0.0) - GUI Binaries & Picsum-only
 - [1.1.0](https://github.com/riturajprofile/paprwall/releases/tag/v1.1.0) - Distribution Ready
 - [1.0.0](https://github.com/riturajprofile/paprwall/releases/tag/v1.0.0) - Initial Release
 
