@@ -1,0 +1,30 @@
+# Include documentation files
+include README.md
+include LICENSE
+include CONTRIBUTING.md
+include INSTALLATION.md
+include requirements.txt
+
+# Include version file
+include src/paprwall/__version__.py
+
+# Include assets
+recursive-include assets *.png *.svg *.ico
+
+# Include scripts
+recursive-include scripts *.sh *.bat
+
+# Exclude compiled Python files
+global-exclude __pycache__
+global-exclude *.py[cod]
+global-exclude *.so
+global-exclude .DS_Store
+
+# Exclude development and build artifacts
+prune .git
+prune .github
+prune .vscode
+prune tests
+prune dist
+prune build
+prune *.egg-info

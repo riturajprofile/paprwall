@@ -57,6 +57,7 @@ test_images/
 *.env
 .env
 *.secret
+.secrets/
 
 # User configuration directories (contains personal API keys)
 .config/paprwall/

@@ -3,8 +3,8 @@ paprwall: Auto-rotating wallpaper app for Linux
 with multi-source support and local images.
 """
 
-__version__ = "1.0.2"
-__author__ = "riturajprofile"
+from .__version__ import __version__, __author__, __description__
+
 __email__ = "riturajprofile@gmail.com"
 
 from pathlib import Path

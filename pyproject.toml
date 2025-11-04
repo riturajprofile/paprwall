@@ -10,12 +10,11 @@ authors = [
 ]
 description = "Modern Desktop Wallpaper Manager with Motivational Quotes"
 readme = "README.md"
-license = {file = "LICENSE"}
+license = {text = "MIT"}
 requires-python = ">=3.8"
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Intended Audience :: End Users/Desktop",
-    "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.8",
@@ -56,17 +55,23 @@ Documentation = "https://github.com/riturajprofile/paprwall#readme"
 Changelog = "https://github.com/riturajprofile/paprwall/releases"
 
 [project.scripts]
-paprwall-gui = "paprwall.gui:main"
-paprwall = "paprwall.cli:main"
+paprwall-gui = "paprwall.gui.wallpaper_manager_gui:main"
+paprwall = "paprwall.gui.wallpaper_manager_gui:main"
 
 [project.gui-scripts]
-paprwall-gui = "paprwall.gui:main"
+paprwall-gui = "paprwall.gui.wallpaper_manager_gui:main"
+
+[tool.setuptools]
+include-package-data = true
 
 [tool.setuptools.packages.find]
 where = ["src"]
+include = ["paprwall*"]
+namespaces = false
 
 [tool.setuptools.package-data]
-paprwall = ["assets/*", "*.json"]
+"*" = ["*.txt", "*.md", "*.json"]
+paprwall = ["assets/*", "../assets/*"]
 
 [tool.black]
 line-length = 88
@@ -129,6 +134,6 @@ exclude_lines = [
     "raise NotImplementedError",
     "if 0:",
     "if __name__ == .__main__.:",
-    "class .*\bProtocol\):",
-    "@(abc\.)?abstractmethod",
+    "class .*\\bProtocol\\):",
+    "@(abc\\.)?abstractmethod",
 ]

@@ -263,7 +263,7 @@ jobs:
       - name: Build macOS executable
         run: |
           # Get version
-          VERSION=$(python -c "from paprwall import __version__; print(__version__)")
+          VERSION=$(python -c "import sys; sys.path.insert(0, 'src'); from paprwall.__version__ import __version__; print(__version__)")
 
           # Build with PyInstaller
           pyinstaller --onefile \
@@ -367,7 +367,7 @@ jobs:
       - name: Get version
         id: version
         run: |
-          VERSION=$(python -c "from src.paprwall import __version__; print(__version__)")
+          VERSION=$(python -c "import sys; sys.path.insert(0, 'src'); from paprwall.__version__ import __version__; print(__version__)")
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
       - name: Create release notes

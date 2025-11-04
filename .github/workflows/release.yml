@@ -56,7 +56,7 @@ jobs:
       - name: Get current version
         id: version
         run: |
-          VERSION=$(python -c "from src.paprwall import __version__; print(__version__)")
+          VERSION=$(python -c "import sys; sys.path.insert(0, 'src'); from paprwall.__version__ import __version__; print(__version__)")
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "Current version: $VERSION"
 
@@ -66,8 +66,8 @@ jobs:
           # Get the version from the previous commit
           git checkout HEAD~1 2>/dev/null || echo "No previous commit"
           PREV_VERSION=""
-          if [ -f "src/paprwall/__init__.py" ]; then
-            PREV_VERSION=$(python -c "from src.paprwall import __version__; print(__version__)" 2>/dev/null || echo "")
+          if [ -f "src/paprwall/__version__.py" ]; then
+            PREV_VERSION=$(python -c "import sys; sys.path.insert(0, 'src'); from paprwall.__version__ import __version__; print(__version__)" 2>/dev/null || echo "")
           fi
           git checkout HEAD
 
