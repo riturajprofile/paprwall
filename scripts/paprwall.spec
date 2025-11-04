@@ -8,8 +8,18 @@ import os
 import sys
 from pathlib import Path
 
-# Get the project root directory
-project_root = Path(__file__).parent.parent
+# Get the project root directory in a robust way.
+# In some PyInstaller versions, __file__ may not be defined for spec execution.
+try:
+    _spec_path = Path(__file__).resolve()
+    project_root = _spec_path.parent.parent
+except NameError:
+    # Fall back to current working directory (CI/build scripts call from repo root)
+    project_root = Path.cwd()
+    # If called from the scripts directory, move one level up
+    if project_root.name == "scripts" and (project_root.parent / "src").exists():
+        project_root = project_root.parent
+
 src_dir = project_root / "src"
 assets_dir = project_root / "assets"
 

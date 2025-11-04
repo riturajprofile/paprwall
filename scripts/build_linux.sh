@@ -1,8 +1,8 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # PaprWall Linux Build Script
 # Builds standalone executable and packages (.deb, .rpm, .AppImage)
 
-set -e  # Exit on any error
+set -euo pipefail
 
 echo "========================================"
 echo "PaprWall Linux Build Script"
@@ -20,7 +20,7 @@ fi
 check_command() {
     if ! command -v "$1" &> /dev/null; then
         echo "❌ Error: $1 is not installed"
-        if [ "$2" != "" ]; then
+        if [ "${2:-}" != "" ]; then
             echo "Install with: $2"
         fi
         return 1
@@ -35,8 +35,8 @@ check_command pip3 "sudo apt install python3-pip"
 python_version=$(python3 -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')")
 echo "✓ Python version: $python_version"
 
-if ! python3 -c "import sys; exit(0 if sys.version_info >= (3, 8) else 1)"; then
-    echo "❌ Error: Python 3.8+ is required"
+if ! python3 -c "import sys; exit(0 if sys.version_info >= (3, 9) else 1)"; then
+    echo "❌ Error: Python 3.9+ is required"
     exit 1
 fi
 
@@ -52,7 +52,7 @@ source .venv/bin/activate
 # Upgrade pip and install build dependencies
 echo "Installing/upgrading build dependencies..."
 pip install --upgrade pip setuptools wheel
-pip install pyinstaller>=5.0
+pip install 'pyinstaller>=5.0'
 
 # Install project dependencies
 echo "Installing project dependencies..."

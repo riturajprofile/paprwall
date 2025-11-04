@@ -1,8 +1,8 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # PaprWall AppImage Build Script
 # Creates a universal Linux executable that runs on all distributions
 
-set -e  # Exit on error
+set -euo pipefail  # Exit on error and treat unset vars as errors
 
 echo "========================================"
 echo "PaprWall AppImage Builder"
@@ -30,7 +30,7 @@ echo -e "${BLUE}Checking required tools...${NC}"
 check_command() {
     if ! command -v "$1" &> /dev/null; then
         echo -e "${RED}❌ Error: $1 is not installed${NC}"
-        if [ "$2" != "" ]; then
+        if [ "${2:-}" != "" ]; then
             echo "Install with: $2"
         fi
         return 1
@@ -43,8 +43,17 @@ check_command python3 "sudo apt install python3"
 check_command pip3 "sudo apt install python3-pip"
 check_command wget "sudo apt install wget"
 
-# Get version
-VERSION=$(python3 -c "from src.paprwall import __version__; print(__version__)" 2>/dev/null || echo "1.0.2")
+# Get version (ensure src is on PYTHONPATH)
+VERSION=$(python3 - <<'PY'
+import sys
+sys.path.insert(0, 'src')
+try:
+    from paprwall.__version__ import __version__
+except Exception:
+    __version__ = '0.0.0'
+print(__version__)
+PY
+)
 echo -e "${GREEN}Building version: $VERSION${NC}"
 echo
 
