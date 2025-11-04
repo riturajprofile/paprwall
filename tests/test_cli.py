@@ -86,8 +86,10 @@ class TestCLIParser:
 
     def test_config_dir_argument(self):
         """Test --config-dir argument."""
+        from pathlib import Path
         args = self.parser.parse_args(["--config-dir", "/custom/config"])
-        assert str(args.config_dir) == "/custom/config"
+        # Use Path comparison to handle platform-specific path separators
+        assert args.config_dir == Path("/custom/config")
 
     def test_default_arguments(self):
         """Test default argument values."""
