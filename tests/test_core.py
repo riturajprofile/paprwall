@@ -14,6 +14,16 @@ from paprwall.core import (
     fetch_and_set_wallpaper,
 )
 
+# Provide a minimal ctypes.windll shim on non-Windows so patching works
+import ctypes
+from types import SimpleNamespace
+
+if not hasattr(ctypes, "windll"):
+    ctypes.windll = SimpleNamespace()  # type: ignore[attr-defined]
+    ctypes.windll.user32 = SimpleNamespace(  # type: ignore[attr-defined]
+        SystemParametersInfoW=lambda *args, **kwargs: True
+    )
+
 
 class TestWallpaperCore:
     """Test the WallpaperCore class."""
@@ -128,7 +138,7 @@ class TestWallpaperCore:
             result = self.core._set_wallpaper_linux("/test/path.jpg")
             assert result is True
 
-    @patch("ctypes.windll.user32.SystemParametersInfoW")
+    @patch("ctypes.windll.user32.SystemParametersInfoW", create=True)
     def test_set_wallpaper_windows(self, mock_api):
         """Test wallpaper setting on Windows."""
         mock_api.return_value = True
