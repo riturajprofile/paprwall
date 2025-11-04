@@ -3,7 +3,7 @@ paprwall: Auto-rotating wallpaper app for Linux
 with multi-source support and local images.
 """
 
-__version__ = "0.1.0"
+__version__ = "1.0.2"
 __author__ = "riturajprofile"
 __email__ = "riturajprofile@gmail.com"
 

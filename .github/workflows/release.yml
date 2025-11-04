@@ -1,116 +1,348 @@
-name: Release builds
+name: Automated Release
 
 on:
   push:
-    tags:
-      - 'v*.*.*'
+    branches: [ main ]
+    paths:
+      - 'src/**'
+      - 'pyproject.toml'
+      - 'requirements.txt'
+  workflow_dispatch:
+    inputs:
+      release_type:
+        description: 'Release type'
+        required: true
+        default: 'patch'
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+      prerelease:
+        description: 'Create pre-release'
+        required: false
+        default: false
+        type: boolean
 
-permissions:
-  contents: write
+env:
+  PYTHON_VERSION: '3.8'
 
 jobs:
-  build:
-    name: Build standalone binaries
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-        python-version: ['3.11']
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ matrix.python-version }}
-
-      - name: Install system deps (Linux)
-        if: runner.os == 'Linux'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y python3-tk ruby ruby-dev build-essential rpm
-          sudo gem install --no-document fpm
-
-      - name: Install build deps
-        run: |
-          python -m pip install --upgrade pip
-          pip install pyinstaller
-          pip install -e .
-
-      - name: Build CLI (paprwall)
-        run: |
-          pyinstaller -F -n paprwall src/paprwall/cli.py
-
-      - name: Build GUI (paprwall-gui)
-        shell: bash
-        run: |
-          if [ "$RUNNER_OS" == "Windows" ]; then
-            pyinstaller -F -w -n paprwall-gui --add-data "src/paprwall;paprwall" src/paprwall/gui/wallpaper_manager_gui.py
-          elif [ "$RUNNER_OS" == "macOS" ]; then
-            pyinstaller -F -w -n paprwall-gui --add-data "src/paprwall:paprwall" src/paprwall/gui/wallpaper_manager_gui.py
-          else
-            pyinstaller -F -n paprwall-gui --add-data "src/paprwall:paprwall" src/paprwall/gui/wallpaper_manager_gui.py
-          fi
-
-      - name: Rename binaries
-        shell: bash
-        run: |
-          cd dist
-          if [ "$RUNNER_OS" == "Windows" ]; then
-            mv paprwall.exe paprwall-windows-amd64.exe
-            mv paprwall-gui.exe paprwall-gui-windows-amd64.exe
-          elif [ "$RUNNER_OS" == "macOS" ]; then
-            mv paprwall paprwall-macos-amd64
-            mv paprwall-gui paprwall-gui-macos-amd64
-          else
-            mv paprwall paprwall-linux-amd64
-            mv paprwall-gui paprwall-gui-linux-amd64
-          fi
-
-      - name: Build DEB and RPM packages (Linux only)
-        if: runner.os == 'Linux'
-        run: |
-          mkdir -p dist/packages
-          fpm -s dir -t deb -n paprwall -v 1.1.1 \
-            --description "Picsum wallpaper rotator with GUI" \
-            --url "https://github.com/riturajprofile/paprwall" \
-            --license "CC BY-NC 4.0" \
-            dist/paprwall-linux-amd64=/usr/bin/paprwall \
-            dist/paprwall-gui-linux-amd64=/usr/bin/paprwall-gui
-          fpm -s dir -t rpm -n paprwall -v 1.1.1 \
-            --description "Picsum wallpaper rotator with GUI" \
-            --url "https://github.com/riturajprofile/paprwall" \
-            --license "CC BY-NC 4.0" \
-            dist/paprwall-linux-amd64=/usr/bin/paprwall \
-            dist/paprwall-gui-linux-amd64=/usr/bin/paprwall-gui
-          mv *.deb *.rpm dist/packages/
-
-      - name: Archive artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: paprwall-${{ runner.os }}
-          path: |
-            dist/*
-            dist/packages/*
-
-  release:
-    name: Create GitHub Release
-    needs: build
+  check-version:
+    name: Check Version Changes
     runs-on: ubuntu-latest
-    steps:
-      - name: Download artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: dist
+    outputs:
+      version_changed: ${{ steps.check.outputs.changed }}
+      current_version: ${{ steps.version.outputs.version }}
+      should_release: ${{ steps.decide.outputs.release }}
 
-      - name: Create Release
-        uses: softprops/action-gh-release@v2
-        with:
-          files: |
-            dist/**
-            dist/packages/*.deb
-            dist/packages/*.rpm
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+
+    - name: Get current version
+      id: version
+      run: |
+        VERSION=$(python -c "from src.paprwall import __version__; print(__version__)")
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        echo "Current version: $VERSION"
+
+    - name: Check if version changed
+      id: check
+      run: |
+        # Get the version from the previous commit
+        git checkout HEAD~1 2>/dev/null || echo "No previous commit"
+        PREV_VERSION=""
+        if [ -f "src/paprwall/__init__.py" ]; then
+          PREV_VERSION=$(python -c "from src.paprwall import __version__; print(__version__)" 2>/dev/null || echo "")
+        fi
+        git checkout HEAD
+
+        echo "Previous version: $PREV_VERSION"
+        echo "Current version: ${{ steps.version.outputs.version }}"
+
+        if [ "$PREV_VERSION" != "${{ steps.version.outputs.version }}" ]; then
+          echo "changed=true" >> $GITHUB_OUTPUT
+          echo "Version has changed!"
+        else
+          echo "changed=false" >> $GITHUB_OUTPUT
+          echo "Version unchanged"
+        fi
+
+    - name: Decide whether to release
+      id: decide
+      run: |
+        if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+          echo "release=true" >> $GITHUB_OUTPUT
+          echo "Manual release triggered"
+        elif [[ "${{ steps.check.outputs.changed }}" == "true" ]]; then
+          echo "release=true" >> $GITHUB_OUTPUT
+          echo "Version changed, will create release"
+        else
+          echo "release=false" >> $GITHUB_OUTPUT
+          echo "No release needed"
+        fi
+
+  create-tag:
+    name: Create Release Tag
+    runs-on: ubuntu-latest
+    needs: check-version
+    if: needs.check-version.outputs.should_release == 'true'
+    outputs:
+      tag_name: ${{ steps.tag.outputs.tag }}
+      release_notes: ${{ steps.notes.outputs.notes }}
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Configure Git
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+
+    - name: Create tag
+      id: tag
+      run: |
+        VERSION="${{ needs.check-version.outputs.current_version }}"
+        TAG_NAME="v$VERSION"
+
+        # Check if tag already exists
+        if git rev-parse "$TAG_NAME" >/dev/null 2>&1; then
+          echo "Tag $TAG_NAME already exists"
+          echo "tag=$TAG_NAME" >> $GITHUB_OUTPUT
+        else
+          # Create and push tag
+          git tag -a "$TAG_NAME" -m "Release $TAG_NAME"
+          git push origin "$TAG_NAME"
+          echo "tag=$TAG_NAME" >> $GITHUB_OUTPUT
+          echo "Created tag: $TAG_NAME"
+        fi
+
+    - name: Generate release notes
+      id: notes
+      run: |
+        VERSION="${{ needs.check-version.outputs.current_version }}"
+        TAG_NAME="v$VERSION"
+
+        # Get previous tag
+        PREV_TAG=$(git describe --tags --abbrev=0 HEAD~1 2>/dev/null || echo "")
+
+        echo "Generating release notes for $TAG_NAME (previous: $PREV_TAG)"
+
+        # Create release notes
+        cat > release_notes.md << EOF
+        # 🎨 PaprWall v$VERSION - Modern Desktop Wallpaper Manager
+
+        ## What's New
+
+        This release includes improvements and bug fixes to make your wallpaper experience even better!
+
+        ## 📥 Quick Installation
+
+        ### 🐧 Linux
+        \`\`\`bash
+        # Download and extract
+        wget https://github.com/riturajprofile/paprwall/releases/download/$TAG_NAME/paprwall-v$VERSION-linux-x86_64.tar.gz
+        tar -xzf paprwall-v$VERSION-linux-x86_64.tar.gz
+        cd release-v$VERSION
+        ./paprwall-gui
+        \`\`\`
+
+        ### 🪟 Windows
+        \`\`\`cmd
+        :: Download paprwall-v$VERSION-windows-x64.zip
+        :: Extract and run paprwall-gui.exe
+        \`\`\`
+
+        ### 📦 PyPI (All Platforms)
+        \`\`\`bash
+        pip install paprwall
+        paprwall-gui
+        \`\`\`
+
+        ## 🔄 Changes in this Release
+
+        EOF
+
+        # Add commit messages since last tag
+        if [ -n "$PREV_TAG" ]; then
+          echo "### Commits since $PREV_TAG:" >> release_notes.md
+          echo "" >> release_notes.md
+          git log --pretty=format:"- %s (%h)" $PREV_TAG..HEAD >> release_notes.md
+        else
+          echo "### All commits in this release:" >> release_notes.md
+          echo "" >> release_notes.md
+          git log --pretty=format:"- %s (%h)" >> release_notes.md
+        fi
+
+        cat >> release_notes.md << EOF
+
+        ## 🛠️ Technical Details
+
+        - **Version**: $VERSION
+        - **Build Date**: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
+        - **Commit**: $(git rev-parse --short HEAD)
+        - **Python**: 3.8+
+
+        ## 📋 Supported Platforms
+
+        | Platform | Architecture | Package Type | Status |
+        |----------|-------------|--------------|---------|
+        | Linux | x86_64 | .tar.gz, .deb, .rpm | ✅ Supported |
+        | Windows | x64 | .zip, .exe | ✅ Supported |
+        | macOS | x64 | .tar.gz | ⚠️ Experimental |
+
+        ## 🎯 System Requirements
+
+        - **Linux**: Ubuntu 20.04+, Fedora 35+, or equivalent
+        - **Windows**: Windows 10 (1809+) or Windows 11
+        - **Display**: 720p or higher recommended
+        - **Memory**: 256MB RAM minimum
+        - **Storage**: 50MB free space
+        - **Network**: Internet connection for wallpaper downloads
+
+        ## ✨ Features Included
+
+        - 🎨 **Modern GUI** - Full-screen responsive design with 480px preview
+        - 💭 **Smart Quotes** - 6 categories: Motivational, Math, Science, Famous, Tech, Philosophy
+        - 🔄 **Auto-Rotation** - Customizable intervals with countdown timer
+        - 📜 **History Gallery** - Browse recent wallpapers with thumbnails
+        - 🖥️ **Multi-Desktop** - GNOME, KDE, XFCE, MATE, Cinnamon, LXQt support
+        - 🌐 **Web APIs** - Quotable.io & ZenQuotes.io integration
+        - 📁 **Local Files** - Use your own images with quote overlays
+
+        ## 🔒 Security & Verification
+
+        All release assets include SHA-256 checksums for verification:
+
+        \`\`\`bash
+        # Verify downloads
+        sha256sum -c *.sha256
+        \`\`\`
+
+        ## 🆘 Support & Issues
+
+        - **Documentation**: [README.md](https://github.com/riturajprofile/paprwall#readme)
+        - **Issues**: [GitHub Issues](https://github.com/riturajprofile/paprwall/issues)
+        - **Discussions**: [GitHub Discussions](https://github.com/riturajprofile/paprwall/discussions)
+
+        ---
+
+        **⭐ Like PaprWall?** Give us a star on GitHub and share with your friends!
+
+        **🐛 Found a bug?** Please [report it](https://github.com/riturajprofile/paprwall/issues/new) so we can fix it.
+
+        **💡 Have an idea?** Start a [discussion](https://github.com/riturajprofile/paprwall/discussions) and let's make it happen!
+        EOF
+
+        # Output the notes
+        {
+          echo 'notes<<EOF'
+          cat release_notes.md
+          echo EOF
+        } >> $GITHUB_OUTPUT
+
+  build-and-release:
+    name: Build and Create Release
+    runs-on: ubuntu-latest
+    needs: [check-version, create-tag]
+    if: needs.check-version.outputs.should_release == 'true'
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Trigger build workflow
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const { owner, repo } = context.repo;
+
+          // Trigger the main CI workflow which handles building and releasing
+          await github.rest.actions.createWorkflowDispatch({
+            owner,
+            repo,
+            workflow_id: 'ci.yml',
+            ref: 'main'
+          });
+
+          console.log('Triggered CI workflow for building and releasing');
+
+    - name: Create GitHub Release
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: ${{ needs.create-tag.outputs.tag_name }}
+        name: "PaprWall ${{ needs.create-tag.outputs.tag_name }}"
+        body: ${{ needs.create-tag.outputs.release_notes }}
+        draft: false
+        prerelease: ${{ github.event.inputs.prerelease == 'true' }}
+        generate_release_notes: false
+        token: ${{ secrets.GITHUB_TOKEN }}
+
+  post-release:
+    name: Post-Release Tasks
+    runs-on: ubuntu-latest
+    needs: [check-version, create-tag, build-and-release]
+    if: always() && needs.check-version.outputs.should_release == 'true'
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Update development files
+      run: |
+        VERSION="${{ needs.check-version.outputs.current_version }}"
+        echo "Released version: $VERSION"
+
+        # You could update changelog, bump dev version, etc. here
+        echo "Post-release tasks completed"
+
+    - name: Notify success
+      if: needs.build-and-release.result == 'success'
+      run: |
+        echo "## 🎉 Release Successful!" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**Version**: ${{ needs.create-tag.outputs.tag_name }}" >> $GITHUB_STEP_SUMMARY
+        echo "**Release**: https://github.com/${{ github.repository }}/releases/tag/${{ needs.create-tag.outputs.tag_name }}" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "The release has been created and the CI workflow has been triggered to build and upload all platform-specific packages." >> $GITHUB_STEP_SUMMARY
+
+    - name: Notify failure
+      if: needs.build-and-release.result == 'failure'
+      run: |
+        echo "## ❌ Release Failed!" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**Version**: ${{ needs.create-tag.outputs.tag_name }}" >> $GITHUB_STEP_SUMMARY
+        echo "**Error**: Build and release process failed" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "Please check the workflow logs and try again." >> $GITHUB_STEP_SUMMARY
+        exit 1
+
+  cleanup:
+    name: Cleanup
+    runs-on: ubuntu-latest
+    needs: [check-version]
+    if: always() && needs.check-version.outputs.should_release == 'false'
+
+    steps:
+    - name: No release needed
+      run: |
+        echo "## ℹ️ No Release Needed" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**Current Version**: ${{ needs.check-version.outputs.current_version }}" >> $GITHUB_STEP_SUMMARY
+        echo "**Reason**: Version unchanged since last commit" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "To create a release:" >> $GITHUB_STEP_SUMMARY
+        echo "1. Update the version in \`src/paprwall/__version__.py\`" >> $GITHUB_STEP_SUMMARY
+        echo "2. Commit and push the changes" >> $GITHUB_STEP_SUMMARY
+        echo "3. Or use the manual 'workflow_dispatch' trigger" >> $GITHUB_STEP_SUMMARY

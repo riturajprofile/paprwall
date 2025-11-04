@@ -1,1 +1,0 @@
-RPM package requires rpmbuild tool. See build_rpm.sh for build instructions.

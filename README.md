@@ -48,111 +48,58 @@ Transform your desktop with stunning wallpapers embedded with inspirational quot
 
 ### Installation
 
-#### 🐧 Linux
+#### 🐧 Linux (Recommended: AppImage)
 
-**Option 1: Package Managers (Easiest)**
 ```bash
-# Debian/Ubuntu (.deb package)
-wget https://github.com/riturajprofile/paprwall/releases/download/v1.0.2/paprwall_1.0.2_amd64.deb
-sudo dpkg -i paprwall_1.0.2_amd64.deb
-sudo apt-get install -f  # Fix dependencies if needed
+# Download universal AppImage (works on ALL distros)
+wget https://github.com/riturajprofile/paprwall/releases/latest/download/PaprWall-x86_64.AppImage
 
-# Fedora/RHEL (.rpm package)  
-wget https://github.com/riturajprofile/paprwall/releases/download/v1.0.2/paprwall-1.0.2-1.x86_64.rpm
-sudo dnf install paprwall-1.0.2-1.x86_64.rpm  # or: sudo yum install
+# Make executable and run
+chmod +x PaprWall-x86_64.AppImage
+./PaprWall-x86_64.AppImage
 ```
 
-**Option 2: Portable Binary**
+**Or use package manager:**
 ```bash
-# Download the latest release
-wget https://github.com/riturajprofile/paprwall/releases/download/v1.0.2/paprwall-v1.0.2-linux-x64.tar.gz
+# Debian/Ubuntu
+wget https://github.com/riturajprofile/paprwall/releases/latest/download/paprwall_amd64.deb
+sudo dpkg -i paprwall_amd64.deb
 
-# Extract and run
-tar -xzf paprwall-v1.0.2-linux-x64.tar.gz
-cd release-v1.0.2
-./paprwall-gui  # Auto-install prompt will appear on first run
-```
-
-**Option 3: Install from PyPI**
-```bash
-pip install paprwall
-```
-
-**Option 4: Install from Source**
-```bash
-git clone https://github.com/riturajprofile/paprwall.git
-cd paprwall
-pip install -e .
+# Fedora/RHEL
+wget https://github.com/riturajprofile/paprwall/releases/latest/download/paprwall-x86_64.rpm
+sudo dnf install paprwall-x86_64.rpm
 ```
 
 #### 🪟 Windows
 
-**Option 1: Installer (Recommended)**
-1. Download `paprwall-setup-1.0.2-win64.exe` from [Releases](https://github.com/riturajprofile/paprwall/releases)
-2. Run the installer (creates Start Menu shortcut, desktop entry, uninstaller)
-3. Find "PaprWall" in Start Menu
+1. Download `paprwall-windows-x64.zip` from [Releases](https://github.com/riturajprofile/paprwall/releases/latest)
+2. Extract and run `paprwall-gui.exe`
+3. First-run will offer system integration (optional)
 
-**Option 2: Portable Binary**
-1. Download `paprwall-v1.0.2-windows-x64.zip` from [Releases](https://github.com/riturajprofile/paprwall/releases)
-2. Extract the ZIP file
-3. Run `paprwall-gui.exe` (auto-install prompt will appear on first run)
+#### 🐍 PyPI (Any Platform)
 
-**Option 3: Install from PyPI**
-```cmd
+```bash
 pip install paprwall
-```
-
-**Option 4: Install from Source**
-```cmd
-git clone https://github.com/riturajprofile/paprwall.git
-cd paprwall
-pip install -e .
-```
-
-### Launch
-
-```bash
-# Launch GUI
 paprwall-gui
-
-# Or search "PaprWall" in your application menu
 ```
 
-### 🎯 First-Run Installation (Automatic)
+**📖 Full Installation Guide:** See [INSTALLATION.md](INSTALLATION.md) for detailed instructions, troubleshooting, and all installation methods.
 
-When you run the binary for the first time, PaprWall will automatically detect that it's not installed and ask:
+### 🎯 First-Run Behavior
 
-```
-"Would you like to install PaprWall to your system?"
-[Yes]     → Installs desktop entry, icon, and shortcuts
-[No]      → Skip installation this time
-[Cancel]  → Never ask again
-```
+When you run PaprWall for the first time, it will ask if you want to install it to your system:
 
-**What gets installed:**
-- ✅ Desktop entry (appears in application menu)
-- ✅ Application icon
-- ✅ Start menu shortcut (Windows) or .desktop file (Linux)
-- ✅ Uninstall script
+- **Yes** → Creates desktop shortcut and menu entry
+- **No** → Ask again next time
+- **Cancel** → Stay portable (never ask again)
 
-### Command-Line Options
-
-PaprWall supports command-line options for installation and uninstallation:
-
+You can also install/uninstall anytime via:
 ```bash
-# Show help and available options
-paprwall-gui --help
-
-# Install PaprWall to your system manually
-# Creates desktop entry, copies icon, and sets up uninstall script
-paprwall-gui --install
-
-# Uninstall PaprWall from your system
-# Removes application files, shortcuts, and optionally data
-paprwall-gui --uninstall
+paprwall-gui --install    # Install to system
+paprwall-gui --uninstall  # Remove from system
 ```
 
-**Uninstall Button**: You can also uninstall PaprWall directly from the GUI - look for the 🗑️ **Uninstall PaprWall** button at the bottom of the left panel.
+Or use the GUI buttons in Settings.
 
 ## 📋 Requirements
 
@@ -335,58 +282,22 @@ chmod +x paprwall-gui
 - Try different image URL
 - Check firewall settings
 
-## �️ Uninstallation
+## 🗑️ Uninstallation
 
-### Linux
-
-If you installed from the release package:
+**Via Command Line:**
 ```bash
-# Navigate to extracted release directory
-cd release-v1.0.0
-
-# Run uninstall script
-./uninstall.sh
+paprwall-gui --uninstall  # Linux/Windows
+pip uninstall paprwall    # If installed via pip
 ```
 
-Or if you moved the uninstall script:
-```bash
-# Run from anywhere
-./uninstall.sh
-```
+**Via GUI:**
+- Click the **"🗑️ Uninstall PaprWall"** button in Settings
 
-The uninstall script:
-- ✅ Removes the binary from `~/.local/bin/`
-- ✅ Removes desktop entry and icon
-- ✅ Updates system caches
-- ❓ Optionally removes data directory (`~/.local/share/paprwall/`)
+**Via System:**
+- **Linux**: `sudo apt remove paprwall` or `sudo dnf remove paprwall`
+- **Windows**: Start Menu → PaprWall → Uninstall
 
-If you installed from PyPI or source:
-```bash
-pip uninstall paprwall
-```
-
-### Windows
-
-If you installed from the release package:
-1. Navigate to extracted release folder
-2. Run `UNINSTALL.bat` as normal user
-3. Choose whether to remove data directory
-
-Or manually:
-1. Open Start Menu
-2. Find "PaprWall" folder
-3. Click "Uninstall PaprWall"
-
-The uninstall script:
-- ✅ Removes program from `%LOCALAPPDATA%\Programs\PaprWall`
-- ✅ Removes Start Menu shortcuts
-- ✅ Removes Desktop shortcut
-- ❓ Optionally removes data directory (`%APPDATA%\PaprWall`)
-
-If you installed from PyPI or source:
-```cmd
-pip uninstall paprwall
-```
+**📖 Full details:** See [INSTALLATION.md](INSTALLATION.md) for complete uninstallation instructions.
 
 ## �📦 Building from Source
 
