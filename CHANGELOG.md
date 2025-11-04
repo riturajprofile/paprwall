@@ -5,6 +5,33 @@ All notable changes to Paprwall will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.0] - 2025-11-04
+
+### Added
+- ⏱️ **Real-time Countdown Timer**: Display showing MM:SS until next wallpaper rotation
+- 🔄 **Auto Fetch Button**: One-click button to fetch and immediately apply new wallpaper (sync)
+- 🎛️ **Auto-Rotation Controls**: Toggle checkbox with configurable interval (minutes)
+- 🧵 **Background Timer Thread**: Non-blocking countdown updates every second
+- 📊 **Timer Auto-Reset**: Timer resets automatically when manually changing wallpapers
+
+### Features
+- 🌐 Picsum-only image source (https://picsum.photos/1920/1080)
+- 🖼️ Modern web-inspired GUI with large preview area
+- 💻 CLI interface with fetch/next/prev/set/current commands
+- 📦 Standalone binaries for Linux, Windows, macOS
+- 🤖 Automated builds via GitHub Actions
+- 📦 DEB and RPM packages for Linux
+- 🔧 One-line installer for Linux
+
+### Technical
+- Thread-safe UI updates using root.after()
+- Proper daemon thread cleanup with stop flags
+- Non-blocking HTTP requests for downloads
+- Comprehensive error handling
+- Real-time status bar feedback
+
+---
+
 ## [1.1.0] - 2025-11-04
 ## [2.0.0] - 2025-11-04
 
@@ -76,9 +103,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Release Links
 
-- [2.0.0](https://github.com/riturajprofile/paprwall/releases/tag/v2.0.0) - GUI Binaries & Picsum-only
-- [1.1.0](https://github.com/riturajprofile/paprwall/releases/tag/v1.1.0) - Distribution Ready
-- [1.0.0](https://github.com/riturajprofile/paprwall/releases/tag/v1.0.0) - Initial Release
+- [0.1.0](https://github.com/riturajprofile/paprwall/releases/tag/v0.1.0) - First Release with Countdown Timer & Auto-Fetch
 
 ## Upgrade Instructions
 
