@@ -4,15 +4,15 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "paprwall"
-version = "0.1.0"
-description = "Picsum-powered wallpaper app with GUI & CLI for Linux/Windows"
+version = "1.0.0"
+description = "Modern Desktop Wallpaper Manager with GUI & Auto-Rotation for Linux/Windows"
 authors = [{name = "riturajprofile", email = "riturajprofile.me@gmail.com"}]
 license = {text = "CC BY-NC 4.0"}
 readme = "README.md"
 requires-python = ">=3.8"
 keywords = ["wallpaper", "linux", "windows", "desktop", "picsum", "paprwall", "gui", "cli"]
 classifiers = [
-    "Development Status :: 4 - Beta",
+    "Development Status :: 5 - Production/Stable",
     "Environment :: X11 Applications :: GTK",
     "Intended Audience :: End Users/Desktop",
     "License :: Other/Proprietary License",

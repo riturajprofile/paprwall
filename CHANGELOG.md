@@ -81,23 +81,104 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - � Hardcoded API keys for instant use
 - 🧹 Removed unnecessary build scripts
 
-## [1.0.0] - 2025-11-03
+## [1.0.0] - 2025-11-04
+
+### 🎉 Major Release - Complete Redesign
+
+#### 🎨 Modern GUI Interface
+- **Full-screen responsive layout** - Maximized by default, efficient space usage
+- **Large wallpaper preview** (480px sidebar) with embedded quotes
+- **Dark theme** with professional color palette
+- **Compact header** with quick actions
+- **Dynamic content panels** that expand to fill available space
+
+#### 💭 Quote System
+- **6 Quote Categories**: Motivational, Mathematics, Science, Famous People, Technology, Philosophy
+- **Category-specific quotes** with curated fallbacks
+- **Quote embedding** directly on wallpaper images (top-right corner)
+- **Semi-transparent overlay** for better readability
+- **Custom quote support** - Add your own inspirational text
+- **API integration** (quotable.io, zenquotes.io)
+
+#### 🔄 Auto-Rotation
+- **Enabled by default** with 60-minute interval
+- **Real-time countdown timer** (MM:SS format)
+- **Auto-fetch on startup** - 2 images fetched automatically
+- **Configurable intervals** - Adjust rotation time
+- **Smart timer reset** - Resets when manually changing wallpapers
+
+#### � Enhanced History
+- **Recent History Gallery** with large thumbnails (120x75px)
+- **Preview & Set buttons** for each history item
+- **Click to preview** without setting wallpaper
+- **Direct set** from history gallery
+- **Removed sidebar history** for cleaner layout
+- **No favorites clutter** - History is the main feature
+
+#### 🖼️ Wallpaper Management
+- **Picsum Photos integration** (https://picsum.photos)
+- **URL-based fetching** with progress indicators
+- **Local file browser** support
+- **Quote embedded on save** - Permanent quote on wallpaper file
+- **High-quality exports** (JPEG quality=95)
+- **Auto-fetch on launch** - Immediate wallpaper preview
+
+#### 🎯 User Experience
+- **Responsive design** - Works on 720p, 1080p, and higher
+- **Clean typography** - Segoe UI, Poppins, Georgia fonts
+- **Hover effects** - Visual feedback on interactive elements
+- **Status bar updates** - Real-time operation feedback
+- **Toast notifications** - Non-intrusive alerts
+- **Smooth scrolling** - Scrollbars appear only when needed
+
+#### 🛠️ Technical Improvements
+- **Thread-safe operations** - Non-blocking UI
+- **Smart image resizing** - Maintains aspect ratios
+- **Font fallback system** - DejaVu → Liberation → default
+- **Error handling** - Graceful degradation
+- **Memory efficient** - Proper cleanup of images
+- **Cross-platform** - Linux (GNOME, KDE, XFCE) support
+
+#### 🚫 Removed Features
+- Multi-source API support (simplified to Picsum)
+- Theme selector (removed for simplicity)
+- Favorites system (replaced with enhanced history)
+- Sidebar recent history (moved to main gallery)
+- Complex configuration options
 
 ### Added
-- 🎨 Initial release of Paprwall
-- 🌐 Multi-source wallpaper support (Pixabay, Unsplash, Pexels)
-- 📁 Local image management
-- 🔄 Automatic wallpaper rotation
-- 🎛️ Theme support (nature, city, space, ocean, minimal, etc.)
-- 🔍 Custom search queries
-- 📸 Photographer attribution system
-- 🖥️ Desktop environment support (GNOME, KDE, XFCE, MATE, etc.)
-- 💻 Dual interface: CLI and GUI
-- ⚙️ Systemd service for auto-start
-- 📊 Wallpaper history navigation
-- 🔑 Custom API key support
-- 🎨 Source enable/disable functionality
-- 📝 Comprehensive logging
+- 🎨 Modern full-screen GUI with dark theme
+- � Motivational quote embedding on wallpapers
+- 🔄 Auto-rotation with countdown timer
+- 📜 Enhanced history gallery with preview
+- 🎯 6 quote categories to choose from
+- 🖼️ Top-right corner quote positioning
+- 📊 Real-time status updates
+- � Custom quote input support
+- 🎨 Professional color scheme
+- ✨ Hover effects and visual feedback
+
+### Changed
+- 🌐 Simplified to Picsum Photos only
+- 📐 Full-screen maximized window by default
+- 🎨 Complete UI redesign with web-inspired layout
+- 💾 Quote embedded permanently on wallpaper images
+- 📜 History moved from sidebar to main panel
+- 🔄 Auto-rotation enabled by default
+
+### Removed
+- ❌ Multi-API support (Pixabay, Unsplash, Pexels)
+- ❌ Favorites feature
+- ❌ Wallpaper theme selector
+- ❌ Sidebar recent history thumbnails
+- ❌ Favorite button from actions
+
+### Fixed
+- � Layout responsiveness issues
+- 🐛 Quote overlay visibility
+- 🐛 Timer thread cleanup
+- 🐛 Button enable/disable states
+- 🐛 History gallery refresh
 
 ---
 

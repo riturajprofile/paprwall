@@ -10,12 +10,13 @@ import platform
 import subprocess
 import threading
 import time
+import random
 from pathlib import Path
 from datetime import datetime
 from urllib.parse import urlparse
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
-from PIL import Image, ImageTk
+from PIL import Image, ImageTk, ImageDraw, ImageFont
 import requests
 
 
@@ -94,9 +95,6 @@ class WallpaperManagerGUI:
         self.timer_thread = None
         self.stop_timer_flag = False
         
-        # Favorites
-        self.favorites = self.load_favorites()
-        
         # Random resolutions
         self.resolutions = [
             "1920x1080", "2560x1440", "3840x2160",
@@ -125,8 +123,12 @@ class WallpaperManagerGUI:
         # Load current wallpaper
         self.refresh_display()
         
-        # Auto-fetch wallpaper on launch
+        # Auto-fetch wallpaper and quote on launch
         self.root.after(500, self.auto_fetch_on_launch)
+        self.root.after(800, self.fetch_random_quote)
+        
+        # Fetch second image and start auto-rotation
+        self.root.after(5000, self.fetch_second_image_and_start_rotation)
     
     def setup_ui(self):
         """Setup the user interface with responsive full-screen layout."""
@@ -256,7 +258,7 @@ class WallpaperManagerGUI:
             pady=4
         )
         
-        # Quote Overlay Frame (bottom of canvas)
+        # Quote Overlay Frame (bottom of canvas with semi-transparent background)
         self.quote_frame = tk.Frame(self.preview_canvas, bg='#000000')
         
         self.quote_text = tk.Label(
@@ -265,10 +267,13 @@ class WallpaperManagerGUI:
             fg=self.colors['text_primary'],
             bg='#000000',
             font=self.fonts['quote'],
-            wraplength=350,
+            wraplength=420,
             justify='left'
         )
-        self.quote_text.pack(side=tk.LEFT, padx=12, pady=8)
+        self.quote_text.pack(side=tk.LEFT, padx=15, pady=10)
+        
+        # Current quote text storage
+        self.current_quote = '"Change your wallpaper, change your mood"'
         
         # Placeholder (will be positioned dynamically)
         self.placeholder_id = self.preview_canvas.create_text(
@@ -283,46 +288,8 @@ class WallpaperManagerGUI:
         controls_section = tk.Frame(left_panel, bg=self.colors['bg_secondary'])
         controls_section.pack(side=tk.BOTTOM, fill=tk.X, expand=False)
         
-        # Thin separator
-        tk.Frame(controls_section, bg=self.colors['border'], height=1).pack(fill=tk.X, pady=(0, 8))
-        
-        # History Section
-        history_label = tk.Label(
-            controls_section,
-            text="Recent History",
-            bg=self.colors['bg_secondary'],
-            fg=self.colors['text_primary'],
-            font=self.fonts['heading'],
-            anchor='w'
-        )
-        history_label.pack(fill=tk.X, padx=12, pady=(8, 5))
-        
-        # History thumbnails (scrollable)
-        history_frame = tk.Frame(controls_section, bg=self.colors['bg_secondary'])
-        history_frame.pack(fill=tk.X, padx=12, pady=(0, 8))
-        
-        history_canvas = tk.Canvas(
-            history_frame,
-            bg=self.colors['bg_secondary'],
-            height=100,
-            highlightthickness=0
-        )
-        history_scrollbar = ttk.Scrollbar(history_frame, orient=tk.VERTICAL, command=history_canvas.yview)
-        
-        self.history_container = tk.Frame(history_canvas, bg=self.colors['bg_secondary'])
-        self.history_container.bind(
-            "<Configure>",
-            lambda e: history_canvas.configure(scrollregion=history_canvas.bbox("all"))
-        )
-        
-        history_canvas.create_window((0, 0), window=self.history_container, anchor='nw')
-        history_canvas.configure(yscrollcommand=history_scrollbar.set)
-        
-        history_canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-        history_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-        
         # URL Fetch Section
-        tk.Frame(controls_section, bg=self.colors['border'], height=1).pack(fill=tk.X, pady=8)
+        tk.Frame(controls_section, bg=self.colors['border'], height=1).pack(fill=tk.X, pady=(8, 8))
         
         url_label = tk.Label(
             controls_section,
@@ -401,6 +368,129 @@ class WallpaperManagerGUI:
         right_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
         right_canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         
+        # --- Motivational Quote Section ---
+        quote_header = tk.Frame(right_content, bg=self.colors['bg_primary'])
+        quote_header.pack(fill=tk.X, padx=15, pady=(12, 8))
+        
+        tk.Label(
+            quote_header,
+            text="💭 Motivational Quote",
+            bg=self.colors['bg_primary'],
+            fg=self.colors['text_primary'],
+            font=self.fonts['heading'],
+            anchor='w'
+        ).pack(side=tk.LEFT)
+        
+        quote_card = tk.Frame(
+            right_content,
+            bg=self.colors['bg_secondary'],
+            relief=tk.FLAT
+        )
+        quote_card.pack(fill=tk.X, padx=15, pady=(0, 12))
+        
+        # Quote category selector
+        category_frame = tk.Frame(quote_card, bg=self.colors['bg_secondary'])
+        category_frame.pack(fill=tk.X, padx=12, pady=(12, 8))
+        
+        tk.Label(
+            category_frame,
+            text="Category:",
+            bg=self.colors['bg_secondary'],
+            fg=self.colors['text_secondary'],
+            font=self.fonts['body']
+        ).pack(side=tk.LEFT, padx=(0, 8))
+        
+        # Quote categories
+        quote_categories = [
+            "💡 Motivational",
+            "🔢 Mathematics",
+            "🔬 Science",
+            "🌟 Famous People",
+            "💻 Technology",
+            "📚 Philosophy"
+        ]
+        
+        self.quote_category = tk.StringVar(value="💡 Motivational")
+        category_dropdown = ttk.Combobox(
+            category_frame,
+            textvariable=self.quote_category,
+            values=quote_categories,
+            state='readonly',
+            width=18,
+            font=self.fonts['body']
+        )
+        category_dropdown.pack(side=tk.LEFT)
+        
+        # Quote display area
+        quote_display_frame = tk.Frame(quote_card, bg=self.colors['bg_tertiary'])
+        quote_display_frame.pack(fill=tk.X, padx=12, pady=(8, 8))
+        
+        self.quote_display = tk.Label(
+            quote_display_frame,
+            text=self.current_quote,
+            bg=self.colors['bg_tertiary'],
+            fg=self.colors['text_primary'],
+            font=self.fonts['quote'],
+            wraplength=600,
+            justify='center',
+            anchor='center',
+            pady=15
+        )
+        self.quote_display.pack(fill=tk.X, padx=15)
+        
+        # Quote input area
+        quote_input_label = tk.Label(
+            quote_card,
+            text="CUSTOM QUOTE",
+            bg=self.colors['bg_secondary'],
+            fg=self.colors['text_muted'],
+            font=self.fonts['small'],
+            anchor='w'
+        )
+        quote_input_label.pack(fill=tk.X, padx=12, pady=(8, 3))
+        
+        self.quote_input = tk.Text(
+            quote_card,
+            bg=self.colors['bg_tertiary'],
+            fg=self.colors['text_primary'],
+            font=self.fonts['body'],
+            relief=tk.FLAT,
+            bd=0,
+            wrap=tk.WORD,
+            height=3,
+            insertbackground=self.colors['text_primary']
+        )
+        self.quote_input.pack(fill=tk.X, padx=12, pady=(0, 8))
+        self.quote_input.insert(1.0, "Type your own inspirational quote here...")
+        
+        # Quote action buttons
+        quote_button_frame = tk.Frame(quote_card, bg=self.colors['bg_secondary'])
+        quote_button_frame.pack(fill=tk.X, padx=12, pady=(0, 12))
+        
+        tk.Button(
+            quote_button_frame,
+            text="🎲 Random Quote",
+            command=self.fetch_random_quote,
+            bg=self.colors['accent_purple'],
+            fg='white',
+            font=self.fonts['button'],
+            relief=tk.FLAT,
+            cursor='hand2',
+            pady=8
+        ).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 4))
+        
+        tk.Button(
+            quote_button_frame,
+            text="✓ Apply Custom",
+            command=self.apply_custom_quote,
+            bg=self.colors['accent_cyan'],
+            fg='white',
+            font=self.fonts['button'],
+            relief=tk.FLAT,
+            cursor='hand2',
+            pady=8
+        ).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(4, 0))
+        
         # --- Auto-Rotation Settings ---
         rotation_header = tk.Frame(right_content, bg=self.colors['bg_primary'])
         rotation_header.pack(fill=tk.X, padx=15, pady=(0, 8))
@@ -425,7 +515,7 @@ class WallpaperManagerGUI:
         toggle_frame = tk.Frame(rotation_card, bg=self.colors['bg_secondary'])
         toggle_frame.pack(fill=tk.X, padx=12, pady=(12, 8))
         
-        self.auto_rotate_var = tk.BooleanVar(value=False)
+        self.auto_rotate_var = tk.BooleanVar(value=True)
         toggle_check = ttk.Checkbutton(
             toggle_frame,
             text="Enable Auto-Rotate",
@@ -522,48 +612,57 @@ class WallpaperManagerGUI:
         self.current_text.insert(1.0, "No wallpaper set yet")
         self.current_text.config(state=tk.DISABLED)
         
-        # --- Favorites ---
-        favorites_header = tk.Frame(right_content, bg=self.colors['bg_primary'])
-        favorites_header.pack(fill=tk.X, padx=15, pady=(0, 8))
+        # --- Recent History Gallery ---
+        history_gallery_header = tk.Frame(right_content, bg=self.colors['bg_primary'])
+        history_gallery_header.pack(fill=tk.X, padx=15, pady=(0, 8))
         
         tk.Label(
-            favorites_header,
-            text="❤️ Favorites",
+            history_gallery_header,
+            text="📜 Recent History Gallery",
             bg=self.colors['bg_primary'],
             fg=self.colors['text_primary'],
             font=self.fonts['heading'],
             anchor='w'
         ).pack(side=tk.LEFT)
         
-        favorites_card = tk.Frame(
+        tk.Label(
+            history_gallery_header,
+            text="Click to preview and set",
+            bg=self.colors['bg_primary'],
+            fg=self.colors['text_muted'],
+            font=self.fonts['small'],
+            anchor='e'
+        ).pack(side=tk.RIGHT)
+        
+        history_gallery_card = tk.Frame(
             right_content,
             bg=self.colors['bg_secondary'],
             relief=tk.FLAT
         )
-        favorites_card.pack(fill=tk.X, padx=15, pady=(0, 12))
+        history_gallery_card.pack(fill=tk.X, padx=15, pady=(0, 12))
         
-        fav_frame = tk.Frame(favorites_card, bg=self.colors['bg_secondary'])
-        fav_frame.pack(fill=tk.X, padx=12, pady=12)
+        gallery_frame = tk.Frame(history_gallery_card, bg=self.colors['bg_secondary'])
+        gallery_frame.pack(fill=tk.X, padx=12, pady=12)
         
-        fav_canvas = tk.Canvas(
-            fav_frame,
+        gallery_canvas = tk.Canvas(
+            gallery_frame,
             bg=self.colors['bg_secondary'],
-            height=120,
+            height=180,
             highlightthickness=0
         )
-        fav_scrollbar = ttk.Scrollbar(fav_frame, orient=tk.VERTICAL, command=fav_canvas.yview)
+        gallery_scrollbar = ttk.Scrollbar(gallery_frame, orient=tk.VERTICAL, command=gallery_canvas.yview)
         
-        self.favorites_container = tk.Frame(fav_canvas, bg=self.colors['bg_secondary'])
-        self.favorites_container.bind(
+        self.history_gallery_container = tk.Frame(gallery_canvas, bg=self.colors['bg_secondary'])
+        self.history_gallery_container.bind(
             "<Configure>",
-            lambda e: fav_canvas.configure(scrollregion=fav_canvas.bbox("all"))
+            lambda e: gallery_canvas.configure(scrollregion=gallery_canvas.bbox("all"))
         )
         
-        fav_canvas.create_window((0, 0), window=self.favorites_container, anchor='nw')
-        fav_canvas.configure(yscrollcommand=fav_scrollbar.set)
+        gallery_canvas.create_window((0, 0), window=self.history_gallery_container, anchor='nw')
+        gallery_canvas.configure(yscrollcommand=gallery_scrollbar.set)
         
-        fav_canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-        fav_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        gallery_canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        gallery_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
         
         # --- Primary Action Buttons ---
         action_frame = tk.Frame(right_content, bg=self.colors['bg_primary'])
@@ -581,22 +680,7 @@ class WallpaperManagerGUI:
             cursor='hand2',
             pady=15
         )
-        self.set_button.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 8))
-        
-        self.favorite_button = tk.Button(
-            action_frame,
-            text="❤️",
-            command=self.add_to_favorites,
-            state=tk.DISABLED,
-            bg=self.colors['warning_yellow'],
-            fg='white',
-            font=('Segoe UI', 18),
-            relief=tk.FLAT,
-            cursor='hand2',
-            width=5,
-            pady=15
-        )
-        self.favorite_button.pack(side=tk.RIGHT)
+        self.set_button.pack(fill=tk.X, expand=True)
         
         # Progress bar (initially hidden)
         self.progress = ttk.Progressbar(
@@ -768,12 +852,118 @@ class WallpaperManagerGUI:
             self.preview_image_path = filename
             self.display_preview(filename, f"Local: {os.path.basename(filename)}")
     
+    def embed_quote_on_image(self, img):
+        """Embed the current quote on the image at top-right corner, blended with the image."""
+        try:
+            # Create a copy to avoid modifying original
+            img_with_quote = img.copy()
+            
+            # Image dimensions
+            img_width, img_height = img_with_quote.size
+            
+            # Try to load a nice font, fallback to default
+            try:
+                # Smaller font size for top-right corner
+                font_size = max(18, img_width // 70)
+                font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSerif-Italic.ttf", font_size)
+            except:
+                try:
+                    font = ImageFont.truetype("/usr/share/fonts/truetype/liberation/LiberationSerif-Italic.ttf", font_size)
+                except:
+                    font = ImageFont.load_default()
+            
+            # Prepare quote text
+            quote_text = self.current_quote
+            
+            # Create a temporary draw object for text measurement
+            temp_draw = ImageDraw.Draw(img_with_quote)
+            
+            # Wrap text to fit in top-right corner (30% of image width)
+            max_width = int(img_width * 0.3)
+            words = quote_text.split()
+            lines = []
+            current_line = []
+            
+            for word in words:
+                current_line.append(word)
+                line_text = ' '.join(current_line)
+                bbox = temp_draw.textbbox((0, 0), line_text, font=font)
+                if bbox[2] - bbox[0] > max_width:
+                    if len(current_line) > 1:
+                        current_line.pop()
+                        lines.append(' '.join(current_line))
+                        current_line = [word]
+                    else:
+                        lines.append(line_text)
+                        current_line = []
+            
+            if current_line:
+                lines.append(' '.join(current_line))
+            
+            quote_text = '\n'.join(lines)
+            bbox = temp_draw.textbbox((0, 0), quote_text, font=font)
+            text_width = bbox[2] - bbox[0]
+            text_height = bbox[3] - bbox[1]
+            
+            # Position at top-right corner with padding
+            padding = 40
+            x = img_width - text_width - padding
+            y = padding
+            
+            # Convert image to RGBA for blending
+            if img_with_quote.mode != 'RGBA':
+                img_with_quote = img_with_quote.convert('RGBA')
+            
+            # Create overlay with gradient/blur effect for better blending
+            overlay = Image.new('RGBA', img_with_quote.size, (0, 0, 0, 0))
+            overlay_draw = ImageDraw.Draw(overlay)
+            
+            # Draw a subtle semi-transparent background with more transparency
+            bg_padding = 15
+            bg_box = [
+                x - bg_padding,
+                y - bg_padding,
+                x + text_width + bg_padding,
+                y + text_height + bg_padding
+            ]
+            
+            # Very subtle background (lower opacity for better blending)
+            overlay_draw.rectangle(bg_box, fill=(0, 0, 0, 100))
+            
+            # Composite the overlay
+            img_with_quote = Image.alpha_composite(img_with_quote, overlay)
+            
+            # Draw the text with a subtle shadow for depth
+            draw = ImageDraw.Draw(img_with_quote)
+            
+            # Shadow (offset by 2 pixels)
+            shadow_offset = 2
+            draw.text((x + shadow_offset, y + shadow_offset), quote_text, font=font, fill=(0, 0, 0, 120))
+            
+            # Main text
+            draw.text((x, y), quote_text, font=font, fill=(255, 255, 255, 240), align='right')
+            
+            # Convert back to RGB
+            if img_with_quote.mode == 'RGBA':
+                rgb_img = Image.new('RGB', img_with_quote.size, (255, 255, 255))
+                rgb_img.paste(img_with_quote, mask=img_with_quote.split()[3])
+                return rgb_img
+            
+            return img_with_quote
+            
+        except Exception as e:
+            print(f"Error embedding quote: {e}")
+            return img
+    
     def display_preview(self, image_path, info_text):
         """Display image preview in canvas."""
         try:
             # Open and resize image
             img = Image.open(image_path)
             original_size = f"{img.width} × {img.height}"
+            
+            # Embed quote on the image
+            img = self.embed_quote_on_image(img)
             
             # Force canvas to update its geometry
             self.preview_canvas.update_idletasks()
@@ -820,19 +1010,8 @@ class WallpaperManagerGUI:
                 tags="resolution"
             )
             
-            # Place quote overlay at bottom
-            self.preview_canvas.delete("quote")
-            self.preview_canvas.create_window(
-                0, canvas_height,
-                window=self.quote_frame,
-                anchor='sw',
-                width=canvas_width,
-                tags="quote"
-            )
-            
-            # Enable set and favorite buttons
+            # Enable set button
             self.set_button.config(state=tk.NORMAL)
-            self.favorite_button.config(state=tk.NORMAL)
             self.update_status("Preview loaded", self.colors['success_green'])
             
         except Exception as e:
@@ -846,8 +1025,19 @@ class WallpaperManagerGUI:
             return
         
         try:
+            self.update_status("Preparing wallpaper...", self.colors['accent_blue'])
+            
+            # Load original image and embed quote
+            img = Image.open(self.preview_image_path)
+            img_with_quote = self.embed_quote_on_image(img)
+            
+            # Save the image with embedded quote
+            filename = f"wallpaper_quoted_{datetime.now().strftime('%Y%m%d_%H%M%S')}.jpg"
+            temp_path = self.wallpapers_dir / filename
+            img_with_quote.save(temp_path, quality=95)
+            
             # Convert to absolute path
-            image_path = os.path.abspath(self.preview_image_path)
+            image_path = os.path.abspath(temp_path)
             
             self.update_status("Setting wallpaper...", self.colors['accent_blue'])
             
@@ -962,94 +1152,10 @@ class WallpaperManagerGUI:
         self.save_history()
     
     def refresh_display(self):
-        """Refresh the history and current wallpaper display."""
+        """Refresh the history gallery and current wallpaper display."""
         self.history = self.load_history()
-        self.favorites = self.load_favorites()
-        self.display_history()
-        self.display_favorites()
+        self.display_history_gallery()
         self.display_current_wallpaper()
-    
-    def display_history(self):
-        """Display history thumbnails."""
-        for widget in self.history_container.winfo_children():
-            widget.destroy()
-        
-        if not self.history:
-            tk.Label(
-                self.history_container,
-                text="No history yet",
-                font=self.fonts['body'],
-                bg=self.colors['bg_secondary'],
-                fg=self.colors['text_muted']
-            ).pack(pady=10)
-            return
-        
-        for idx, item in enumerate(self.history):
-            self.create_history_thumbnail(item, idx)
-    
-    def create_history_thumbnail(self, item, index):
-        """Create a thumbnail widget for a history item."""
-        frame = tk.Frame(
-            self.history_container,
-            bg='white',
-            relief=tk.SOLID,
-            borderwidth=1
-        )
-        frame.pack(fill=tk.X, pady=3)
-        
-        try:
-            # Load thumbnail
-            img = Image.open(item["path"])
-            img.thumbnail((70, 45), Image.Resampling.LANCZOS)
-            photo = ImageTk.PhotoImage(img)
-            
-            inner = tk.Frame(frame, bg='white')
-            inner.pack(fill=tk.X, padx=5, pady=5)
-            
-            label = tk.Label(inner, image=photo, bg='white', cursor="hand2")
-            label.image = photo
-            label.pack(side=tk.LEFT, padx=(0, 8))
-            
-            info_frame = tk.Frame(inner, bg='white')
-            info_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-            
-            tk.Label(
-                info_frame,
-                text=item['filename'][:22],
-                font=("Segoe UI", 8, "bold"),
-                bg='white',
-                fg=self.colors['text'],
-                anchor=tk.W
-            ).pack(fill=tk.X)
-            
-            tk.Label(
-                info_frame,
-                text=item['timestamp'][:10],
-                font=("Segoe UI", 7),
-                bg='white',
-                fg='gray',
-                anchor=tk.W
-            ).pack(fill=tk.X)
-            
-            label.bind("<Button-1>", lambda e, path=item["path"]: self.set_from_history(path))
-            
-            def on_enter(e):
-                frame.config(bg=self.colors['accent'])
-            def on_leave(e):
-                frame.config(bg='white')
-            
-            frame.bind("<Enter>", on_enter)
-            frame.bind("<Leave>", on_leave)
-            label.bind("<Enter>", on_enter)
-            
-        except Exception:
-            tk.Label(
-                frame,
-                text=f"Error: {item['filename'][:20]}",
-                font=("Segoe UI", 8),
-                bg='white',
-                fg='red'
-            ).pack(padx=5, pady=5)
     
     def set_from_history(self, image_path):
         """Set wallpaper from history."""
@@ -1240,162 +1346,136 @@ class WallpaperManagerGUI:
         except Exception as e:
             messagebox.showerror("Error", f"Could not open folder: {str(e)}")
     
-    def load_favorites(self):
-        """Load favorites from JSON file."""
-        favorites_file = self.data_dir / "favorites.json"
-        if favorites_file.exists():
-            try:
-                with open(favorites_file, 'r') as f:
-                    return json.load(f)
-            except Exception as e:
-                print(f"Error loading favorites: {e}")
-                return []
-        return []
-    
-    def save_favorites(self):
-        """Save favorites to JSON file."""
-        try:
-            favorites_file = self.data_dir / "favorites.json"
-            with open(favorites_file, 'w') as f:
-                json.dump(self.favorites, f, indent=2)
-        except Exception as e:
-            print(f"Error saving favorites: {e}")
-    
-    def add_to_favorites(self):
-        """Add current preview to favorites."""
-        if not self.preview_image_path:
-            messagebox.showwarning("No Image", "Please select an image first")
-            return
-        
-        # Check if already in favorites
-        for fav in self.favorites:
-            if fav.get("path") == self.preview_image_path:
-                messagebox.showinfo("Already Added", "This wallpaper is already in favorites")
-                return
-        
-        entry = {
-            "path": self.preview_image_path,
-            "timestamp": datetime.now().isoformat(),
-            "filename": os.path.basename(self.preview_image_path)
-        }
-        
-        self.favorites.insert(0, entry)
-        self.favorites = self.favorites[:10]  # Keep max 10 favorites
-        self.save_favorites()
-        self.display_favorites()
-        
-        self.update_status("Added to favorites", self.colors['success_green'])
-        messagebox.showinfo("Success", "Wallpaper added to favorites!")
-    
-    def display_favorites(self):
-        """Display favorite wallpapers."""
-        for widget in self.favorites_container.winfo_children():
+    def display_history_gallery(self):
+        """Display history wallpapers in a gallery format with larger thumbnails."""
+        for widget in self.history_gallery_container.winfo_children():
             widget.destroy()
         
-        if not self.favorites:
+        if not self.history:
             tk.Label(
-                self.favorites_container,
-                text="No favorites yet",
+                self.history_gallery_container,
+                text="No history yet",
                 font=self.fonts['body'],
                 bg=self.colors['bg_secondary'],
                 fg=self.colors['text_muted']
-            ).pack(pady=10)
+            ).pack(pady=20)
             return
         
-        for idx, item in enumerate(self.favorites):
-            self.create_favorite_thumbnail(item, idx)
+        for idx, item in enumerate(self.history):
+            self.create_history_gallery_thumbnail(item, idx)
     
-    def create_favorite_thumbnail(self, item, index):
-        """Create a thumbnail widget for a favorite item."""
+    def create_history_gallery_thumbnail(self, item, index):
+        """Create a larger thumbnail widget for history gallery with preview and set functionality."""
         frame = tk.Frame(
-            self.favorites_container,
-            bg='#fff3cd',
+            self.history_gallery_container,
+            bg=self.colors['bg_tertiary'],
             relief=tk.SOLID,
-            borderwidth=1
+            borderwidth=1,
+            highlightthickness=2,
+            highlightbackground=self.colors['border']
         )
-        frame.pack(fill=tk.X, pady=3)
+        frame.pack(fill=tk.X, pady=5)
         
         try:
-            # Load thumbnail
+            # Load larger thumbnail for gallery
             img = Image.open(item["path"])
-            img.thumbnail((55, 35), Image.Resampling.LANCZOS)
+            img.thumbnail((120, 75), Image.Resampling.LANCZOS)
             photo = ImageTk.PhotoImage(img)
             
-            inner = tk.Frame(frame, bg='#fff3cd')
-            inner.pack(fill=tk.X, padx=5, pady=5)
+            inner = tk.Frame(frame, bg=self.colors['bg_tertiary'])
+            inner.pack(fill=tk.X, padx=8, pady=8)
             
-            label = tk.Label(inner, image=photo, bg='#fff3cd', cursor="hand2")
-            label.image = photo
-            label.pack(side=tk.LEFT, padx=(0, 8))
+            # Image thumbnail
+            img_label = tk.Label(inner, image=photo, bg=self.colors['bg_tertiary'], cursor="hand2")
+            img_label.image = photo
+            img_label.pack(side=tk.LEFT, padx=(0, 10))
             
-            info_frame = tk.Frame(inner, bg='#fff3cd')
+            # Info frame
+            info_frame = tk.Frame(inner, bg=self.colors['bg_tertiary'])
             info_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
             
             tk.Label(
                 info_frame,
-                text=item['filename'][:20],
-                font=("Segoe UI", 8, "bold"),
-                bg='#fff3cd',
-                fg='#856404',
+                text=item['filename'][:30],
+                font=("Segoe UI", 9, "bold"),
+                bg=self.colors['bg_tertiary'],
+                fg=self.colors['text_primary'],
                 anchor=tk.W
             ).pack(fill=tk.X)
             
-            # Remove button
-            remove_btn = tk.Label(
-                inner,
-                text="✖",
-                font=("Segoe UI", 10, "bold"),
-                bg='#fff3cd',
-                fg='#dc3545',
-                cursor="hand2"
+            tk.Label(
+                info_frame,
+                text=item['timestamp'][:10],
+                font=("Segoe UI", 8),
+                bg=self.colors['bg_tertiary'],
+                fg=self.colors['text_muted'],
+                anchor=tk.W
+            ).pack(fill=tk.X, pady=(2, 0))
+            
+            # Action buttons frame
+            btn_frame = tk.Frame(inner, bg=self.colors['bg_tertiary'])
+            btn_frame.pack(side=tk.RIGHT, padx=(10, 0))
+            
+            # Preview button
+            preview_btn = tk.Button(
+                btn_frame,
+                text="👁 Preview",
+                command=lambda path=item["path"]: self.preview_from_history(path),
+                bg=self.colors['accent_blue'],
+                fg='white',
+                font=("Segoe UI", 8, "bold"),
+                relief=tk.FLAT,
+                cursor="hand2",
+                padx=10,
+                pady=5
             )
-            remove_btn.pack(side=tk.RIGHT)
-            remove_btn.bind("<Button-1>", lambda e, path=item["path"]: self.remove_from_favorites(path))
+            preview_btn.pack(side=tk.TOP, fill=tk.X, pady=(0, 4))
             
-            label.bind("<Button-1>", lambda e, path=item["path"]: self.set_from_favorites(path))
+            # Set wallpaper button
+            set_btn = tk.Button(
+                btn_frame,
+                text="✓ Set",
+                command=lambda path=item["path"]: self.set_from_history(path),
+                bg=self.colors['success_green'],
+                fg='white',
+                font=("Segoe UI", 8, "bold"),
+                relief=tk.FLAT,
+                cursor="hand2",
+                padx=10,
+                pady=5
+            )
+            set_btn.pack(side=tk.TOP, fill=tk.X)
             
+            # Hover effects
             def on_enter(e):
-                frame.config(bg='#ffc107')
-                inner.config(bg='#ffc107')
-                label.config(bg='#ffc107')
-                info_frame.config(bg='#ffc107')
-                remove_btn.config(bg='#ffc107')
+                frame.config(highlightbackground=self.colors['accent_blue'], highlightthickness=2)
             def on_leave(e):
-                frame.config(bg='#fff3cd')
-                inner.config(bg='#fff3cd')
-                label.config(bg='#fff3cd')
-                info_frame.config(bg='#fff3cd')
-                remove_btn.config(bg='#fff3cd')
+                frame.config(highlightbackground=self.colors['border'], highlightthickness=2)
             
             frame.bind("<Enter>", on_enter)
             frame.bind("<Leave>", on_leave)
-            label.bind("<Enter>", on_enter)
+            img_label.bind("<Button-1>", lambda e, path=item["path"]: self.preview_from_history(path))
             
-        except Exception:
+        except Exception as e:
             tk.Label(
                 frame,
-                text=f"Error: {item['filename'][:15]}",
-                font=("Segoe UI", 7),
-                bg='#fff3cd',
-                fg='red'
-            ).pack(padx=5, pady=5)
+                text=f"Error loading: {item['filename'][:20]}",
+                font=("Segoe UI", 8),
+                bg=self.colors['bg_tertiary'],
+                fg=self.colors['danger_red']
+            ).pack(padx=8, pady=8)
     
-    def set_from_favorites(self, image_path):
-        """Set wallpaper from favorites."""
+    def preview_from_history(self, image_path):
+        """Preview wallpaper from history without setting it."""
         if os.path.exists(image_path):
             self.preview_image_path = image_path
-            self.display_preview(image_path, f"Favorite: {os.path.basename(image_path)}")
-            self.set_wallpaper()
+            self.display_preview(image_path, f"History: {os.path.basename(image_path)}")
+            self.update_status("Preview loaded from history", self.colors['success_green'])
         else:
             messagebox.showerror("Error", f"Image file not found:\n{image_path}")
-            self.remove_from_favorites(image_path)
-    
-    def remove_from_favorites(self, image_path):
-        """Remove image from favorites."""
-        self.favorites = [f for f in self.favorites if f.get("path") != image_path]
-        self.save_favorites()
-        self.display_favorites()
-        self.update_status("Removed from favorites", self.colors['text_muted'])
+            self.history = [h for h in self.history if h.get("path") != image_path]
+            self.save_history()
+            self.refresh_display()
     
     def auto_fetch_on_launch(self):
         """Auto-fetch a wallpaper when the GUI launches."""
@@ -1427,6 +1507,181 @@ class WallpaperManagerGUI:
         self.preview_image_path = image_path
         self.display_preview(image_path, f"Picsum: {os.path.basename(image_path)}")
         self.update_status("Downloaded successfully", self.colors['success_green'])
+    
+    def fetch_second_image_and_start_rotation(self):
+        """Fetch a second image and enable auto-rotation."""
+        # Fetch second image
+        self.update_status("Fetching second wallpaper...", self.colors['accent_blue'])
+        
+        def fetch_task():
+            try:
+                url = self.url_entry.get().strip() or "https://picsum.photos/1920/1080"
+                response = requests.get(url, timeout=30, stream=True)
+                response.raise_for_status()
+                
+                filename = f"wallpaper_{datetime.now().strftime('%Y%m%d_%H%M%S')}.jpg"
+                temp_path = self.wallpapers_dir / filename
+                
+                with open(temp_path, 'wb') as f:
+                    for chunk in response.iter_content(chunk_size=8192):
+                        f.write(chunk)
+                
+                image_path = str(temp_path)
+                success = self.set_wallpaper_platform(image_path)
+                
+                if success:
+                    self.add_to_history(image_path)
+                    self.root.after(0, lambda: self.on_second_fetch_success(image_path))
+                else:
+                    self.root.after(0, lambda: self.update_status("Ready", self.colors['success_green']))
+                    
+            except Exception as e:
+                self.root.after(0, lambda: self.update_status("Ready", self.colors['success_green']))
+        
+        threading.Thread(target=fetch_task, daemon=True).start()
+    
+    def on_second_fetch_success(self, image_path):
+        """Handle successful second fetch and start auto-rotation."""
+        self.refresh_display()
+        self.update_status("Auto-rotation started", self.colors['success_green'])
+        
+        # Start auto-rotation timer
+        self.auto_rotate_enabled = True
+        self.start_auto_rotate()
+    
+    def fetch_random_quote(self):
+        """Fetch a random quote based on selected category."""
+        category = self.quote_category.get()
+        self.update_status(f"Fetching {category} quote...", self.colors['accent_purple'])
+        
+        def fetch_task():
+            try:
+                quote_text = None
+                
+                # Map category to API tags/queries
+                category_mapping = {
+                    "💡 Motivational": ["inspirational", "motivational"],
+                    "🔢 Mathematics": ["mathematics", "math"],
+                    "🔬 Science": ["science", "physics", "chemistry"],
+                    "🌟 Famous People": ["famous-quotes"],
+                    "💻 Technology": ["technology", "computers"],
+                    "📚 Philosophy": ["philosophy", "wisdom"]
+                }
+                
+                # Get tags for selected category
+                tags = category_mapping.get(category, ["inspirational"])
+                
+                # Try quotable.io API with tags
+                try:
+                    # Try with first tag
+                    tag = tags[0]
+                    url = f"https://api.quotable.io/random?tags={tag}"
+                    response = requests.get(url, timeout=10)
+                    response.raise_for_status()
+                    data = response.json()
+                    quote_text = f'"{data["content"]}" — {data["author"]}'
+                except Exception:
+                    # Try zenquotes.io as fallback
+                    try:
+                        response = requests.get("https://zenquotes.io/api/random", timeout=10)
+                        response.raise_for_status()
+                        data = response.json()[0]
+                        author = data['a'] if data['a'] != 'zenquotes.io' else 'Unknown'
+                        quote_text = f'"{data["q"]}" — {author}'
+                    except Exception:
+                        quote_text = None
+                
+                if quote_text:
+                    self.root.after(0, lambda: self.on_quote_fetched(quote_text))
+                else:
+                    self.root.after(0, lambda: self.on_quote_fetch_error("Could not fetch quote"))
+                    
+            except Exception as e:
+                self.root.after(0, lambda: self.on_quote_fetch_error(str(e)))
+        
+        threading.Thread(target=fetch_task, daemon=True).start()
+    
+    def on_quote_fetched(self, quote_text):
+        """Handle successful quote fetch."""
+        self.current_quote = quote_text
+        self.quote_display.config(text=quote_text)
+        self.update_status("Quote updated", self.colors['success_green'])
+        
+        # Refresh preview if an image is loaded
+        if self.preview_image_path:
+            self.display_preview(self.preview_image_path, f"Updated quote: {os.path.basename(self.preview_image_path)}")
+    
+    def on_quote_fetch_error(self, error):
+        """Handle quote fetch error with category-specific fallback quotes."""
+        self.update_status("Quote fetch failed", self.colors['warning_yellow'])
+        
+        category = self.quote_category.get()
+        
+        # Category-specific fallback quotes
+        fallback_quotes = {
+            "💡 Motivational": [
+                '"The only way to do great work is to love what you do." — Steve Jobs',
+                '"Believe you can and you\'re halfway there." — Theodore Roosevelt',
+                '"Success is not final, failure is not fatal: it is the courage to continue that counts." — Winston Churchill',
+                '"Don\'t watch the clock; do what it does. Keep going." — Sam Levenson'
+            ],
+            "🔢 Mathematics": [
+                '"Mathematics is the language in which God has written the universe." — Galileo Galilei',
+                '"Pure mathematics is, in its way, the poetry of logical ideas." — Albert Einstein',
+                '"Mathematics is not about numbers, equations, or algorithms: it is about understanding." — William Paul Thurston',
+                '"The essence of mathematics is not to make simple things complicated, but to make complicated things simple." — Stan Gudder'
+            ],
+            "🔬 Science": [
+                '"Science is not only a disciple of reason but, also, one of romance and passion." — Stephen Hawking',
+                '"The important thing is not to stop questioning. Curiosity has its own reason for existing." — Albert Einstein',
+                '"Somewhere, something incredible is waiting to be known." — Carl Sagan',
+                '"Science knows no country, because knowledge belongs to humanity." — Louis Pasteur'
+            ],
+            "🌟 Famous People": [
+                '"In the end, it\'s not the years in your life that count. It\'s the life in your years." — Abraham Lincoln',
+                '"The future belongs to those who believe in the beauty of their dreams." — Eleanor Roosevelt',
+                '"Be yourself; everyone else is already taken." — Oscar Wilde',
+                '"To be yourself in a world that is constantly trying to make you something else is the greatest accomplishment." — Ralph Waldo Emerson'
+            ],
+            "💻 Technology": [
+                '"Technology is best when it brings people together." — Matt Mullenweg',
+                '"The advance of technology is based on making it fit in so that you don\'t really even notice it." — Bill Gates',
+                '"Any sufficiently advanced technology is indistinguishable from magic." — Arthur C. Clarke',
+                '"Innovation distinguishes between a leader and a follower." — Steve Jobs'
+            ],
+            "📚 Philosophy": [
+                '"The unexamined life is not worth living." — Socrates',
+                '"I think, therefore I am." — René Descartes',
+                '"Life must be understood backward, but it must be lived forward." — Søren Kierkegaard',
+                '"The only true wisdom is in knowing you know nothing." — Socrates'
+            ]
+        }
+        
+        quotes = fallback_quotes.get(category, fallback_quotes["💡 Motivational"])
+        quote_text = random.choice(quotes)
+        self.on_quote_fetched(quote_text)
+    
+    def apply_custom_quote(self):
+        """Apply user's custom quote."""
+        custom_text = self.quote_input.get(1.0, tk.END).strip()
+        
+        if not custom_text or custom_text == "Type your own inspirational quote here...":
+            messagebox.showwarning("No Quote", "Please enter a custom quote first")
+            return
+        
+        # Add quotes if not present
+        if not custom_text.startswith('"'):
+            custom_text = f'"{custom_text}"'
+        
+        self.current_quote = custom_text
+        self.quote_display.config(text=custom_text)
+        self.update_status("Custom quote applied", self.colors['success_green'])
+        
+        # Refresh preview if an image is loaded
+        if self.preview_image_path:
+            self.display_preview(self.preview_image_path, f"Custom quote: {os.path.basename(self.preview_image_path)}")
+        
+        messagebox.showinfo("Success", "Custom quote has been embedded on the image!")
 
 
 def main():
