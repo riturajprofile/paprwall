@@ -1,0 +1,1 @@
+Windows installer requires NSIS and Windows binary. See build_windows_installer.sh for build instructions.

@@ -1,0 +1,29 @@
+#!/bin/bash
+# PaprWall post-installation script
+
+set -e
+
+# Update icon cache
+if command -v gtk-update-icon-cache &> /dev/null; then
+    gtk-update-icon-cache -f -t /usr/share/icons/hicolor 2>/dev/null || true
+fi
+
+# Update desktop database
+if command -v update-desktop-database &> /dev/null; then
+    update-desktop-database /usr/share/applications 2>/dev/null || true
+fi
+
+echo ""
+echo "=========================================="
+echo "  PaprWall v1.0.2 Installed Successfully!"
+echo "=========================================="
+echo ""
+echo "You can now:"
+echo "  • Find 'PaprWall' in your application menu"
+echo "  • Run: paprwall-gui"
+echo ""
+echo "To uninstall:"
+echo "  sudo apt remove paprwall"
+echo ""
+
+exit 0

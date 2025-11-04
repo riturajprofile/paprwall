@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024" role="img" aria-labelledby="title1 desc1">
+  <title id="title1">Paprwall - Landscape icon</title>
+  <desc id="desc1">Rounded square with mountain, sun and wave representing wallpapers</desc>
+  <defs>
+    <style>
+      :root{
+        --bg:#1e293b; /* dark slate */
+        --accent:#06b6d4; /* teal */
+        --sun:#ffd166; /* warm yellow */
+        --mount:#ffffff; /* mountain light */
+        --shadow:rgba(0,0,0,0.08);
+      }
+      .bg{fill:var(--bg)}
+      .sun{fill:var(--sun)}
+      .accent{fill:var(--accent)}
+      .mount{fill:var(--mount)}
+      .overlay{fill:var(--shadow)}
+    </style>
+    <linearGradient id="lg" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0" stop-color="#0ea5e9"/>
+      <stop offset="1" stop-color="#06b6d4"/>
+    </linearGradient>
+  </defs>
+
+  <!-- rounded background -->
+  <rect x="64" y="64" width="896" height="896" rx="160" ry="160" class="bg"/>
+
+  <!-- sky gradient circle (slightly off-center) -->
+  <g transform="translate(0, -40)">
+    <circle cx="600" cy="300" r="260" fill="url(#lg)" opacity="0.13"/>
+    <circle cx="700" cy="220" r="68" class="sun"/>
+  </g>
+
+  <!-- mountains -->
+  <g transform="translate(0, 120)">
+    <path class="mount" d="M160 640 L360 360 L520 640 Z" />
+    <path class="accent" d="M420 640 L620 320 L840 640 Z" />
+    <!-- little snowcap -->
+    <path d="M340 410 L360 380 L380 408 Z" fill="#ffffff" opacity="0.85"/>
+    <path d="M580 360 L620 320 L640 356 Z" fill="#ffffff" opacity="0.9"/>
+  </g>
+
+  <!-- foreground wave -->
+  <path d="M64 760 Q300 680 512 760 T960 760 L960 920 L64 920 Z" fill="#0f172a" opacity="0.95"/>
+
+  <!-- soft shadow near bottom -->
+  <rect x="64" y="860" width="896" height="20" rx="10" fill="black" opacity="0.06"/>
+</svg>

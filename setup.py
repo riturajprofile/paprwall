@@ -10,7 +10,7 @@ long_description = (this_directory / "README.md").read_text(encoding="utf-8")
 
 setup(
     name="paprwall",
-    version="1.0.0",
+    version="1.0.2",
     author="riturajprofile",
     author_email="riturajprofile@example.com",
     description="Modern Desktop Wallpaper Manager with Motivational Quotes",
@@ -39,7 +39,11 @@ setup(
         "Programming Language :: Python :: 3.12",
         "Programming Language :: Python :: 3.13",
         "Operating System :: POSIX :: Linux",
+        "Operating System :: Microsoft :: Windows",
+        "Operating System :: Microsoft :: Windows :: Windows 10",
+        "Operating System :: Microsoft :: Windows :: Windows 11",
         "Environment :: X11 Applications",
+        "Environment :: Win32 (MS Windows)",
         "Natural Language :: English",
     ],
     keywords="wallpaper desktop background quotes motivation linux gnome kde xfce",

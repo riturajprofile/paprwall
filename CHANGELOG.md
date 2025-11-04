@@ -5,6 +5,32 @@ All notable changes to Paprwall will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.2] - 2025-11-04
+
+### Added
+- 🚀 **First-Run Auto-Install Prompt**: Binary automatically detects if not installed and prompts user
+  - "Yes" button installs desktop entry, icon, and shortcuts
+  - "No" button skips this time (asks again next run)
+  - "Cancel" button permanently dismisses prompt (portable mode)
+- 🔧 **Command-Line Installation**: `paprwall-gui --install` for manual installation
+- 🗑️ **Command-Line Uninstallation**: `paprwall-gui --uninstall` for removal
+- 🗑️ **GUI Uninstall Button**: Red uninstall button in left control panel
+- 🎯 **Automatic Desktop Integration**: Creates desktop entries, shortcuts, and icons
+
+### Changed
+- 📦 Binary now includes installation/uninstallation functionality
+- 🖥️ Improved user experience for first-time users
+- 📝 Updated README with installation options documentation
+
+### Technical
+- Added `install_app()` function for cross-platform installation
+- Added `uninstall_app_cli()` and GUI `uninstall_app()` methods
+- Added `check_first_run_install()` to detect and prompt on first run
+- Cross-platform support for Linux and Windows installation paths
+- Creates `.no_install_prompt` file to remember user preference
+
+---
+
 ## [0.1.0] - 2025-11-04
 
 ### Added

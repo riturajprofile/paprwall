@@ -11,6 +11,8 @@ import subprocess
 import threading
 import time
 import random
+import argparse
+import shutil
 from pathlib import Path
 from datetime import datetime
 from urllib.parse import urlparse
@@ -74,8 +76,12 @@ class WallpaperManagerGUI:
         # Configure root background
         self.root.configure(bg=self.colors['bg_primary'])
         
-        # Setup data directory
-        self.data_dir = Path.home() / ".paprwall"
+        # Setup data directory (cross-platform)
+        if platform.system() == "Windows":
+            self.data_dir = Path(os.environ.get('APPDATA', Path.home())) / "PaprWall"
+        else:
+            self.data_dir = Path.home() / ".local" / "share" / "paprwall"
+        
         self.data_dir.mkdir(parents=True, exist_ok=True)
         self.history_file = self.data_dir / "history.json"
         self.wallpapers_dir = self.data_dir / "wallpapers"
@@ -101,27 +107,16 @@ class WallpaperManagerGUI:
             "1366x768", "1600x900", "1280x720"
         ]
         self.resolution_var = tk.StringVar(value="1920x1080")
-        
-        # Wallpaper types
-        self.wallpaper_types = [
-            ('🌿 Nature', 'nature'),
-            ('🎨 Abstract', 'abstract'),
-            ('⬜ Minimal', 'minimal'),
-            ('🌑 Dark', 'dark'),
-            ('🌈 Gradient', 'gradient'),
-            ('🚀 Space', 'space'),
-            ('🌊 Ocean', 'ocean'),
-            ('⛰️ Mountain', 'mountain'),
-            ('🏙️ City', 'city'),
-            ('🌅 Sunset', 'sunset')
-        ]
-        self.selected_type = tk.StringVar(value='nature')
+
         
         # Setup UI
         self.setup_ui()
         
         # Load current wallpaper
         self.refresh_display()
+        
+        # Check if first run and prompt for installation
+        self.root.after(100, self.check_first_run_install)
         
         # Auto-fetch wallpaper and quote on launch
         self.root.after(500, self.auto_fetch_on_launch)
@@ -343,6 +338,23 @@ class WallpaperManagerGUI:
             pady=8
         )
         browse_button.pack(side=tk.RIGHT, fill=tk.X, expand=True, padx=(4, 0))
+        
+        # Separator
+        tk.Frame(controls_section, bg=self.colors['border'], height=1).pack(fill=tk.X, pady=(8, 8))
+        
+        # Uninstall button
+        uninstall_button = tk.Button(
+            controls_section,
+            text="🗑️ Uninstall PaprWall",
+            command=self.uninstall_app,
+            bg=self.colors['danger_red'],
+            fg='white',
+            font=self.fonts['button'],
+            relief=tk.FLAT,
+            cursor="hand2",
+            pady=8
+        )
+        uninstall_button.pack(fill=tk.X, padx=12, pady=(0, 10))
         
         # ==== RIGHT PANEL (Expands to fill remaining space) ====
         right_panel = tk.Frame(main_section, bg=self.colors['bg_primary'])
@@ -739,6 +751,66 @@ class WallpaperManagerGUI:
         self.status_label.config(text=f"● {message}", fg=color)
         self.root.update_idletasks()
     
+    def check_first_run_install(self):
+        """Check if this is the first run and prompt for installation."""
+        # Only check if running as a frozen executable (binary)
+        if not getattr(sys, 'frozen', False):
+            return
+        
+        system = platform.system()
+        
+        # Check if already installed
+        if system == "Windows":
+            install_dir = Path(os.environ.get('LOCALAPPDATA')) / "Programs" / "PaprWall"
+            is_installed = (install_dir / "paprwall-gui.exe").exists()
+        else:  # Linux
+            bin_path = Path.home() / ".local" / "bin" / "paprwall-gui"
+            is_installed = bin_path.exists()
+        
+        # If already installed, don't prompt
+        if is_installed:
+            return
+        
+        # Check if user previously dismissed the prompt
+        no_prompt_file = self.data_dir / ".no_install_prompt"
+        if no_prompt_file.exists():
+            return
+        
+        # Show installation prompt
+        result = messagebox.askyesnocancel(
+            "Install PaprWall",
+            "PaprWall is not installed to your system yet.\n\n"
+            "Would you like to install it now?\n\n"
+            "This will:\n"
+            "• Create a desktop entry/shortcut\n"
+            "• Add PaprWall to your application menu\n"
+            "• Install the app icon\n\n"
+            "Click 'Yes' to install\n"
+            "Click 'No' to skip this time\n"
+            "Click 'Cancel' to never ask again",
+            icon='question'
+        )
+        
+        if result is True:
+            # User clicked Yes - install
+            try:
+                if install_app():
+                    messagebox.showinfo(
+                        "Installation Complete",
+                        "PaprWall has been installed successfully!\n\n"
+                        "You can now find it in your application menu."
+                    )
+            except Exception as e:
+                messagebox.showerror("Installation Failed", f"Could not install PaprWall:\n{str(e)}")
+        elif result is None:
+            # User clicked Cancel - don't ask again
+            no_prompt_file.touch()
+            messagebox.showinfo(
+                "Installation Skipped",
+                "You can install PaprWall later by running:\n"
+                f"  {Path(sys.executable).name} --install"
+            )
+    
     def show_toast(self, message, toast_type='success'):
         """Show a toast notification."""
         toast = tk.Toplevel(self.root)
@@ -1068,7 +1140,10 @@ class WallpaperManagerGUI:
         try:
             if system == "Windows":
                 import ctypes
-                ctypes.windll.user32.SystemParametersInfoW(20, 0, image_path, 3)
+                # Convert to absolute path for Windows
+                abs_path = str(Path(image_path).resolve())
+                SPI_SETDESKWALLPAPER = 20
+                ctypes.windll.user32.SystemParametersInfoW(SPI_SETDESKWALLPAPER, 0, abs_path, 3)
                 return True
                 
             elif system == "Darwin":  # macOS
@@ -1682,10 +1757,293 @@ class WallpaperManagerGUI:
             self.display_preview(self.preview_image_path, f"Custom quote: {os.path.basename(self.preview_image_path)}")
         
         messagebox.showinfo("Success", "Custom quote has been embedded on the image!")
+    
+    def uninstall_app(self):
+        """Uninstall PaprWall from the system."""
+        result = messagebox.askyesno(
+            "Uninstall PaprWall",
+            "Are you sure you want to uninstall PaprWall?\n\n"
+            "This will remove:\n"
+            "• Application binary\n"
+            "• Desktop entry and shortcuts\n"
+            "• Application icon\n\n"
+            "Configuration and wallpaper data will be preserved unless you choose to remove them.",
+            icon='warning'
+        )
+        
+        if not result:
+            return
+        
+        try:
+            system = platform.system()
+            
+            if system == "Windows":
+                # Run Windows uninstall script
+                uninstall_script = Path(os.environ.get('APPDATA')) / "PaprWall" / "UNINSTALL.bat"
+                if uninstall_script.exists():
+                    # Close the GUI first
+                    self.root.quit()
+                    subprocess.Popen([str(uninstall_script)], shell=True)
+                else:
+                    messagebox.showerror(
+                        "Uninstall Script Not Found",
+                        f"Could not find uninstall script at:\n{uninstall_script}\n\n"
+                        "Please manually remove PaprWall from:\n"
+                        f"{os.environ.get('LOCALAPPDATA')}\\Programs\\PaprWall"
+                    )
+            else:
+                # Run Linux uninstall script
+                uninstall_script = Path.home() / ".local" / "share" / "paprwall" / "uninstall.sh"
+                if uninstall_script.exists():
+                    # Close the GUI first
+                    self.root.quit()
+                    subprocess.Popen(['bash', str(uninstall_script)])
+                else:
+                    messagebox.showerror(
+                        "Uninstall Script Not Found",
+                        f"Could not find uninstall script at:\n{uninstall_script}\n\n"
+                        "Please manually remove PaprWall or run:\n"
+                        "pip uninstall paprwall"
+                    )
+        except Exception as e:
+            messagebox.showerror("Uninstall Error", f"Failed to start uninstaller:\n{str(e)}")
+
+
+def install_app():
+    """Install PaprWall to the system."""
+    system = platform.system()
+    
+    if system == "Windows":
+        print("Installing PaprWall for Windows...")
+        print("=" * 50)
+        
+        # Get paths
+        install_dir = Path(os.environ.get('LOCALAPPDATA')) / "Programs" / "PaprWall"
+        data_dir = Path(os.environ.get('APPDATA')) / "PaprWall"
+        start_menu = Path(os.environ.get('APPDATA')) / "Microsoft" / "Windows" / "Start Menu" / "Programs"
+        
+        # Get script directory (where paprwall-gui.exe is located)
+        if getattr(sys, 'frozen', False):
+            # Running as compiled executable
+            script_dir = Path(sys.executable).parent
+        else:
+            # Running as script
+            script_dir = Path(__file__).parent.parent.parent.parent
+        
+        # Create directories
+        install_dir.mkdir(parents=True, exist_ok=True)
+        data_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Copy executable
+        exe_name = "paprwall-gui.exe" if getattr(sys, 'frozen', False) else "paprwall-gui.py"
+        source_exe = script_dir / exe_name
+        
+        if source_exe.exists():
+            shutil.copy2(source_exe, install_dir / "paprwall-gui.exe")
+            print(f"✓ Installed to: {install_dir}")
+        else:
+            print(f"✗ Could not find {exe_name} at {script_dir}")
+            return False
+        
+        # Copy icon if available
+        icon_file = script_dir / "paprwall.svg"
+        if icon_file.exists():
+            shutil.copy2(icon_file, data_dir / "paprwall.svg")
+            print("✓ Icon copied")
+        
+        # Copy uninstall script if available
+        uninstall_script = script_dir / "UNINSTALL.bat"
+        if uninstall_script.exists():
+            shutil.copy2(uninstall_script, data_dir / "UNINSTALL.bat")
+            print("✓ Uninstall script copied")
+        
+        # Create Start Menu shortcut
+        try:
+            import winshell
+            from win32com.client import Dispatch
+            
+            shortcut_path = start_menu / "PaprWall.lnk"
+            shell = Dispatch('WScript.Shell')
+            shortcut = shell.CreateShortCut(str(shortcut_path))
+            shortcut.TargetPath = str(install_dir / "paprwall-gui.exe")
+            shortcut.Description = "Modern Desktop Wallpaper Manager"
+            shortcut.save()
+            print("✓ Start Menu shortcut created")
+        except ImportError:
+            print("⚠ Could not create shortcuts (pywin32 not installed)")
+        except Exception as e:
+            print(f"⚠ Could not create shortcuts: {e}")
+        
+        print("\n" + "=" * 50)
+        print("Installation Complete!")
+        print("=" * 50)
+        print(f"\nPaprWall has been installed to: {install_dir}")
+        print(f"\nYou can now:")
+        print("  1. Find 'PaprWall' in Start Menu")
+        print(f"  2. Run: {install_dir}\\paprwall-gui.exe")
+        print(f"\nTo uninstall later, run:")
+        print(f"  {data_dir}\\UNINSTALL.bat")
+        
+    else:  # Linux
+        print("Installing PaprWall for Linux...")
+        print("=" * 50)
+        
+        # Get paths
+        bin_dir = Path.home() / ".local" / "bin"
+        apps_dir = Path.home() / ".local" / "share" / "applications"
+        icons_dir = Path.home() / ".local" / "share" / "icons" / "hicolor" / "scalable" / "apps"
+        data_dir = Path.home() / ".local" / "share" / "paprwall"
+        
+        # Get script directory
+        if getattr(sys, 'frozen', False):
+            # Running as compiled executable
+            script_dir = Path(sys.executable).parent
+        else:
+            # Running as script
+            script_dir = Path(__file__).parent.parent.parent.parent
+        
+        # Create directories
+        bin_dir.mkdir(parents=True, exist_ok=True)
+        apps_dir.mkdir(parents=True, exist_ok=True)
+        icons_dir.mkdir(parents=True, exist_ok=True)
+        data_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Copy executable
+        exe_name = "paprwall-gui"
+        source_exe = script_dir / "dist" / exe_name if not getattr(sys, 'frozen', False) else Path(sys.executable)
+        
+        if source_exe.exists():
+            shutil.copy2(source_exe, bin_dir / exe_name)
+            os.chmod(bin_dir / exe_name, 0o755)
+            print(f"✓ Installed to: {bin_dir / exe_name}")
+        else:
+            # Try current directory
+            source_exe = script_dir / exe_name
+            if source_exe.exists():
+                shutil.copy2(source_exe, bin_dir / exe_name)
+                os.chmod(bin_dir / exe_name, 0o755)
+                print(f"✓ Installed to: {bin_dir / exe_name}")
+            else:
+                print(f"✗ Could not find {exe_name}")
+                return False
+        
+        # Copy icon if available
+        icon_file = script_dir / "paprwall.svg"
+        if icon_file.exists():
+            shutil.copy2(icon_file, icons_dir / "paprwall.svg")
+            shutil.copy2(icon_file, data_dir / "paprwall.svg")
+            print("✓ Icon installed")
+        
+        # Copy uninstall script if available
+        uninstall_script = script_dir / "uninstall.sh"
+        if uninstall_script.exists():
+            shutil.copy2(uninstall_script, data_dir / "uninstall.sh")
+            os.chmod(data_dir / "uninstall.sh", 0o755)
+            print("✓ Uninstall script copied")
+        
+        # Create desktop entry
+        desktop_entry = f"""[Desktop Entry]
+Version=1.0
+Type=Application
+Name=PaprWall
+Comment=Modern Desktop Wallpaper Manager
+Exec={bin_dir / exe_name}
+Icon=paprwall
+Terminal=false
+Categories=Graphics;Utility;
+Keywords=wallpaper;background;image;
+"""
+        desktop_file = apps_dir / "paprwall.desktop"
+        desktop_file.write_text(desktop_entry)
+        os.chmod(desktop_file, 0o644)
+        print("✓ Desktop entry created")
+        
+        # Update caches
+        try:
+            subprocess.run(['gtk-update-icon-cache', '-f', '-t', str(icons_dir.parent.parent)], 
+                         stderr=subprocess.DEVNULL, check=False)
+            subprocess.run(['update-desktop-database', str(apps_dir)], 
+                         stderr=subprocess.DEVNULL, check=False)
+            print("✓ System caches updated")
+        except Exception:
+            pass
+        
+        print("\n" + "=" * 50)
+        print("Installation Complete!")
+        print("=" * 50)
+        print(f"\nPaprWall has been installed to: {bin_dir / exe_name}")
+        print(f"\nYou can now:")
+        print("  1. Find 'PaprWall' in your application menu")
+        print(f"  2. Run: paprwall-gui")
+        print(f"\nTo uninstall later, run:")
+        print(f"  {data_dir / 'uninstall.sh'}")
+        
+        # Check if bin_dir is in PATH
+        path_dirs = os.environ.get('PATH', '').split(':')
+        if str(bin_dir) not in path_dirs:
+            print(f"\n⚠ Note: {bin_dir} is not in your PATH")
+            print("Add it by adding this line to your ~/.bashrc or ~/.zshrc:")
+            print(f'  export PATH="$HOME/.local/bin:$PATH"')
+    
+    return True
+
+
+def uninstall_app_cli():
+    """Uninstall PaprWall from the system (CLI mode)."""
+    system = platform.system()
+    
+    if system == "Windows":
+        # Run Windows uninstall script
+        uninstall_script = Path(os.environ.get('APPDATA')) / "PaprWall" / "UNINSTALL.bat"
+        if uninstall_script.exists():
+            subprocess.run([str(uninstall_script)], shell=True)
+        else:
+            print(f"Uninstall script not found at: {uninstall_script}")
+            print("\nPlease manually remove PaprWall from:")
+            print(f"{os.environ.get('LOCALAPPDATA')}\\Programs\\PaprWall")
+            return False
+    else:
+        # Run Linux uninstall script
+        uninstall_script = Path.home() / ".local" / "share" / "paprwall" / "uninstall.sh"
+        if uninstall_script.exists():
+            subprocess.run(['bash', str(uninstall_script)])
+        else:
+            print(f"Uninstall script not found at: {uninstall_script}")
+            print("\nPlease manually remove PaprWall or run:")
+            print("pip uninstall paprwall")
+            return False
+    
+    return True
 
 
 def main():
-    """Launch the GUI application."""
+    """Launch the GUI application or handle CLI commands."""
+    # Parse command-line arguments
+    parser = argparse.ArgumentParser(
+        description='PaprWall - Modern Desktop Wallpaper Manager',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  paprwall-gui              # Launch GUI
+  paprwall-gui --install    # Install to system
+  paprwall-gui --uninstall  # Uninstall from system
+        """
+    )
+    parser.add_argument('--install', action='store_true',
+                       help='Install PaprWall to the system')
+    parser.add_argument('--uninstall', action='store_true',
+                       help='Uninstall PaprWall from the system')
+    
+    args = parser.parse_args()
+    
+    # Handle install/uninstall commands
+    if args.install:
+        sys.exit(0 if install_app() else 1)
+    
+    if args.uninstall:
+        sys.exit(0 if uninstall_app_cli() else 1)
+    
+    # Launch GUI if no special arguments
     root = tk.Tk()
     app = WallpaperManagerGUI(root)
     root.mainloop()

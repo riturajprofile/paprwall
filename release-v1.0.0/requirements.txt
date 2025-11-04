@@ -1,6 +1,0 @@
-requests>=2.28.0
-Pillow>=10.0.0
-APScheduler>=3.10.0
-# GUI dependencies should be installed via system packages on Linux runners/users
-# Optional pip extra: pip install .[gui]
-# PyGObject is intentionally omitted here to avoid building from source in CI

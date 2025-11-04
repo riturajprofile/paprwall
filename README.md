@@ -2,10 +2,10 @@
 
 **Modern Desktop Wallpaper Manager with Motivational Quotes**
 
-[![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)](https://github.com/riturajprofile/paprwall/releases)
+[![Version](https://img.shields.io/badge/version-1.0.2-blue.svg)](https://github.com/riturajprofile/paprwall/releases)
 [![Python](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![Platform](https://img.shields.io/badge/platform-Linux-lightgrey.svg)](https://www.linux.org/)
+[![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20Windows-lightgrey.svg)](https://github.com/riturajprofile/paprwall)
 
 Transform your desktop with stunning wallpapers embedded with inspirational quotes. PaprWall brings a fresh, modern approach to wallpaper management with automatic rotation and quote personalization.
 
@@ -48,26 +48,62 @@ Transform your desktop with stunning wallpapers embedded with inspirational quot
 
 ### Installation
 
-#### Option 1: Download Release (Recommended)
+#### 🐧 Linux
+
+**Option 1: Package Managers (Easiest)**
 ```bash
-# Download the latest release
-wget https://github.com/riturajprofile/paprwall/releases/download/v1.0.0/paprwall-v1.0.0-linux-x64.tar.gz
+# Debian/Ubuntu (.deb package)
+wget https://github.com/riturajprofile/paprwall/releases/download/v1.0.2/paprwall_1.0.2_amd64.deb
+sudo dpkg -i paprwall_1.0.2_amd64.deb
+sudo apt-get install -f  # Fix dependencies if needed
 
-# Extract
-tar -xzf paprwall-v1.0.0-linux-x64.tar.gz
-cd release-v1.0.0
-
-# Install
-./INSTALL.sh
+# Fedora/RHEL (.rpm package)  
+wget https://github.com/riturajprofile/paprwall/releases/download/v1.0.2/paprwall-1.0.2-1.x86_64.rpm
+sudo dnf install paprwall-1.0.2-1.x86_64.rpm  # or: sudo yum install
 ```
 
-#### Option 2: Install from PyPI
+**Option 2: Portable Binary**
+```bash
+# Download the latest release
+wget https://github.com/riturajprofile/paprwall/releases/download/v1.0.2/paprwall-v1.0.2-linux-x64.tar.gz
+
+# Extract and run
+tar -xzf paprwall-v1.0.2-linux-x64.tar.gz
+cd release-v1.0.2
+./paprwall-gui  # Auto-install prompt will appear on first run
+```
+
+**Option 3: Install from PyPI**
 ```bash
 pip install paprwall
 ```
 
-#### Option 3: Install from Source
+**Option 4: Install from Source**
 ```bash
+git clone https://github.com/riturajprofile/paprwall.git
+cd paprwall
+pip install -e .
+```
+
+#### 🪟 Windows
+
+**Option 1: Installer (Recommended)**
+1. Download `paprwall-setup-1.0.2-win64.exe` from [Releases](https://github.com/riturajprofile/paprwall/releases)
+2. Run the installer (creates Start Menu shortcut, desktop entry, uninstaller)
+3. Find "PaprWall" in Start Menu
+
+**Option 2: Portable Binary**
+1. Download `paprwall-v1.0.2-windows-x64.zip` from [Releases](https://github.com/riturajprofile/paprwall/releases)
+2. Extract the ZIP file
+3. Run `paprwall-gui.exe` (auto-install prompt will appear on first run)
+
+**Option 3: Install from PyPI**
+```cmd
+pip install paprwall
+```
+
+**Option 4: Install from Source**
+```cmd
 git clone https://github.com/riturajprofile/paprwall.git
 cd paprwall
 pip install -e .
@@ -82,15 +118,52 @@ paprwall-gui
 # Or search "PaprWall" in your application menu
 ```
 
+### 🎯 First-Run Installation (Automatic)
+
+When you run the binary for the first time, PaprWall will automatically detect that it's not installed and ask:
+
+```
+"Would you like to install PaprWall to your system?"
+[Yes]     → Installs desktop entry, icon, and shortcuts
+[No]      → Skip installation this time
+[Cancel]  → Never ask again
+```
+
+**What gets installed:**
+- ✅ Desktop entry (appears in application menu)
+- ✅ Application icon
+- ✅ Start menu shortcut (Windows) or .desktop file (Linux)
+- ✅ Uninstall script
+
+### Command-Line Options
+
+PaprWall supports command-line options for installation and uninstallation:
+
+```bash
+# Show help and available options
+paprwall-gui --help
+
+# Install PaprWall to your system manually
+# Creates desktop entry, copies icon, and sets up uninstall script
+paprwall-gui --install
+
+# Uninstall PaprWall from your system
+# Removes application files, shortcuts, and optionally data
+paprwall-gui --uninstall
+```
+
+**Uninstall Button**: You can also uninstall PaprWall directly from the GUI - look for the 🗑️ **Uninstall PaprWall** button at the bottom of the left panel.
+
 ## 📋 Requirements
 
 ### System Requirements
-- **OS**: Linux (Ubuntu 20.04+, Fedora 35+, Arch, Debian, etc.)
-- **Desktop Environment**: GNOME, KDE Plasma, XFCE, MATE, Cinnamon
+- **OS**: Linux (Ubuntu 20.04+, Fedora 35+, Arch, Debian, etc.) or Windows 10/11
 - **Display**: 720p or higher recommended
 - **Python**: 3.8+ (only for source installation)
 
-### Desktop Environment Support
+### Platform Support
+
+#### 🐧 Linux Desktop Environments
 - ✅ **GNOME** (Ubuntu, Fedora)
 - ✅ **KDE Plasma** (Kubuntu, KDE Neon)
 - ✅ **XFCE** (Xubuntu)
@@ -98,11 +171,16 @@ paprwall-gui
 - ✅ **Cinnamon** (Linux Mint)
 - ✅ **LXQt** / **LXDE**
 
+#### 🪟 Windows
+- ✅ **Windows 10** (1809+)
+- ✅ **Windows 11**
+
 ### Dependencies
-- **Tkinter** - GUI framework (usually pre-installed)
+- **Tkinter** - GUI framework (included with Python on Windows, pre-installed on most Linux)
 - **Pillow** - Image processing
 - **Requests** - HTTP client
 
+#### Linux
 ```bash
 # Ubuntu/Debian
 sudo apt install python3-tk
@@ -113,6 +191,9 @@ sudo dnf install python3-tkinter
 # Arch Linux
 sudo pacman -S tk
 ```
+
+#### Windows
+Tkinter is included with the official Python installer - no additional setup needed!
 
 ## 🎯 Usage
 
@@ -161,27 +242,37 @@ Choose from 6 different quote types using the dropdown menu:
 
 ## 🛠️ Configuration
 
-### Wallpaper Storage
-Wallpapers are saved to:
-```
+### Data Locations
+
+#### Linux
+```bash
+# Wallpapers
 ~/.local/share/paprwall/wallpapers/
-```
 
-### History
-History is stored in:
-```
+# History
 ~/.local/share/paprwall/history.json
+
+# Logs
+~/.local/share/paprwall/paprwall.log
 ```
 
-### Logs
-Application logs:
-```
-~/.local/share/paprwall/paprwall.log
+#### Windows
+```cmd
+# Wallpapers
+%APPDATA%\PaprWall\wallpapers\
+
+# History
+%APPDATA%\PaprWall\history.json
+
+# Logs
+%APPDATA%\PaprWall\paprwall.log
 ```
 
 ## 🔧 Troubleshooting
 
-### Issue: GUI doesn't launch
+### Linux Issues
+
+#### Issue: GUI doesn't launch
 **Solution**: Ensure Tkinter is installed
 ```bash
 # Ubuntu/Debian
@@ -194,7 +285,7 @@ sudo dnf install python3-tkinter
 sudo pacman -S tk
 ```
 
-### Issue: Wallpaper doesn't change
+#### Issue: Wallpaper doesn't change
 **Solution**: Check your desktop environment
 ```bash
 # Check current desktop
@@ -203,20 +294,101 @@ echo $XDG_CURRENT_DESKTOP
 # Supported: GNOME, KDE, XFCE, MATE, Cinnamon, etc.
 ```
 
-### Issue: Quote not visible
-**Solution**: 
-- Quote is embedded top-right corner
-- Try a different wallpaper with more space
-- Use custom quote with shorter text
-
-### Issue: Binary doesn't run
+#### Issue: Binary doesn't run
 **Solution**: Make sure it's executable
 ```bash
 chmod +x paprwall-gui
 ./paprwall-gui
 ```
 
-## 📦 Building from Source
+### Windows Issues
+
+#### Issue: Windows SmartScreen warning
+**Solution**: 
+1. Click "More info"
+2. Click "Run anyway"
+3. This is normal for unsigned executables
+
+#### Issue: Wallpaper doesn't change
+**Solution**: 
+- Make sure you have write permissions to wallpaper directory
+- Try running as normal user (not administrator)
+- Check Windows Settings → Personalization → Background
+
+#### Issue: Python not found (source install)
+**Solution**: 
+1. Download Python from [python.org](https://www.python.org/downloads/)
+2. Check "Add Python to PATH" during installation
+3. Restart Command Prompt
+
+### General Issues
+
+#### Issue: Quote not visible
+**Solution**: 
+- Quote is embedded top-right corner
+- Try a different wallpaper with more space
+- Use custom quote with shorter text
+
+#### Issue: Images not downloading
+**Solution**:
+- Check internet connection
+- Try different image URL
+- Check firewall settings
+
+## �️ Uninstallation
+
+### Linux
+
+If you installed from the release package:
+```bash
+# Navigate to extracted release directory
+cd release-v1.0.0
+
+# Run uninstall script
+./uninstall.sh
+```
+
+Or if you moved the uninstall script:
+```bash
+# Run from anywhere
+./uninstall.sh
+```
+
+The uninstall script:
+- ✅ Removes the binary from `~/.local/bin/`
+- ✅ Removes desktop entry and icon
+- ✅ Updates system caches
+- ❓ Optionally removes data directory (`~/.local/share/paprwall/`)
+
+If you installed from PyPI or source:
+```bash
+pip uninstall paprwall
+```
+
+### Windows
+
+If you installed from the release package:
+1. Navigate to extracted release folder
+2. Run `UNINSTALL.bat` as normal user
+3. Choose whether to remove data directory
+
+Or manually:
+1. Open Start Menu
+2. Find "PaprWall" folder
+3. Click "Uninstall PaprWall"
+
+The uninstall script:
+- ✅ Removes program from `%LOCALAPPDATA%\Programs\PaprWall`
+- ✅ Removes Start Menu shortcuts
+- ✅ Removes Desktop shortcut
+- ❓ Optionally removes data directory (`%APPDATA%\PaprWall`)
+
+If you installed from PyPI or source:
+```cmd
+pip uninstall paprwall
+```
+
+## �📦 Building from Source
 
 ### Build Requirements
 ```bash
@@ -224,6 +396,8 @@ pip install build pyinstaller
 ```
 
 ### Build Process
+
+#### Linux
 ```bash
 # Clone repository
 git clone https://github.com/riturajprofile/paprwall.git
@@ -236,6 +410,21 @@ cd paprwall
 This creates:
 - `release-v1.0.0/` directory with binaries
 - `paprwall-v1.0.0-linux-x64.tar.gz` release package
+- SHA-256 checksum file
+
+#### Windows
+```cmd
+# Clone repository
+git clone https://github.com/riturajprofile/paprwall.git
+cd paprwall
+
+# Run build script
+build_release_windows.bat
+```
+
+This creates:
+- `release-v1.0.0\` directory with binaries
+- `paprwall-v1.0.0-windows-x64.zip` release package
 - SHA-256 checksum file
 
 ## 🤝 Contributing
