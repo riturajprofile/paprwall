@@ -1,498 +1,218 @@
-#!/bin/sh
-# Paprwall Installation Script
-# Simple, system-independent, POSIX-compliant installer
-# Usage: curl -fsSL https://raw.githubusercontent.com/riturajprofile/paprwall/main/install.sh | sh
+#!/usr/bin/env bash
+# 
+# Paprwall Installer
+# Installs paprwall wallpaper manager for Linux
+#
+set -euo pipefail
 
-set -e
-
-# ============================================================================
-# Configuration
-# ============================================================================
-REPO_URL="https://github.com/riturajprofile/paprwall.git"
 INSTALL_DIR="$HOME/.paprwall"
+VENV_DIR="$INSTALL_DIR/.venv"
 BIN_DIR="$HOME/.local/bin"
-LOG_FILE="/tmp/paprwall-install-$$.log"
+REPO_URL="https://github.com/riturajprofile/paprwall"
 
-# Colors
+# Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
-NC='\033[0m'
+NC='\033[0m' # No Color
 
-# ============================================================================
-# Helper Functions
-# ============================================================================
-
-print_header() {
-    printf "\n${BLUE}========================================${NC}\n"
-    printf "${BLUE}  Paprwall Installation Script${NC}\n"
-    printf "${BLUE}========================================${NC}\n\n"
+echo_info() {
+    echo -e "${BLUE}ℹ${NC} $1"
 }
 
-print_success() {
-    printf "${GREEN}✓${NC} %s\n" "$1"
+echo_success() {
+    echo -e "${GREEN}✓${NC} $1"
 }
 
-print_error() {
-    printf "${RED}✗${NC} %s\n" "$1"
+echo_warning() {
+    echo -e "${YELLOW}⚠${NC} $1"
 }
 
-print_warning() {
-    printf "${YELLOW}⚠${NC} %s\n" "$1"
+echo_error() {
+    echo -e "${RED}✗${NC} $1"
 }
 
-print_info() {
-    printf "${BLUE}ℹ${NC} %s\n" "$1"
-}
+echo ""
+echo "╔═══════════════════════════════════════════╗"
+echo "║     Paprwall Wallpaper Manager Setup     ║"
+echo "╚═══════════════════════════════════════════╝"
+echo ""
 
-# Check if command exists
-command_exists() {
-    command -v "$1" >/dev/null 2>&1
-}
+# Check if Python 3 is installed
+if ! command -v python3 &> /dev/null; then
+    echo_error "Python 3 is not installed!"
+    echo "Please install Python 3.8 or higher and try again."
+    exit 1
+fi
+
+PYTHON_VERSION=$(python3 -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')
+echo_info "Found Python $PYTHON_VERSION"
+
+# Check Python version (require 3.8+)
+if ! python3 -c "import sys; exit(0 if sys.version_info >= (3, 8) else 1)"; then
+    echo_error "Python 3.8 or higher is required (found $PYTHON_VERSION)"
+    exit 1
+fi
 
 # Detect package manager
-detect_package_manager() {
-    if command_exists apt-get; then
-        echo "apt"
-    elif command_exists dnf; then
-        echo "dnf"
-    elif command_exists yum; then
-        echo "yum"
-    elif command_exists pacman; then
-        echo "pacman"
-    elif command_exists zypper; then
-        echo "zypper"
-    else
-        echo "unknown"
-    fi
+detect_pm() {
+  if command -v apt-get >/dev/null 2>&1; then echo apt; return; fi
+  if command -v dnf >/dev/null 2>&1; then echo dnf; return; fi
+  if command -v yum >/dev/null 2>&1; then echo yum; return; fi
+  if command -v pacman >/dev/null 2>&1; then echo pacman; return; fi
+  if command -v zypper >/dev/null 2>&1; then echo zypper; return; fi
+  echo none
 }
 
-# Install system package
-install_package() {
-    pkg_manager=$(detect_package_manager)
-    packages="$1"
-    
-    case "$pkg_manager" in
+PM="$(detect_pm)"
+echo_info "Package manager: $PM"
+
+# Check and install system dependencies
+echo_info "Checking system dependencies..."
+
+install_system_deps() {
+    case "$PM" in
         apt)
-            if command_exists sudo; then
-                sudo apt-get update -qq && sudo apt-get install -y $packages
-            else
-                apt-get update -qq && apt-get install -y $packages
-            fi
+            echo_info "Installing dependencies via apt..."
+            sudo apt-get update -qq
+            sudo apt-get install -y python3-venv python3-tk git curl 2>/dev/null || true
             ;;
         dnf|yum)
-            if command_exists sudo; then
-                sudo $pkg_manager install -y $packages
-            else
-                $pkg_manager install -y $packages
-            fi
+            echo_info "Installing dependencies via $PM..."
+            sudo "$PM" install -y python3-venv python3-tkinter git curl 2>/dev/null || true
             ;;
         pacman)
-            if command_exists sudo; then
-                sudo pacman -S --noconfirm $packages
-            else
-                pacman -S --noconfirm $packages
-            fi
+            echo_info "Installing dependencies via pacman..."
+            sudo pacman -Sy --noconfirm python tk git curl 2>/dev/null || true
             ;;
         zypper)
-            if command_exists sudo; then
-                sudo zypper install -y $packages
-            else
-                zypper install -y $packages
-            fi
+            echo_info "Installing dependencies via zypper..."
+            sudo zypper install -y python3-venv python3-tk git curl 2>/dev/null || true
             ;;
-        *)
-            print_error "Unknown package manager. Please install manually: $packages"
-            return 1
-            ;;
-    esac
-}
-
-# Get package name for python3-venv
-get_venv_package() {
-    pkg_manager=$(detect_package_manager)
-    python_version=$(python3 -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")' 2>/dev/null || echo "3")
-    
-    case "$pkg_manager" in
-        apt)
-            echo "python${python_version}-venv"
-            ;;
-        dnf|yum)
-            echo "python${python_version}-venv"
-            ;;
-        pacman)
-            echo "python"  # venv included
-            ;;
-        zypper)
-            echo "python3-venv"
-            ;;
-        *)
-            echo "python3-venv"
-            ;;
-    esac
-}
-
-# Get package names for GTK dependencies
-get_gtk_packages() {
-    pkg_manager=$(detect_package_manager)
-    
-    case "$pkg_manager" in
-        apt)
-            echo "python3-gi python3-gi-cairo gir1.2-gtk-3.0"
-            ;;
-        dnf|yum)
-            echo "python3-gobject gtk3"
-            ;;
-        pacman)
-            echo "python-gobject gtk3"
-            ;;
-        zypper)
-            echo "python3-gobject gtk3"
-            ;;
-        *)
-            echo "python3-gi gtk3"
-            ;;
-    esac
-}
-
-# ============================================================================
-# Pre-installation Checks
-# ============================================================================
-
-print_header
-
-# Check OS
-case "$(uname -s)" in
-    Linux*)
-        print_success "Running on Linux"
-        ;;
-    *)
-        print_error "This installer only supports Linux"
-        exit 1
-        ;;
-esac
-
-# Check Python 3
-if ! command_exists python3; then
-    print_error "Python 3 is required but not installed"
-    printf "\nInstall Python 3 using your package manager:\n"
-    printf "  Ubuntu/Debian: sudo apt install python3\n"
-    printf "  Fedora:        sudo dnf install python3\n"
-    printf "  Arch:          sudo pacman -S python\n"
-    exit 1
-fi
-
-python_version=$(python3 --version 2>&1 | cut -d' ' -f2)
-print_success "Found Python $python_version"
-
-# Check Git
-if ! command_exists git; then
-    print_error "Git is required but not installed"
-    printf "\nInstall Git using your package manager:\n"
-    printf "  Ubuntu/Debian: sudo apt install git\n"
-    printf "  Fedora:        sudo dnf install git\n"
-    printf "  Arch:          sudo pacman -S git\n"
-    exit 1
-fi
-print_success "Found Git"
-
-# ============================================================================
-# Check Dependencies
-# ============================================================================
-
-# Check GTK dependencies (optional, for GUI)
-if ! python3 -c "import gi" 2>/dev/null; then
-    print_warning "GTK dependencies not found (GUI will not work)"
-    gtk_packages=$(get_gtk_packages)
-    
-    print_info "Installing GTK dependencies: $gtk_packages"
-    if install_package "$gtk_packages"; then
-        print_success "GTK dependencies installed"
-    else
-        print_warning "Failed to install GTK. GUI may not work (CLI will still work)."
-    fi
-else
-    print_success "GTK dependencies found"
-fi
-
-# ============================================================================
-# Installation
-# ============================================================================
-
-printf "\n"
-print_info "Installing Paprwall to: $INSTALL_DIR"
-printf "\n"
-
-# Clear log file
-: > "$LOG_FILE"
-
-# Remove old installation
-if [ -d "$INSTALL_DIR" ]; then
-    print_warning "Found existing installation - updating..."
-    rm -rf "$INSTALL_DIR"
-    print_success "Removed old installation"
-fi
-
-# Clone repository
-print_info "Cloning repository..."
-if git clone --depth 1 "$REPO_URL" "$INSTALL_DIR" >>"$LOG_FILE" 2>&1; then
-    print_success "Repository cloned"
-else
-    print_error "Failed to clone repository"
-    printf "\n${YELLOW}Error details:${NC}\n"
-    tail -n 20 "$LOG_FILE" 2>/dev/null || cat "$LOG_FILE"
-    exit 1
-fi
-
-cd "$INSTALL_DIR" || exit 1
-
-# ============================================================================
-# Virtual Environment Setup
-# ============================================================================
-
-print_info "Creating virtual environment..."
-
-# Try to create virtual environment with system site packages (for GTK access)
-if python3 -m venv --system-site-packages .venv >>"$LOG_FILE" 2>&1; then
-    print_success "Virtual environment created"
-else
-    # Check if it's the ensurepip/python3-venv issue
-    if grep -q "ensurepip" "$LOG_FILE" 2>/dev/null; then
-        print_warning "python3-venv package is missing"
-        
-        # Remove failed venv directory
-        rm -rf .venv
-        
-        venv_package=$(get_venv_package)
-        
-        print_info "Installing $venv_package automatically..."
-        print_info "You may be prompted for your sudo password..."
-        
-        if install_package "$venv_package"; then
-            print_success "$venv_package installed"
-            
-            # Wait a moment for package to be fully registered
-            sleep 1
-            
-            # Try creating venv again with system site packages
-            print_info "Retrying virtual environment creation..."
-            if python3 -m venv --system-site-packages .venv >>"$LOG_FILE" 2>&1; then
-                print_success "Virtual environment created"
-            else
-                print_error "Still failed to create virtual environment"
-                printf "\n${YELLOW}Error details:${NC}\n"
-                tail -n 20 "$LOG_FILE" 2>/dev/null || cat "$LOG_FILE"
-                printf "\n"
-                printf "${RED}Please try manually:${NC}\n"
-                printf "  ${BLUE}sudo apt update${NC}\n"
-                printf "  ${BLUE}sudo apt install -y %s${NC}\n" "$venv_package"
-                printf "\nThen run the installer again.\n"
+        none)
+            echo_warning "Could not detect package manager"
+            echo_warning "Please ensure python3-venv, python3-tk, git, and curl are installed"
+            read -p "Continue anyway? (y/N) " -n 1 -r
+            echo
+            if [[ ! $REPLY =~ ^[Yy]$ ]]; then
                 exit 1
             fi
-        else
-            print_error "Failed to install $venv_package"
-            printf "\n${RED}Please install manually:${NC}\n"
-            printf "  ${BLUE}sudo apt update${NC}\n"
-            printf "  ${BLUE}sudo apt install -y %s${NC}\n" "$venv_package"
-            printf "\nThen run the installer again.\n"
-            exit 1
-        fi
-    else
-        # Different error
-        print_error "Failed to create virtual environment"
-        printf "\n${YELLOW}Error details:${NC}\n"
-        tail -n 20 "$LOG_FILE" 2>/dev/null || cat "$LOG_FILE"
-        printf "\n"
-        exit 1
-    fi
-fi
-
-# Upgrade pip
-print_info "Upgrading pip..."
-.venv/bin/python -m pip install --upgrade pip >>"$LOG_FILE" 2>&1 || true
-
-# Install package
-print_info "Installing Paprwall..."
-if .venv/bin/pip install . >>"$LOG_FILE" 2>&1; then
-    print_success "Paprwall installed"
-else
-    print_error "Installation failed"
-    printf "\n${YELLOW}Last 50 lines of log:${NC}\n"
-    tail -n 50 "$LOG_FILE" 2>/dev/null || cat "$LOG_FILE"
-    printf "\n"
-    exit 1
-fi
-
-# ============================================================================
-# Create Wrapper Scripts
-# ============================================================================
-
-print_info "Creating wrapper scripts..."
-mkdir -p "$BIN_DIR"
-
-# Create paprwall wrapper
-cat > "$BIN_DIR/paprwall" << 'EOF'
-#!/bin/sh
-exec "$HOME/.paprwall/.venv/bin/paprwall" "$@"
-EOF
-chmod +x "$BIN_DIR/paprwall"
-
-# Create paprwall-gui wrapper
-cat > "$BIN_DIR/paprwall-gui" << 'EOF'
-#!/bin/sh
-exec "$HOME/.paprwall/.venv/bin/paprwall-gui" "$@"
-EOF
-chmod +x "$BIN_DIR/paprwall-gui"
-
-print_success "Wrapper scripts created in $BIN_DIR"
-
-# ============================================================================
-# Setup Configuration
-# ============================================================================
-
-# Setup .env file
-if [ -f ".env.example" ] && [ ! -f ".env" ]; then
-    cp .env.example .env
-    print_success "Configuration file created: $INSTALL_DIR/.env"
-fi
-
-# Ask if user is developer (only in interactive mode)
-# Check if we can access terminal even when piped from curl
-if [ -t 1 ] && [ -t 2 ]; then
-    printf "\n"
-    printf "Are you the developer? (y/N): " >/dev/tty
-    read -r IS_DEVELOPER </dev/tty
-    
-    case "$IS_DEVELOPER" in
-        [Yy]*)
-            print_info "Developer mode activated"
-            printf "\nEnter your GitHub token (with repo access): " >/dev/tty
-            # Hide input for security
-            stty -echo 2>/dev/null || true
-            read -r GH_TOKEN </dev/tty
-            stty echo 2>/dev/null || true
-            printf "\n" >/dev/tty
-            
-            if [ -n "$GH_TOKEN" ]; then
-                print_info "Fetching private .env from GitHub..."
-                
-                # Convert blob URL to raw URL
-                RAW_URL="https://raw.githubusercontent.com/riturajprofile/env-setup/main/.env"
-                
-                # Download with GitHub token
-                if curl -fsSL -H "Authorization: token $GH_TOKEN" "$RAW_URL" -o .env.tmp 2>/dev/null; then
-                    if [ -s .env.tmp ]; then
-                        mv .env.tmp .env
-                        print_success "Private .env downloaded and configured"
-                    else
-                        rm -f .env.tmp
-                        print_warning "Downloaded file was empty, keeping default .env"
-                    fi
-                else
-                    rm -f .env.tmp
-                    print_warning "Failed to download private .env"
-                    print_info "Using default .env file instead"
-                fi
-                
-                # Clear token from memory
-                GH_TOKEN=""
-            else
-                print_warning "No token provided, using default .env"
-            fi
-            ;;
-        *)
-            print_info "Using default .env configuration"
             ;;
     esac
+}
+
+# Only install if not already present
+if ! python3 -c "import venv" 2>/dev/null; then
+    install_system_deps
 else
-    print_info "Non-interactive mode: using default .env"
+    echo_success "System dependencies OK"
 fi
 
-# ============================================================================
-# Completion
-# ============================================================================
+# Create installation directory
+echo_info "Creating installation directory..."
+mkdir -p "$INSTALL_DIR"
+mkdir -p "$BIN_DIR"
 
-printf "\n"
-printf "${GREEN}========================================${NC}\n"
-printf "${GREEN}  Installation Complete! 🎉${NC}\n"
-printf "${GREEN}========================================${NC}\n"
-printf "\n"
+# Clean up old installation if exists
+if [ -d "$VENV_DIR" ]; then
+    echo_warning "Existing installation found. Removing..."
+    rm -rf "$VENV_DIR"
+fi
 
-printf "📁 Installed to: ${BLUE}%s${NC}\n" "$INSTALL_DIR"
-printf "📝 Config file:  ${BLUE}%s/.env${NC}\n" "$INSTALL_DIR"
-printf "\n"
+# Create virtual environment
+echo_info "Creating virtual environment..."
+python3 -m venv "$VENV_DIR"
+
+# Activate virtual environment
+source "$VENV_DIR/bin/activate"
+
+# Upgrade pip
+echo_info "Upgrading pip..."
+python -m pip install --upgrade pip -q
+
+# Install paprwall
+echo_info "Installing paprwall..."
+
+# Check if we're in a git repository
+if [ -d .git ] && [ -f setup.py ]; then
+    echo_info "Installing from local repository..."
+    pip install -e . -q
+else
+    echo_info "Installing from GitHub..."
+    pip install "git+${REPO_URL}.git" -q
+fi
+
+echo_success "Paprwall installed successfully!"
+
+# Create wrapper scripts
+echo_info "Creating command wrappers..."
+
+cat > "$BIN_DIR/paprwall" << 'WRAPPER_EOF'
+#!/bin/bash
+source "$HOME/.paprwall/.venv/bin/activate"
+exec python -m paprwall.cli "$@"
+WRAPPER_EOF
+
+cat > "$BIN_DIR/wallpaper-manager" << 'WRAPPER_EOF'
+#!/bin/bash
+source "$HOME/.paprwall/.venv/bin/activate"
+exec python -m paprwall.wallpaper_cli "$@"
+WRAPPER_EOF
+
+cat > "$BIN_DIR/wallpaper-gui" << 'WRAPPER_EOF'
+#!/bin/bash
+source "$HOME/.paprwall/.venv/bin/activate"
+exec python -m paprwall.gui.wallpaper_manager_gui "$@"
+WRAPPER_EOF
+
+chmod +x "$BIN_DIR/paprwall"
+chmod +x "$BIN_DIR/wallpaper-manager"
+chmod +x "$BIN_DIR/wallpaper-gui"
+
+echo_success "Command wrappers created"
 
 # Check if ~/.local/bin is in PATH
-case ":$PATH:" in
-    *:"$BIN_DIR":*)
-        print_success "Commands ready to use"
-        ;;
-    *)
-        print_warning "$BIN_DIR is not in your PATH"
-        print_info "Adding $BIN_DIR to PATH automatically..."
-        
-        # Detect shell and add to appropriate config file
-        PATH_LINE='export PATH="$HOME/.local/bin:$PATH"'
-        ADDED=0
-        
-        # Check for zsh
-        if [ -n "$ZSH_VERSION" ] || [ -f "$HOME/.zshrc" ]; then
-            if ! grep -q '.local/bin' "$HOME/.zshrc" 2>/dev/null; then
-                echo "" >> "$HOME/.zshrc"
-                echo "# Added by Paprwall installer" >> "$HOME/.zshrc"
-                echo "$PATH_LINE" >> "$HOME/.zshrc"
-                print_success "Added to ~/.zshrc"
-                ADDED=1
-            fi
-        fi
-        
-        # Check for bash
-        if [ -n "$BASH_VERSION" ] || [ -f "$HOME/.bashrc" ]; then
-            if ! grep -q '.local/bin' "$HOME/.bashrc" 2>/dev/null; then
-                echo "" >> "$HOME/.bashrc"
-                echo "# Added by Paprwall installer" >> "$HOME/.bashrc"
-                echo "$PATH_LINE" >> "$HOME/.bashrc"
-                print_success "Added to ~/.bashrc"
-                ADDED=1
-            fi
-        fi
-        
-        # Also add to .profile as fallback
-        if [ -f "$HOME/.profile" ]; then
-            if ! grep -q '.local/bin' "$HOME/.profile" 2>/dev/null; then
-                echo "" >> "$HOME/.profile"
-                echo "# Added by Paprwall installer" >> "$HOME/.profile"
-                echo "$PATH_LINE" >> "$HOME/.profile"
-                print_success "Added to ~/.profile"
-                ADDED=1
-            fi
-        fi
-        
-        if [ $ADDED -eq 1 ]; then
-            printf "\n${GREEN}✓${NC} PATH updated! Run this to use commands immediately:\n"
-            printf "  ${BLUE}source ~/.zshrc${NC}  # or source ~/.bashrc\n"
-            printf "\nOr simply open a new terminal.\n"
-        else
-            print_info "PATH already configured in shell config"
-        fi
-        printf "\n"
-        ;;
-esac
+if [[ ":$PATH:" != *":$HOME/.local/bin:"* ]]; then
+    echo_warning "~/.local/bin is not in your PATH"
+    echo ""
+    echo "Add this to your shell configuration (~/.bashrc or ~/.zshrc):"
+    echo ""
+    echo "    export PATH=\"\$HOME/.local/bin:\$PATH\""
+    echo ""
+fi
 
-printf "📖 Next Steps:\n\n"
-printf "1. Get FREE API keys:\n"
-printf "   • Pixabay: https://pixabay.com/api/docs/\n"
-printf "   • Pexels:  https://www.pexels.com/api/\n\n"
-printf "2. Edit config file:\n"
-printf "   ${BLUE}nano %s/.env${NC}\n\n" "$INSTALL_DIR"
-printf "3. Try these commands:\n"
-printf "   ${BLUE}paprwall --themes${NC}         # List themes\n"
-printf "   ${BLUE}paprwall --set-theme ocean${NC} # Set theme\n"
-printf "   ${BLUE}paprwall --fetch${NC}           # Download wallpapers\n"
-printf "   ${BLUE}paprwall-gui${NC}               # Launch GUI\n"
-printf "\n"
+# Setup systemd service for auto-start
+echo_info "Setting up auto-start service..."
+"$VENV_DIR/bin/python" -m paprwall.service.autostart --enable 2>/dev/null || {
+    echo_warning "Could not enable auto-start service"
+    echo "You can enable it later with: paprwall --enable-service"
+}
 
-printf "🆘 Help: https://github.com/riturajprofile/paprwall\n"
-printf "📋 Log:  %s\n" "$LOG_FILE"
-printf "\n"
+echo ""
+echo "╔═══════════════════════════════════════════╗"
+echo "║    Installation Complete! 🎉              ║"
+echo "╚═══════════════════════════════════════════╝"
+echo ""
+echo_success "Paprwall has been installed to: $INSTALL_DIR"
+echo ""
+echo "📝 Quick Start:"
+echo ""
+echo "  1. Set up API keys (optional, but recommended):"
+echo "     - Pixabay:  https://pixabay.com/api/docs/"
+echo "     - Unsplash: https://unsplash.com/developers"
+echo "     - Pexels:   https://www.pexels.com/api/"
+echo ""
+echo "     Add keys to: ~/.config/paprwall/api_keys.json"
+echo ""
+echo "  2. Try these commands:"
+echo "     paprwall --fetch              # Download & set new wallpapers"
+echo "     paprwall --next               # Navigate to next wallpaper"
+echo "     paprwall --set-theme nature   # Set theme to nature"
+echo "     wallpaper-gui                 # Launch GUI (requires tkinter)"
+echo ""
+echo "  3. For more help:"
+echo "     paprwall --help"
+echo ""
+echo "🔗 Documentation: https://github.com/riturajprofile/paprwall"
+echo ""

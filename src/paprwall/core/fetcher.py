@@ -7,6 +7,8 @@ from pathlib import Path
 from typing import List, Dict
 import logging
 from paprwall import IMAGES_DIR
+import requests
+import time
 from paprwall.api.source_manager import SourceManager
 from paprwall.core.local_images import LocalImageManager
 from paprwall.core.attribution import AttributionManager
@@ -66,6 +68,7 @@ class ImageFetcher:
                 api_images = self.source_manager.fetch_daily_images(api_count)
                 
                 # Download each image
+                api_success_start_count = len(all_images)
                 for idx, img_data in enumerate(api_images):
                     try:
                         # Generate filename
@@ -106,9 +109,23 @@ class ImageFetcher:
                     
                     except Exception as e:
                         logger.error(f"Failed to download image: {e}")
+                # If API images failed or returned fewer than requested, fill with Picsum fallback
+                api_added = len(all_images) - api_success_start_count
+                remaining_needed = max(api_count - api_added, 0)
+                if remaining_needed > 0:
+                    logger.warning(f"API sources returned only {api_added}/{api_count} images. Using Picsum fallback for {remaining_needed} image(s).")
+                    fallback_images = self._download_picsum_images(remaining_needed, today_dir)
+                    all_images.extend(fallback_images)
             
             except Exception as e:
                 logger.error(f"Failed to fetch API images: {e}")
+                # Entire API pipeline failed; try to satisfy with Picsum fallbacks
+                try:
+                    logger.warning(f"Falling back to Picsum for {api_count} image(s) due to API failure.")
+                    fallback_images = self._download_picsum_images(api_count, today_dir)
+                    all_images.extend(fallback_images)
+                except Exception as fe:
+                    logger.error(f"Picsum fallback also failed: {fe}")
         
         # Add local images
         if local_count > 0 and local_enabled:
@@ -120,6 +137,59 @@ class ImageFetcher:
                 logger.error(f"Failed to get local images: {e}")
         
         return all_images
+
+    def _download_picsum_images(self, count: int, dest_dir: Path) -> List[Dict]:
+        """Download random images from Picsum as a fallback.
+
+        Args:
+            count: number of images to download
+            dest_dir: destination directory for images
+
+        Returns:
+            List of image metadata dictionaries similar to API results
+        """
+        results: List[Dict] = []
+        for i in range(count):
+            # Add a cache-busting query param so each request returns a new image
+            ts = int(time.time() * 1000)
+            url = f"https://picsum.photos/1920/1080?random={ts}-{i}"
+            filename = f"picsum_{i + 1}.jpg"
+            local_path = dest_dir / filename
+            try:
+                r = requests.get(url, timeout=30)
+                r.raise_for_status()
+                with open(local_path, 'wb') as f:
+                    f.write(r.content)
+
+                # Build minimal metadata and apply optional overlay
+                img_data: Dict = {
+                    'source': 'picsum',
+                    'download_url': url,
+                    'width': 1920,
+                    'height': 1080,
+                    'attribution': {
+                        'provider': 'Picsum',
+                        'url': 'https://picsum.photos',
+                        'author': 'Random'
+                    }
+                }
+
+                final_path = self.attribution_manager.create_desktop_overlay(local_path, img_data)
+                img_data['local_path'] = str(final_path)
+
+                # Save metadata JSON next to the file
+                metadata_path = local_path.with_suffix('.json')
+                with open(metadata_path, 'w') as f:
+                    json.dump(img_data, f, indent=2)
+
+                results.append(img_data)
+                logger.info(f"Downloaded fallback image: {filename}")
+            except Exception as e:
+                logger.error(f"Failed to download Picsum fallback image {i + 1}/{count}: {e}")
+                # Continue to next; partial results are acceptable
+                continue
+
+        return results
     
     def get_today_images(self) -> List[Dict]:
         """Get list of today's downloaded images"""

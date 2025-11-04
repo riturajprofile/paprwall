@@ -22,7 +22,7 @@ class PostInstallCommand(install):
 
 setup(
     name="paprwall",
-    version="1.0.0",
+    version="1.1.0",
     packages=find_packages(where="src"),
     package_dir={"": "src"},
     install_requires=[
