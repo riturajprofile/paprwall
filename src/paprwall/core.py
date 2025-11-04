@@ -264,7 +264,7 @@ class WallpaperCore:
             abs_path = os.path.abspath(image_path)
 
             # Set wallpaper using Windows API
-            result = ctypes.windll.user32.SystemParametersInfoW(  # type: ignore[attr-defined]
+            result = ctypes.windll.user32.SystemParametersInfoW(  # type: ignore
                 20,  # SPI_SETDESKWALLPAPER
                 0,
                 abs_path,
