@@ -26,7 +26,8 @@ class WallpaperManagerGUI:
         """Initialize the wallpaper manager GUI."""
         self.root = root
         self.root.title("Wallpaper Manager")
-        self.root.geometry("1400x900")
+        self.root.geometry("1000x700")
+        self.root.minsize(800, 600)
         self.root.resizable(True, True)
         
         # Modern color scheme
@@ -63,11 +64,23 @@ class WallpaperManagerGUI:
         self.timer_thread = None
         self.stop_timer_flag = False
         
+        # Favorites
+        self.favorites = self.load_favorites()
+        
+        # Random resolutions
+        self.resolutions = [
+            "1920x1080", "2560x1440", "3840x2160",
+            "1366x768", "1600x900", "1280x720"
+        ]
+        
         # Setup UI
         self.setup_ui()
         
         # Load current wallpaper
         self.refresh_display()
+        
+        # Auto-fetch wallpaper on launch
+        self.root.after(500, self.auto_fetch_on_launch)
     
     def setup_ui(self):
         """Setup the user interface with web-inspired layout."""
@@ -99,6 +112,38 @@ class WallpaperManagerGUI:
             fg=self.colors['text']
         ).pack(side=tk.LEFT, padx=(10, 0))
         
+        # Quick actions in navbar
+        quick_actions = tk.Frame(navbar, bg=self.colors['sidebar'])
+        quick_actions.pack(side=tk.RIGHT, padx=20)
+        
+        # Random wallpaper button
+        tk.Button(
+            quick_actions,
+            text="🎲 Random",
+            command=self.fetch_random_wallpaper,
+            bg=self.colors['accent'],
+            fg='white',
+            font=("Segoe UI", 9, "bold"),
+            relief=tk.FLAT,
+            cursor="hand2",
+            padx=12,
+            pady=5
+        ).pack(side=tk.LEFT, padx=5)
+        
+        # Open wallpapers folder button
+        tk.Button(
+            quick_actions,
+            text="📁 Folder",
+            command=self.open_wallpapers_folder,
+            bg='#6c757d',
+            fg='white',
+            font=("Segoe UI", 9, "bold"),
+            relief=tk.FLAT,
+            cursor="hand2",
+            padx=12,
+            pady=5
+        ).pack(side=tk.LEFT, padx=5)
+        
         # Status in navbar
         self.status_label = tk.Label(
             navbar,
@@ -114,8 +159,8 @@ class WallpaperManagerGUI:
         content.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
         
         # === RIGHT SIDEBAR (Fixed width) ===
-        sidebar = tk.Frame(content, bg=self.colors['sidebar'], width=350)
-        sidebar.pack(side=tk.RIGHT, fill=tk.Y, padx=(10, 10), pady=10)
+        sidebar = tk.Frame(content, bg=self.colors['sidebar'], width=360)
+        sidebar.pack(side=tk.RIGHT, fill=tk.Y, padx=(5, 5), pady=5)
         sidebar.pack_propagate(False)
         
         # Sidebar scrollable content
@@ -142,6 +187,27 @@ class WallpaperManagerGUI:
         source_frame = tk.Frame(sidebar_content, bg=self.colors['sidebar'])
         source_frame.pack(fill=tk.X, padx=20, pady=(0, 20))
         
+        # Resolution selector
+        tk.Label(
+            source_frame,
+            text="Resolution",
+            font=("Segoe UI", 9, "bold"),
+            bg=self.colors['sidebar'],
+            fg=self.colors['text']
+        ).pack(anchor=tk.W, pady=(0, 3))
+        
+        self.resolution_var = tk.StringVar(value="1920x1080")
+        resolution_dropdown = ttk.Combobox(
+            source_frame,
+            textvariable=self.resolution_var,
+            values=self.resolutions,
+            state="readonly",
+            width=15,
+            font=("Segoe UI", 9)
+        )
+        resolution_dropdown.pack(fill=tk.X, pady=(0, 10))
+        resolution_dropdown.bind("<<ComboboxSelected>>", self.update_url_with_resolution)
+        
         # URL input
         tk.Label(
             source_frame,
@@ -149,53 +215,54 @@ class WallpaperManagerGUI:
             font=("Segoe UI", 9, "bold"),
             bg=self.colors['sidebar'],
             fg=self.colors['text']
-        ).pack(anchor=tk.W, pady=(0, 5))
-        
-        url_container = tk.Frame(source_frame, bg=self.colors['sidebar'])
-        url_container.pack(fill=tk.X, pady=(0, 10))
+        ).pack(anchor=tk.W, pady=(0, 3))
         
         self.url_entry = tk.Entry(
-            url_container,
-            font=("Segoe UI", 10),
+            source_frame,
+            font=("Segoe UI", 9),
             relief=tk.SOLID,
             borderwidth=1,
             bg='white'
         )
-        self.url_entry.pack(fill=tk.X, pady=(0, 8))
+        self.url_entry.pack(fill=tk.X, pady=(0, 6))
         self.url_entry.insert(0, "https://picsum.photos/1920/1080")
         self.url_entry.bind('<Return>', lambda e: self.fetch_from_url())
         
+        # Buttons row
+        btn_row = tk.Frame(source_frame, bg=self.colors['sidebar'])
+        btn_row.pack(fill=tk.X, pady=(0, 8))
+        
         self.fetch_btn = tk.Button(
-            url_container,
-            text="Fetch & Preview",
+            btn_row,
+            text="Fetch",
             command=self.fetch_from_url,
             bg=self.colors['accent'],
             fg='white',
-            font=("Segoe UI", 10, "bold"),
+            font=("Segoe UI", 9, "bold"),
             relief=tk.FLAT,
             cursor="hand2",
-            padx=20,
-            pady=8
+            padx=10,
+            pady=6
         )
-        self.fetch_btn.pack(fill=tk.X)
+        self.fetch_btn.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 3))
         
         # Auto Fetch button
         self.auto_fetch_btn = tk.Button(
-            url_container,
-            text="🔄 Auto Fetch (Sync)",
+            btn_row,
+            text="🔄 Auto",
             command=self.auto_fetch_and_set,
             bg='#28a745',
             fg='white',
-            font=("Segoe UI", 10, "bold"),
+            font=("Segoe UI", 9, "bold"),
             relief=tk.FLAT,
             cursor="hand2",
-            padx=20,
-            pady=8
+            padx=10,
+            pady=6
         )
-        self.auto_fetch_btn.pack(fill=tk.X, pady=(5, 0))
+        self.auto_fetch_btn.pack(side=tk.LEFT, fill=tk.X, expand=True)
         
         # Divider
-        tk.Frame(source_frame, bg=self.colors['border'], height=1).pack(fill=tk.X, pady=15)
+        tk.Frame(source_frame, bg=self.colors['border'], height=1).pack(fill=tk.X, pady=10)
         
         # Local file
         tk.Label(
@@ -204,53 +271,50 @@ class WallpaperManagerGUI:
             font=("Segoe UI", 9, "bold"),
             bg=self.colors['sidebar'],
             fg=self.colors['text']
-        ).pack(anchor=tk.W, pady=(0, 5))
-        
-        file_container = tk.Frame(source_frame, bg=self.colors['sidebar'])
-        file_container.pack(fill=tk.X)
+        ).pack(anchor=tk.W, pady=(0, 3))
         
         self.file_entry = tk.Entry(
-            file_container,
-            font=("Segoe UI", 9),
+            source_frame,
+            font=("Segoe UI", 8),
             relief=tk.SOLID,
             borderwidth=1,
             bg='white'
         )
-        self.file_entry.pack(fill=tk.X, pady=(0, 8))
+        self.file_entry.pack(fill=tk.X, pady=(0, 6))
         
         tk.Button(
-            file_container,
-            text="📁 Browse Files",
+            source_frame,
+            text="📁 Browse",
             command=self.browse_file,
             bg='white',
             fg=self.colors['text'],
-            font=("Segoe UI", 10),
+            font=("Segoe UI", 9),
             relief=tk.SOLID,
             borderwidth=1,
             cursor="hand2",
-            padx=20,
-            pady=8
+            padx=12,
+            pady=5
         ).pack(fill=tk.X)
         
         # Preview Info section
         self.create_section_header(sidebar_content, "ℹ️ Preview Info")
         
         info_frame = tk.Frame(sidebar_content, bg=self.colors['sidebar'])
-        info_frame.pack(fill=tk.X, padx=20, pady=(0, 20))
+        info_frame.pack(fill=tk.X, padx=20, pady=(0, 10))
         
         self.preview_info_text = tk.Text(
             info_frame,
-            height=4,
-            font=("Segoe UI", 9),
+            height=2,
+            font=("Segoe UI", 8),
             relief=tk.SOLID,
             borderwidth=1,
             bg='#f8f9fa',
             wrap=tk.WORD,
-            padx=10,
-            pady=10
+            padx=6,
+            pady=6
         )
         self.preview_info_text.pack(fill=tk.X)
-        self.preview_info_text.insert(1.0, "No image loaded\nUse URL or browse local files")
+        self.preview_info_text.insert(1.0, "Loading...")
         self.preview_info_text.config(state=tk.DISABLED)
         
         # Progress bar
@@ -260,60 +324,76 @@ class WallpaperManagerGUI:
             length=200
         )
         
-        # Action button
+        # Action buttons
+        action_frame = tk.Frame(sidebar_content, bg=self.colors['sidebar'])
+        action_frame.pack(fill=tk.X, padx=20, pady=(0, 15))
+        
         self.set_button = tk.Button(
-            sidebar_content,
-            text="✓ Set as Wallpaper",
+            action_frame,
+            text="✓ Set Wallpaper",
             command=self.set_wallpaper,
             state=tk.DISABLED,
             bg='#28a745',
             fg='white',
-            font=("Segoe UI", 12, "bold"),
+            font=("Segoe UI", 10, "bold"),
             relief=tk.FLAT,
             cursor="hand2",
-            padx=20,
-            pady=12
+            padx=12,
+            pady=8
         )
-        self.set_button.pack(fill=tk.X, padx=20, pady=(0, 20))
+        self.set_button.pack(fill=tk.X, pady=(0, 4))
+        
+        # Favorite button
+        self.favorite_button = tk.Button(
+            action_frame,
+            text="⭐ Favorite",
+            command=self.add_to_favorites,
+            state=tk.DISABLED,
+            bg='#ffc107',
+            fg='white',
+            font=("Segoe UI", 9, "bold"),
+            relief=tk.FLAT,
+            cursor="hand2",
+            padx=12,
+            pady=6
+        )
+        self.favorite_button.pack(fill=tk.X)
         
         # Auto-Rotation section
         self.create_section_header(sidebar_content, "⏱️ Auto-Rotation")
         
         rotation_frame = tk.Frame(sidebar_content, bg=self.colors['sidebar'])
-        rotation_frame.pack(fill=tk.X, padx=20, pady=(0, 20))
+        rotation_frame.pack(fill=tk.X, padx=20, pady=(0, 15))
         
         # Timer display
         timer_display = tk.Frame(rotation_frame, bg='#f8f9fa', relief=tk.SOLID, borderwidth=1)
-        timer_display.pack(fill=tk.X, pady=(0, 10))
+        timer_display.pack(fill=tk.X, pady=(0, 6))
         
         tk.Label(
             timer_display,
-            text="Next change in:",
-            font=("Segoe UI", 9),
+            text="Next:",
+            font=("Segoe UI", 8),
             bg='#f8f9fa',
             fg=self.colors['text']
-        ).pack(side=tk.LEFT, padx=10, pady=8)
+        ).pack(side=tk.LEFT, padx=8, pady=6)
         
         self.timer_label = tk.Label(
             timer_display,
             text="--:--",
-            font=("Segoe UI", 14, "bold"),
+            font=("Segoe UI", 12, "bold"),
             bg='#f8f9fa',
             fg=self.colors['accent']
         )
-        self.timer_label.pack(side=tk.RIGHT, padx=10, pady=8)
+        self.timer_label.pack(side=tk.RIGHT, padx=8, pady=6)
         
         # Auto-rotate toggle
-        toggle_frame = tk.Frame(rotation_frame, bg=self.colors['sidebar'])
-        toggle_frame.pack(fill=tk.X, pady=(0, 10))
-        
         self.auto_rotate_var = tk.BooleanVar(value=False)
         ttk.Checkbutton(
-            toggle_frame,
+            rotation_frame,
             text="Enable Auto-Rotate",
             variable=self.auto_rotate_var,
             command=self.toggle_auto_rotate
-        ).pack(side=tk.LEFT)
+        ).pack(anchor=tk.W, pady=(0, 6))
         
         # Interval setting
         interval_frame = tk.Frame(rotation_frame, bg=self.colors['sidebar'])
@@ -321,97 +401,102 @@ class WallpaperManagerGUI:
         
         tk.Label(
             interval_frame,
-            text="Interval (min):",
-            font=("Segoe UI", 9),
+            text="Interval:",
+            font=("Segoe UI", 8),
             bg=self.colors['sidebar']
-        ).pack(side=tk.LEFT)
+        ).pack(side=tk.LEFT, padx=(0, 5))
         
         self.interval_entry = tk.Entry(
             interval_frame,
-            font=("Segoe UI", 9),
-            width=8,
+            font=("Segoe UI", 8),
+            width=6,
             relief=tk.SOLID,
             borderwidth=1
         )
         self.interval_entry.insert(0, "60")
-        self.interval_entry.pack(side=tk.LEFT, padx=5)
+        self.interval_entry.pack(side=tk.LEFT, padx=(0, 5))
+        
+        tk.Label(
+            interval_frame,
+            text="min",
+            font=("Segoe UI", 8),
+            bg=self.colors['sidebar']
+        ).pack(side=tk.LEFT, padx=(0, 5))
         
         tk.Button(
             interval_frame,
             text="Apply",
             command=self.apply_interval,
-            bg='white',
-            fg=self.colors['text'],
-            font=("Segoe UI", 9),
-            relief=tk.SOLID,
-            borderwidth=1,
+            bg=self.colors['accent'],
+            fg='white',
+            font=("Segoe UI", 8, "bold"),
+            relief=tk.FLAT,
             cursor="hand2",
-            padx=10,
-            pady=2
+            padx=8,
+            pady=3
         ).pack(side=tk.LEFT)
         
         # Current Wallpaper section
-        self.create_section_header(sidebar_content, "✨ Current Wallpaper")
+        self.create_section_header(sidebar_content, "✨ Current")
         
         current_frame = tk.Frame(sidebar_content, bg=self.colors['sidebar'])
-        current_frame.pack(fill=tk.X, padx=20, pady=(0, 20))
+        current_frame.pack(fill=tk.X, padx=20, pady=(0, 10))
         
         self.current_text = tk.Text(
             current_frame,
-            height=6,
-            font=("Segoe UI", 9),
+            height=3,
+            font=("Segoe UI", 8),
             relief=tk.SOLID,
             borderwidth=1,
             bg='#f8f9fa',
             wrap=tk.WORD,
-            padx=10,
-            pady=10
+            padx=6,
+            pady=6
         )
         self.current_text.pack(fill=tk.X)
         
+        # Favorites section
+        self.create_section_header(sidebar_content, "⭐ Favorites")
+        
+        # Favorites container
+        self.favorites_container = tk.Frame(sidebar_content, bg=self.colors['sidebar'])
+        self.favorites_container.pack(fill=tk.X, padx=20, pady=(0, 10))
+        
         # History section
-        self.create_section_header(sidebar_content, "🕐 Recent History")
+        self.create_section_header(sidebar_content, "🕐 History")
         
         history_header = tk.Frame(sidebar_content, bg=self.colors['sidebar'])
-        history_header.pack(fill=tk.X, padx=20, pady=(0, 10))
-        
-        tk.Label(
-            history_header,
-            text="Click to reapply",
-            font=("Segoe UI", 8),
-            bg=self.colors['sidebar'],
-            fg='gray'
-        ).pack(side=tk.LEFT)
+        history_header.pack(fill=tk.X, padx=20, pady=(0, 6))
         
         tk.Button(
             history_header,
-            text="Clear",
+            text="Clear All",
             command=self.clear_history,
-            bg='white',
-            fg='#dc3545',
-            font=("Segoe UI", 8),
+            bg='#dc3545',
+            fg='white',
+            font=("Segoe UI", 8, "bold"),
             relief=tk.FLAT,
             cursor="hand2",
             padx=8,
-            pady=2
+            pady=3
         ).pack(side=tk.RIGHT)
         
         # History thumbnails
         self.history_container = tk.Frame(sidebar_content, bg=self.colors['sidebar'])
-        self.history_container.pack(fill=tk.X, padx=20, pady=(0, 20))
+        self.history_container.pack(fill=tk.X, padx=20, pady=(0, 10))
         
-        # === LEFT SIDE: LARGE PREVIEW AREA ===
+        # === LEFT SIDE: PREVIEW AREA ===
         preview_container = tk.Frame(content, bg=self.colors['preview_bg'])
-        preview_container.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(10, 0), pady=10)
+        preview_container.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(5, 0), pady=5)
         
         # Preview header
         preview_header = tk.Frame(preview_container, bg=self.colors['preview_bg'])
-        preview_header.pack(fill=tk.X, padx=20, pady=(15, 10))
+        preview_header.pack(fill=tk.X, padx=15, pady=(10, 8))
         
         tk.Label(
             preview_header,
             text="Preview",
-            font=("Segoe UI", 14, "bold"),
+            font=("Segoe UI", 12, "bold"),
             bg=self.colors['preview_bg'],
             fg='white'
         ).pack(side=tk.LEFT)
@@ -419,7 +504,7 @@ class WallpaperManagerGUI:
         self.preview_size_label = tk.Label(
             preview_header,
             text="",
-            font=("Segoe UI", 10),
+            font=("Segoe UI", 9),
             bg=self.colors['preview_bg'],
             fg='#999999'
         )
@@ -427,7 +512,7 @@ class WallpaperManagerGUI:
         
         # Canvas for image
         canvas_container = tk.Frame(preview_container, bg=self.colors['preview_bg'])
-        canvas_container.pack(fill=tk.BOTH, expand=True, padx=20, pady=(0, 20))
+        canvas_container.pack(fill=tk.BOTH, expand=True, padx=15, pady=(0, 15))
         
         self.preview_canvas = tk.Canvas(
             canvas_container,
@@ -439,8 +524,8 @@ class WallpaperManagerGUI:
         # Placeholder text
         self.placeholder_id = self.preview_canvas.create_text(
             400, 300,
-            text="🖼️\n\nNo Preview\n\nEnter a URL or browse a file to preview",
-            font=("Segoe UI", 16),
+            text="🖼️\n\nLoading wallpaper...",
+            font=("Segoe UI", 14),
             fill='#666666',
             justify=tk.CENTER
         )
@@ -448,20 +533,20 @@ class WallpaperManagerGUI:
     def create_section_header(self, parent, text):
         """Create a section header in sidebar."""
         frame = tk.Frame(parent, bg=self.colors['sidebar'])
-        frame.pack(fill=tk.X, padx=20, pady=(10, 10))
+        frame.pack(fill=tk.X, padx=20, pady=(6, 6))
         
         tk.Label(
             frame,
             text=text,
-            font=("Segoe UI", 11, "bold"),
+            font=("Segoe UI", 9, "bold"),
             bg=self.colors['sidebar'],
             fg=self.colors['text']
         ).pack(side=tk.LEFT)
         
         # Separator line
         sep_frame = tk.Frame(parent, bg=self.colors['sidebar'])
-        sep_frame.pack(fill=tk.X, padx=20, pady=(0, 15))
-        tk.Frame(sep_frame, bg=self.colors['border'], height=2).pack(fill=tk.X)
+        sep_frame.pack(fill=tk.X, padx=20, pady=(0, 8))
+        tk.Frame(sep_frame, bg=self.colors['border'], height=1).pack(fill=tk.X)
     
     def load_history(self):
         """Load wallpaper history from JSON file."""
@@ -618,8 +703,9 @@ class WallpaperManagerGUI:
             
             self.preview_size_label.config(text=original_size)
             
-            # Enable set button
+            # Enable set and favorite buttons
             self.set_button.config(state=tk.NORMAL)
+            self.favorite_button.config(state=tk.NORMAL)
             self.update_status("Preview loaded", '#28a745')
             
         except Exception as e:
@@ -751,7 +837,9 @@ class WallpaperManagerGUI:
     def refresh_display(self):
         """Refresh the history and current wallpaper display."""
         self.history = self.load_history()
+        self.favorites = self.load_favorites()
         self.display_history()
+        self.display_favorites()
         self.display_current_wallpaper()
     
     def display_history(self):
@@ -785,7 +873,7 @@ class WallpaperManagerGUI:
         try:
             # Load thumbnail
             img = Image.open(item["path"])
-            img.thumbnail((80, 50), Image.Resampling.LANCZOS)
+            img.thumbnail((70, 45), Image.Resampling.LANCZOS)
             photo = ImageTk.PhotoImage(img)
             
             inner = tk.Frame(frame, bg='white')
@@ -793,15 +881,15 @@ class WallpaperManagerGUI:
             
             label = tk.Label(inner, image=photo, bg='white', cursor="hand2")
             label.image = photo
-            label.pack(side=tk.LEFT, padx=(0, 10))
+            label.pack(side=tk.LEFT, padx=(0, 8))
             
             info_frame = tk.Frame(inner, bg='white')
             info_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
             
             tk.Label(
                 info_frame,
-                text=item['filename'][:25],
-                font=("Segoe UI", 9, "bold"),
+                text=item['filename'][:22],
+                font=("Segoe UI", 8, "bold"),
                 bg='white',
                 fg=self.colors['text'],
                 anchor=tk.W
@@ -991,6 +1079,227 @@ class WallpaperManagerGUI:
     def auto_rotate_fetch(self):
         """Fetch and set new wallpaper when timer expires."""
         self.auto_fetch_and_set()
+    
+    def fetch_random_wallpaper(self):
+        """Fetch a random wallpaper with current resolution."""
+        resolution = self.resolution_var.get()
+        width, height = resolution.split('x')
+        url = f"https://picsum.photos/{width}/{height}"
+        self.url_entry.delete(0, tk.END)
+        self.url_entry.insert(0, url)
+        self.fetch_from_url()
+    
+    def update_url_with_resolution(self, event=None):
+        """Update URL when resolution changes."""
+        current_url = self.url_entry.get().strip()
+        if "picsum.photos" in current_url:
+            resolution = self.resolution_var.get()
+            width, height = resolution.split('x')
+            new_url = f"https://picsum.photos/{width}/{height}"
+            self.url_entry.delete(0, tk.END)
+            self.url_entry.insert(0, new_url)
+    
+    def open_wallpapers_folder(self):
+        """Open wallpapers directory in file manager."""
+        try:
+            system = platform.system()
+            if system == "Windows":
+                os.startfile(self.wallpapers_dir)
+            elif system == "Darwin":  # macOS
+                subprocess.run(["open", str(self.wallpapers_dir)])
+            else:  # Linux
+                subprocess.run(["xdg-open", str(self.wallpapers_dir)])
+            self.update_status("Opened wallpapers folder", '#28a745')
+        except Exception as e:
+            messagebox.showerror("Error", f"Could not open folder: {str(e)}")
+    
+    def load_favorites(self):
+        """Load favorites from JSON file."""
+        favorites_file = self.data_dir / "favorites.json"
+        if favorites_file.exists():
+            try:
+                with open(favorites_file, 'r') as f:
+                    return json.load(f)
+            except Exception as e:
+                print(f"Error loading favorites: {e}")
+                return []
+        return []
+    
+    def save_favorites(self):
+        """Save favorites to JSON file."""
+        try:
+            favorites_file = self.data_dir / "favorites.json"
+            with open(favorites_file, 'w') as f:
+                json.dump(self.favorites, f, indent=2)
+        except Exception as e:
+            print(f"Error saving favorites: {e}")
+    
+    def add_to_favorites(self):
+        """Add current preview to favorites."""
+        if not self.preview_image_path:
+            messagebox.showwarning("No Image", "Please select an image first")
+            return
+        
+        # Check if already in favorites
+        for fav in self.favorites:
+            if fav.get("path") == self.preview_image_path:
+                messagebox.showinfo("Already Added", "This wallpaper is already in favorites")
+                return
+        
+        entry = {
+            "path": self.preview_image_path,
+            "timestamp": datetime.now().isoformat(),
+            "filename": os.path.basename(self.preview_image_path)
+        }
+        
+        self.favorites.insert(0, entry)
+        self.favorites = self.favorites[:10]  # Keep max 10 favorites
+        self.save_favorites()
+        self.display_favorites()
+        
+        self.update_status("Added to favorites", '#28a745')
+        messagebox.showinfo("Success", "Wallpaper added to favorites!")
+    
+    def display_favorites(self):
+        """Display favorite wallpapers."""
+        for widget in self.favorites_container.winfo_children():
+            widget.destroy()
+        
+        if not self.favorites:
+            tk.Label(
+                self.favorites_container,
+                text="No favorites yet",
+                font=("Segoe UI", 9),
+                bg=self.colors['sidebar'],
+                fg='gray'
+            ).pack(pady=10)
+            return
+        
+        for idx, item in enumerate(self.favorites):
+            self.create_favorite_thumbnail(item, idx)
+    
+    def create_favorite_thumbnail(self, item, index):
+        """Create a thumbnail widget for a favorite item."""
+        frame = tk.Frame(
+            self.favorites_container,
+            bg='#fff3cd',
+            relief=tk.SOLID,
+            borderwidth=1
+        )
+        frame.pack(fill=tk.X, pady=3)
+        
+        try:
+            # Load thumbnail
+            img = Image.open(item["path"])
+            img.thumbnail((55, 35), Image.Resampling.LANCZOS)
+            photo = ImageTk.PhotoImage(img)
+            
+            inner = tk.Frame(frame, bg='#fff3cd')
+            inner.pack(fill=tk.X, padx=5, pady=5)
+            
+            label = tk.Label(inner, image=photo, bg='#fff3cd', cursor="hand2")
+            label.image = photo
+            label.pack(side=tk.LEFT, padx=(0, 8))
+            
+            info_frame = tk.Frame(inner, bg='#fff3cd')
+            info_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+            
+            tk.Label(
+                info_frame,
+                text=item['filename'][:20],
+                font=("Segoe UI", 8, "bold"),
+                bg='#fff3cd',
+                fg='#856404',
+                anchor=tk.W
+            ).pack(fill=tk.X)
+            
+            # Remove button
+            remove_btn = tk.Label(
+                inner,
+                text="✖",
+                font=("Segoe UI", 10, "bold"),
+                bg='#fff3cd',
+                fg='#dc3545',
+                cursor="hand2"
+            )
+            remove_btn.pack(side=tk.RIGHT)
+            remove_btn.bind("<Button-1>", lambda e, path=item["path"]: self.remove_from_favorites(path))
+            
+            label.bind("<Button-1>", lambda e, path=item["path"]: self.set_from_favorites(path))
+            
+            def on_enter(e):
+                frame.config(bg='#ffc107')
+                inner.config(bg='#ffc107')
+                label.config(bg='#ffc107')
+                info_frame.config(bg='#ffc107')
+                remove_btn.config(bg='#ffc107')
+            def on_leave(e):
+                frame.config(bg='#fff3cd')
+                inner.config(bg='#fff3cd')
+                label.config(bg='#fff3cd')
+                info_frame.config(bg='#fff3cd')
+                remove_btn.config(bg='#fff3cd')
+            
+            frame.bind("<Enter>", on_enter)
+            frame.bind("<Leave>", on_leave)
+            label.bind("<Enter>", on_enter)
+            
+        except Exception:
+            tk.Label(
+                frame,
+                text=f"Error: {item['filename'][:15]}",
+                font=("Segoe UI", 7),
+                bg='#fff3cd',
+                fg='red'
+            ).pack(padx=5, pady=5)
+    
+    def set_from_favorites(self, image_path):
+        """Set wallpaper from favorites."""
+        if os.path.exists(image_path):
+            self.preview_image_path = image_path
+            self.display_preview(image_path, f"Favorite: {os.path.basename(image_path)}")
+            self.set_wallpaper()
+        else:
+            messagebox.showerror("Error", f"Image file not found:\n{image_path}")
+            self.remove_from_favorites(image_path)
+    
+    def remove_from_favorites(self, image_path):
+        """Remove image from favorites."""
+        self.favorites = [f for f in self.favorites if f.get("path") != image_path]
+        self.save_favorites()
+        self.display_favorites()
+        self.update_status("Removed from favorites", '#6c757d')
+    
+    def auto_fetch_on_launch(self):
+        """Auto-fetch a wallpaper when the GUI launches."""
+        self.update_status("Fetching wallpaper...", '#007bff')
+        
+        def fetch_task():
+            try:
+                url = self.url_entry.get().strip() or "https://picsum.photos/1920/1080"
+                response = requests.get(url, timeout=30, stream=True)
+                response.raise_for_status()
+                
+                filename = f"wallpaper_{datetime.now().strftime('%Y%m%d_%H%M%S')}.jpg"
+                temp_path = self.wallpapers_dir / filename
+                
+                with open(temp_path, 'wb') as f:
+                    for chunk in response.iter_content(chunk_size=8192):
+                        f.write(chunk)
+                
+                # Display preview
+                self.root.after(0, lambda: self.on_launch_fetch_success(str(temp_path)))
+                
+            except Exception as e:
+                self.root.after(0, lambda: self.update_status("Ready", '#28a745'))
+        
+        threading.Thread(target=fetch_task, daemon=True).start()
+    
+    def on_launch_fetch_success(self, image_path):
+        """Handle successful launch fetch."""
+        self.preview_image_path = image_path
+        self.display_preview(image_path, f"Picsum: {os.path.basename(image_path)}")
+        self.update_status("Downloaded successfully", '#28a745')
 
 
 def main():
