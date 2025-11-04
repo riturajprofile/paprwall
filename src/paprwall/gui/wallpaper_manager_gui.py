@@ -17,6 +17,8 @@ from tkinter import ttk, filedialog, messagebox, scrolledtext
 from PIL import Image, ImageTk, ImageDraw, ImageFont
 import requests
 
+from ..core import WallpaperCore
+
 
 class ModernWallpaperGUI:
     """Modern wallpaper manager with clean UI and enhanced features."""
@@ -44,9 +46,6 @@ class ModernWallpaperGUI:
         # Build UI
         self.build_ui()
 
-        # Load history gallery after UI is ready
-        self.root.after(50, self.update_history_gallery)
-
         # Check for first run installation
         self.root.after(100, self.check_first_run_installation)
 
@@ -62,8 +61,7 @@ class ModernWallpaperGUI:
             # Find the icon file
             if getattr(sys, "frozen", False):
                 # Running as PyInstaller bundle
-                bundle_root = getattr(sys, "_MEIPASS", None)
-                bundle_dir = Path(bundle_root) if bundle_root else Path.cwd()
+                bundle_dir = Path(sys._MEIPASS)
                 icon_path = bundle_dir / "assets" / "paprwall-icon.png"
             else:
                 # Running as script
@@ -724,13 +722,13 @@ class ModernWallpaperGUI:
         except Exception as e:
             print(f"[ERROR] Fetch failed: {e}")
             self.root.after(
-                0,
-                lambda msg=str(e): self.update_status(f"Error: {msg}", "accent_red"),
+                0, lambda: self.update_status(f"Error: {str(e)}", "accent_red")
             )
             return False
 
     def fetch_random_wallpaper(self):
-        """Fetch random wallpaper from internet, always try picsum first, then fallback."""
+        """Fetch random wallpaper from internet with retry logic."""
+        # Thread-safe check
         with self.fetch_lock:
             if self.is_fetching:
                 print("[DEBUG] Already fetching, ignoring request")
@@ -744,13 +742,16 @@ class ModernWallpaperGUI:
 
             success = False
             last_error = None
-            sources = ["https://picsum.photos/1920/1080"] + [s for s in self.image_sources if s != "https://picsum.photos/1920/1080"]
 
+            # Try multiple image sources
             for attempt in range(self.max_retries):
-                # Always try picsum first, then fallback to other sources
-                url = sources[0] if attempt == 0 else random.choice(sources[1:])
                 try:
-                    print(f"[DEBUG] Attempt {attempt + 1}/{self.max_retries}: Fetching from {url}")
+                    url = random.choice(self.image_sources)
+                    print(
+                        f"[DEBUG] Attempt {attempt + 1}/{self.max_retries}: Fetching from {url}"
+                    )
+
+                    # Fetch image with increased timeout
                     response = requests.get(
                         url,
                         timeout=15,
@@ -761,20 +762,30 @@ class ModernWallpaperGUI:
                     )
 
                     if response.status_code == 200:
+                        # Save image
                         temp_path = self.wallpapers_dir / f"temp_{int(time.time())}.jpg"
                         with open(temp_path, "wb") as f:
                             f.write(response.content)
 
                         print(f"[DEBUG] Image saved to: {temp_path}")
 
+                        # Fetch quote (with its own retry logic)
                         self.fetch_quote_with_retry()
-                        time.sleep(0.5)
+                        time.sleep(0.5)  # Wait for quote
 
+                        # Embed quote and preview
                         preview_path = self.embed_quote_on_image(str(temp_path))
                         self.current_wallpaper = str(temp_path)
 
-                        self.root.after(0, lambda p=preview_path: self.load_image_to_preview(p))
-                        self.root.after(0, lambda: self.update_status("Wallpaper loaded", "accent_green"))
+                        self.root.after(
+                            0, lambda p=preview_path: self.load_image_to_preview(p)
+                        )
+                        self.root.after(
+                            0,
+                            lambda: self.update_status(
+                                "Wallpaper loaded", "accent_green"
+                            ),
+                        )
 
                         success = True
                         break
@@ -794,6 +805,7 @@ class ModernWallpaperGUI:
                     last_error = str(e)
                     print(f"[WARN] Attempt {attempt + 1} failed: {e}")
 
+                # Wait before retry (except on last attempt)
                 if attempt < self.max_retries - 1:
                     time.sleep(self.retry_delay)
 
@@ -802,9 +814,18 @@ class ModernWallpaperGUI:
                 if last_error:
                     error_msg += f": {last_error}"
 
-                self.root.after(0, lambda msg=error_msg: self.update_status(msg[:50], "accent_red"))
-                self.root.after(0, lambda msg=error_msg: messagebox.showerror("Fetch Failed", f"{msg}\n\nPlease check your internet connection."))
+                self.root.after(
+                    0, lambda msg=error_msg: self.update_status(msg[:50], "accent_red")
+                )
+                self.root.after(
+                    0,
+                    lambda msg=error_msg: messagebox.showerror(
+                        "Fetch Failed",
+                        f"{msg}\n\nPlease check your internet connection.",
+                    ),
+                )
 
+            # Always reset the flag
             with self.fetch_lock:
                 self.is_fetching = False
 
@@ -928,9 +949,8 @@ class ModernWallpaperGUI:
                 print(f"[DEBUG] Wallpaper set result: {success}")
 
                 if success:
-                    # Save original image path (without quote) to history for cleaner thumbnails
                     self.root.after(
-                        0, lambda: self.save_to_history(self.current_wallpaper, self.current_quote)
+                        0, lambda: self.save_to_history(final_path, self.current_quote)
                     )
                     self.root.after(
                         0, lambda: self.update_status("Wallpaper set!", "accent_green")
@@ -948,8 +968,7 @@ class ModernWallpaperGUI:
             except Exception as e:
                 print(f"[ERROR] Failed to set wallpaper: {e}")
                 self.root.after(
-                    0,
-                    lambda msg=str(e): messagebox.showerror("Error", f"Failed: {msg}"),
+                    0, lambda: messagebox.showerror("Error", f"Failed: {str(e)}")
                 )
 
         threading.Thread(target=set_wp, daemon=True).start()
@@ -984,10 +1003,7 @@ class ModernWallpaperGUI:
                     )
             except Exception as e:
                 self.root.after(
-                    0,
-                    lambda msg=str(e): self.update_status(
-                        f"Error: {msg}", "accent_red"
-                    ),
+                    0, lambda: self.update_status(f"Error: {str(e)}", "accent_red")
                 )
 
         threading.Thread(target=fetch, daemon=True).start()
@@ -1060,14 +1076,11 @@ class ModernWallpaperGUI:
                     author_font = ImageFont.truetype(fp, afs)
                     print(f"[DEBUG] Loaded font: {fp}")
                     break
-                except Exception as e:
-                    print(f"[ERROR] Failed to set wallpaper: {e}")
-                    self.root.after(
-                        0,
-                        lambda msg=str(e): messagebox.showerror(
-                            "Error", f"Failed: {msg}"
-                        ),
-                    )
+                except Exception as fe:
+                    print(f"[DEBUG] Font load failed: {fp} ({fe})")
+
+            if font is None:
+                try:
                     font = ImageFont.load_default()
                     author_font = font
                     print("[DEBUG] Using default font.")
@@ -1091,23 +1104,21 @@ class ModernWallpaperGUI:
             x = img_width - max_width - padding
             y = padding
 
-            # Calculate text dimensions - more compact
-            line_height = 24  # Reduced line height
+            # Calculate text dimensions
+            line_height = 40  # Default line height
             try:
-                line_height = font.size + 4 if hasattr(font, "size") else 24
+                line_height = font.size + 8 if hasattr(font, "size") else 40
             except:
                 pass
 
-            # Calculate actual text height more precisely
-            author_height = 16  # Height for author line
-            total_height = len(lines) * line_height + author_height + 15  # Minimal extra space
+            total_height = len(lines) * line_height + 50
 
-            # Draw semi-transparent background with tighter padding
+            # Draw semi-transparent background
             try:
                 overlay = Image.new("RGBA", img.size, (0, 0, 0, 0))
                 overlay_draw = ImageDraw.Draw(overlay)
                 overlay_draw.rectangle(
-                    [x - 12, y - 10, img_width - padding + 10, y + total_height + 10],
+                    [x - 20, y - 20, img_width - padding + 20, y + total_height + 20],
                     fill=(0, 0, 0, 150),
                 )
 
@@ -1121,9 +1132,9 @@ class ModernWallpaperGUI:
                 draw = ImageDraw.Draw(img)
             except Exception as e:
                 print(f"[DEBUG] Overlay creation failed, using direct drawing: {e}")
-                # Fallback: draw directly on image with tighter padding
+                # Fallback: draw directly on image
                 draw.rectangle(
-                    [x - 12, y - 10, img_width - padding + 10, y + total_height + 10],
+                    [x - 20, y - 20, img_width - padding + 20, y + total_height + 20],
                     fill=(0, 0, 0),
                     outline=(50, 50, 50),
                 )
@@ -1136,9 +1147,9 @@ class ModernWallpaperGUI:
                 draw.text((x, y_offset), line, font=font, fill="white")
                 y_offset += line_height
 
-            # Draw author text with minimal spacing
+            # Draw author text
             draw.text(
-                (x, y_offset + 5), author_text, font=author_font, fill="lightgray"
+                (x, y_offset + 10), author_text, font=author_font, fill="lightgray"
             )
 
             # Save permanently with embedded quote
@@ -1173,94 +1184,18 @@ class ModernWallpaperGUI:
         return lines or [text]
 
     def set_system_wallpaper(self, image_path):
-        """Set wallpaper on the system."""
+        """Set wallpaper on the system using improved WallpaperCore implementation."""
         try:
-            system = platform.system()
-
-            if system == "Windows":
-                import ctypes
-
-                abs_path = str(Path(image_path).resolve())
-                ctypes.windll.user32.SystemParametersInfoW(20, 0, abs_path, 3)
-                return True
-
-            elif system == "Linux":
-                # Try GNOME
-                try:
-                    subprocess.run(
-                        [
-                            "gsettings",
-                            "set",
-                            "org.gnome.desktop.background",
-                            "picture-uri",
-                            f"file://{image_path}",
-                        ],
-                        check=True,
-                        capture_output=True,
-                    )
-                    return True
-                except:
-                    pass
-
-                # Try KDE
-                try:
-                    script = f"""
-                    qdbus org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell.evaluateScript '
-                        var allDesktops = desktops();
-                        for (i=0;i<allDesktops.length;i++) {{
-                            d = allDesktops[i];
-                            d.wallpaperPlugin = "org.kde.image";
-                            d.currentConfigGroup = Array("Wallpaper", "org.kde.image", "General");
-                            d.writeConfig("Image", "file://{image_path}");
-                        }}
-                    '
-                    """
-                    subprocess.run(script, shell=True, check=True, capture_output=True)
-                    return True
-                except:
-                    pass
-
-                # Try XFCE
-                try:
-                    subprocess.run(
-                        [
-                            "xfconf-query",
-                            "-c",
-                            "xfce4-desktop",
-                            "-p",
-                            "/backdrop/screen0/monitor0/workspace0/last-image",
-                            "-s",
-                            image_path,
-                        ],
-                        check=True,
-                        capture_output=True,
-                    )
-                    return True
-                except:
-                    pass
-
-                # Try feh as fallback
-                try:
-                    subprocess.run(
-                        ["feh", "--bg-scale", image_path],
-                        check=True,
-                        capture_output=True,
-                    )
-                    return True
-                except:
-                    pass
-
-            return False
-
+            # Use the improved wallpaper setting from WallpaperCore
+            core = WallpaperCore()
+            return core.set_wallpaper(image_path)
         except Exception as e:
-            print(f"Failed to set wallpaper: {e}")
+            print(f"[ERROR] Failed to set wallpaper: {e}")
             return False
 
     def update_history_gallery(self):
         """Update history thumbnail gallery."""
         try:
-            print(f"[DEBUG] Updating history gallery. History entries: {len(self.history) if isinstance(self.history, list) else 0}")
-            
             # Clear existing thumbnails
             for widget in self.history_frame.winfo_children():
                 widget.destroy()
@@ -1271,7 +1206,6 @@ class ModernWallpaperGUI:
                 or not isinstance(self.history, list)
                 or len(self.history) == 0
             ):
-                print("[DEBUG] No history to display")
                 tk.Label(
                     self.history_frame,
                     text="No history yet",
@@ -1282,26 +1216,20 @@ class ModernWallpaperGUI:
                 return
 
             # Create thumbnails for recent entries
-            created_count = 0
             for entry in self.history[:10]:
                 if entry and isinstance(entry, dict) and "path" in entry:
                     self.create_history_thumbnail(entry)
-                    created_count += 1
-            
-            print(f"[DEBUG] Created {created_count} history thumbnails")
         except Exception as e:
-            print(f"[ERROR] Failed to update history gallery: {e}")
+            print(f"Failed to update history gallery: {e}")
 
     def create_history_thumbnail(self, entry):
         """Create a thumbnail widget for history entry with Set button."""
         try:
             if not entry or "path" not in entry:
-                print(f"[DEBUG] Invalid history entry: {entry}")
                 return
 
             image_path = entry.get("path")
             if not image_path or not Path(image_path).exists():
-                print(f"[DEBUG] Image path not found: {image_path}")
                 return
 
             # Container frame
@@ -1326,7 +1254,7 @@ class ModernWallpaperGUI:
             set_btn = tk.Button(
                 container,
                 text="Set",
-                command=lambda e=entry: self.set_from_history(e),
+                command=lambda p=image_path: self.set_from_history(p),
                 font=("Segoe UI", 8),
                 bg=self.colors["accent_green"],
                 fg="white",
@@ -1363,61 +1291,39 @@ class ModernWallpaperGUI:
         else:
             messagebox.showerror("Error", "Image file not found")
 
-    def set_from_history(self, entry):
-        """Set wallpaper directly from history with its original quote."""
-        if not entry or not isinstance(entry, dict):
-            messagebox.showerror("Error", "Invalid history entry")
-            return
-            
-        image_path = entry.get("path")
-        if not image_path or not Path(image_path).exists():
+    def set_from_history(self, image_path):
+        """Set wallpaper directly from history."""
+        if Path(image_path).exists():
+            self.update_status("Setting wallpaper...", "accent_blue")
+
+            def set_wp():
+                try:
+                    success = self.set_system_wallpaper(image_path)
+                    if success:
+                        self.root.after(
+                            0,
+                            lambda: self.update_status(
+                                "Wallpaper set!", "accent_green"
+                            ),
+                        )
+                        self.root.after(
+                            0,
+                            lambda: messagebox.showinfo(
+                                "Success", "Wallpaper set from history!"
+                            ),
+                        )
+                    else:
+                        self.root.after(
+                            0, lambda: self.update_status("Failed to set", "accent_red")
+                        )
+                except Exception as e:
+                    self.root.after(
+                        0, lambda: messagebox.showerror("Error", f"Failed: {str(e)}")
+                    )
+
+            threading.Thread(target=set_wp, daemon=True).start()
+        else:
             messagebox.showerror("Error", "Image file not found")
-            return
-
-        self.update_status("Setting wallpaper...", "accent_blue")
-
-        def set_wp():
-            try:
-                # Get the quote from history entry
-                quote = entry.get("quote", self.current_quote)
-                
-                # Temporarily set the quote to the one from history
-                original_quote = self.current_quote
-                self.current_quote = quote
-                
-                # Embed quote on the image
-                final_path = self.embed_quote_on_image(image_path)
-                
-                # Restore current quote
-                self.current_quote = original_quote
-                
-                # Set as wallpaper
-                success = self.set_system_wallpaper(final_path)
-                if success:
-                    self.root.after(
-                        0,
-                        lambda: self.update_status(
-                            "Wallpaper set!", "accent_green"
-                        ),
-                    )
-                    self.root.after(
-                        0,
-                        lambda: messagebox.showinfo(
-                            "Success", "Wallpaper set from history!"
-                        ),
-                    )
-                else:
-                    self.root.after(
-                        0, lambda: self.update_status("Failed to set", "accent_red")
-                    )
-            except Exception as e:
-                print(f"[ERROR] Failed to set from history: {e}")
-                self.root.after(
-                    0,
-                    lambda msg=str(e): messagebox.showerror("Error", f"Failed: {msg}")
-                )
-
-        threading.Thread(target=set_wp, daemon=True).start()
 
     def start_auto_rotation(self):
         """Start auto-rotation timer."""

@@ -30,17 +30,17 @@ class WallpaperCore:
             "science": "science",
             "famous": "famous-quotes",
             "technology": "technology",
-            "philosophy": "philosophy"
+            "philosophy": "philosophy",
         }
 
         self.quote_apis = [
             "https://api.quotable.io/random",
-            "https://zenquotes.io/api/random"
+            "https://zenquotes.io/api/random",
         ]
 
         self.image_sources = [
             "https://picsum.photos/1920/1080",
-            "https://source.unsplash.com/1920x1080/nature"
+            "https://source.unsplash.com/1920x1080/nature",
         ]
 
     def get_quote(self, category: str = "motivational") -> Dict[str, str]:
@@ -50,7 +50,9 @@ class WallpaperCore:
         for api_url in self.quote_apis:
             try:
                 if "quotable.io" in api_url:
-                    params = {"tags": self.quote_categories.get(category, "motivational")}
+                    params = {
+                        "tags": self.quote_categories.get(category, "motivational")
+                    }
                     response = requests.get(api_url, params=params, timeout=5)
                 elif "zenquotes.io" in api_url:
                     response = requests.get(api_url, timeout=5)
@@ -62,12 +64,16 @@ class WallpaperCore:
                     if "quotable.io" in api_url:
                         quote_data = {
                             "text": data.get("content", "Stay motivated!"),
-                            "author": data.get("author", "Unknown")
+                            "author": data.get("author", "Unknown"),
                         }
-                    elif "zenquotes.io" in api_url and isinstance(data, list) and len(data) > 0:
+                    elif (
+                        "zenquotes.io" in api_url
+                        and isinstance(data, list)
+                        and len(data) > 0
+                    ):
                         quote_data = {
                             "text": data[0].get("q", "Stay motivated!"),
-                            "author": data[0].get("a", "Unknown")
+                            "author": data[0].get("a", "Unknown"),
                         }
                     break
             except Exception:
@@ -86,10 +92,11 @@ class WallpaperCore:
                 # Create unique filename
                 import hashlib
                 import time
+
                 filename = f"wallpaper_{int(time.time())}_{hashlib.md5(url.encode()).hexdigest()[:8]}.jpg"
                 filepath = IMAGES_DIR / filename
 
-                with open(filepath, 'wb') as f:
+                with open(filepath, "wb") as f:
                     f.write(response.content)
 
                 return str(filepath)
@@ -113,12 +120,22 @@ class WallpaperCore:
             font_size = 32
             author_font_size = 24
             try:
-                font: Union[ImageFont.FreeTypeFont, ImageFont.ImageFont] = ImageFont.truetype("arial.ttf", font_size)
-                author_font: Union[ImageFont.FreeTypeFont, ImageFont.ImageFont] = ImageFont.truetype("arial.ttf", author_font_size)
+                font: Union[ImageFont.FreeTypeFont, ImageFont.ImageFont] = (
+                    ImageFont.truetype("arial.ttf", font_size)
+                )
+                author_font: Union[ImageFont.FreeTypeFont, ImageFont.ImageFont] = (
+                    ImageFont.truetype("arial.ttf", author_font_size)
+                )
             except Exception:
                 try:
-                    font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", font_size)
-                    author_font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", author_font_size)
+                    font = ImageFont.truetype(
+                        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+                        font_size,
+                    )
+                    author_font = ImageFont.truetype(
+                        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+                        author_font_size,
+                    )
                 except Exception:
                     font = ImageFont.load_default()
                     author_font = ImageFont.load_default()
@@ -147,28 +164,35 @@ class WallpaperCore:
             bg_y2 = start_y + total_height + bg_padding
 
             # Create overlay for semi-transparent background
-            overlay = Image.new('RGBA', image.size, (0, 0, 0, 0))
+            overlay = Image.new("RGBA", image.size, (0, 0, 0, 0))
             overlay_draw = ImageDraw.Draw(overlay)
             overlay_draw.rectangle([bg_x1, bg_y1, bg_x2, bg_y2], fill=(0, 0, 0, 128))
 
             # Composite overlay onto image
-            image = image.convert('RGBA')
+            image = image.convert("RGBA")
             image = Image.alpha_composite(image, overlay)
-            image = image.convert('RGB')
+            image = image.convert("RGB")
             draw = ImageDraw.Draw(image)
 
             # Draw quote text
             y_offset = start_y
             for line in quote_lines:
-                draw.text((start_x, y_offset), line, font=font, fill='white')
+                draw.text((start_x, y_offset), line, font=font, fill="white")
                 y_offset += line_height
 
             # Draw author
-            draw.text((start_x, y_offset + 10), author_text, font=author_font, fill='lightgray')
+            draw.text(
+                (start_x, y_offset + 10),
+                author_text,
+                font=author_font,
+                fill="lightgray",
+            )
 
             # Save the modified image
-            output_path = image_path.replace('.jpg', '_with_quote.jpg').replace('.png', '_with_quote.jpg')
-            image.save(output_path, 'JPEG', quality=95)
+            output_path = image_path.replace(".jpg", "_with_quote.jpg").replace(
+                ".png", "_with_quote.jpg"
+            )
+            image.save(output_path, "JPEG", quality=95)
 
             return output_path
 
@@ -188,16 +212,16 @@ class WallpaperCore:
         current_line: List[str] = []
 
         for word in words:
-            test_line = ' '.join(current_line + [word])
+            test_line = " ".join(current_line + [word])
             bbox = font.getbbox(test_line)
             if bbox[2] - bbox[0] <= max_width or not current_line:
                 current_line.append(word)
             else:
-                lines.append(' '.join(current_line))
+                lines.append(" ".join(current_line))
                 current_line = [word]
 
         if current_line:
-            lines.append(' '.join(current_line))
+            lines.append(" ".join(current_line))
 
         return lines
 
@@ -222,37 +246,197 @@ class WallpaperCore:
 
     def _set_wallpaper_linux(self, image_path: str) -> bool:
         """Set wallpaper on Linux."""
-        desktop_env = os.environ.get('XDG_CURRENT_DESKTOP', '').lower()
+        desktop_env = os.environ.get("XDG_CURRENT_DESKTOP", "").lower()
+        print(f"[DEBUG] Desktop environment: {desktop_env or 'unknown'}")
+        print(f"[DEBUG] Setting wallpaper: {image_path}")
 
-        commands = [
-            # GNOME
-            ['gsettings', 'set', 'org.gnome.desktop.background', 'picture-uri', f'file://{image_path}'],
-            # KDE
-            ['qdbus', 'org.kde.plasmashell', '/PlasmaShell', 'org.kde.PlasmaShell.evaluateScript',
-             f"var allDesktops = desktops();for(i=0;i<allDesktops.length;i++){{d=allDesktops[i];d.wallpaperPlugin='org.kde.image';d.currentConfigGroup=Array('Wallpaper','org.kde.image','General');d.writeConfig('Image','file://{image_path}')}}"],
-            # XFCE
-            ['xfconf-query', '-c', 'xfce4-desktop', '-p', '/backdrop/screen0/monitor0/workspace0/last-image', '-s', image_path],
-            # Cinnamon
-            ['gsettings', 'set', 'org.cinnamon.desktop.background', 'picture-uri', f'file://{image_path}'],
-            # MATE
-            ['gsettings', 'set', 'org.mate.background', 'picture-filename', image_path],
-        ]
+        # Convert to absolute path and ensure it exists
+        abs_image_path = os.path.abspath(image_path)
+        if not os.path.exists(abs_image_path):
+            print(f"[ERROR] Image file not found: {abs_image_path}")
+            return False
 
-        for cmd in commands:
+        # Try GNOME/Ubuntu first (most common)
+        if "gnome" in desktop_env or "ubuntu" in desktop_env or not desktop_env:
             try:
-                result = subprocess.run(cmd, capture_output=True, timeout=10)
-                if result.returncode == 0:
+                print("[DEBUG] Trying GNOME gsettings...")
+                # Set both light and dark mode wallpapers for modern GNOME
+                result1 = subprocess.run(
+                    [
+                        "gsettings",
+                        "set",
+                        "org.gnome.desktop.background",
+                        "picture-uri",
+                        f"file://{abs_image_path}",
+                    ],
+                    capture_output=True,
+                    timeout=10,
+                    text=True,
+                )
+                result2 = subprocess.run(
+                    [
+                        "gsettings",
+                        "set",
+                        "org.gnome.desktop.background",
+                        "picture-uri-dark",
+                        f"file://{abs_image_path}",
+                    ],
+                    capture_output=True,
+                    timeout=10,
+                    text=True,
+                )
+
+                if result1.returncode == 0 or result2.returncode == 0:
+                    print("[DEBUG] GNOME wallpaper set successfully")
                     return True
-            except:
-                continue
+                else:
+                    print(
+                        f"[DEBUG] GNOME gsettings failed: {result1.stderr} {result2.stderr}"
+                    )
+            except Exception as e:
+                print(f"[DEBUG] GNOME method failed: {e}")
 
-        # Fallback: try feh if available
+        # Try Cinnamon
+        if "cinnamon" in desktop_env:
+            try:
+                print("[DEBUG] Trying Cinnamon...")
+                result = subprocess.run(
+                    [
+                        "gsettings",
+                        "set",
+                        "org.cinnamon.desktop.background",
+                        "picture-uri",
+                        f"file://{abs_image_path}",
+                    ],
+                    capture_output=True,
+                    timeout=10,
+                    text=True,
+                )
+                if result.returncode == 0:
+                    print("[DEBUG] Cinnamon wallpaper set successfully")
+                    return True
+                else:
+                    print(f"[DEBUG] Cinnamon failed: {result.stderr}")
+            except Exception as e:
+                print(f"[DEBUG] Cinnamon method failed: {e}")
+
+        # Try MATE
+        if "mate" in desktop_env:
+            try:
+                print("[DEBUG] Trying MATE...")
+                result = subprocess.run(
+                    [
+                        "gsettings",
+                        "set",
+                        "org.mate.background",
+                        "picture-filename",
+                        abs_image_path,
+                    ],
+                    capture_output=True,
+                    timeout=10,
+                    text=True,
+                )
+                if result.returncode == 0:
+                    print("[DEBUG] MATE wallpaper set successfully")
+                    return True
+                else:
+                    print(f"[DEBUG] MATE failed: {result.stderr}")
+            except Exception as e:
+                print(f"[DEBUG] MATE method failed: {e}")
+
+        # Try XFCE
+        if "xfce" in desktop_env:
+            try:
+                print("[DEBUG] Trying XFCE...")
+                result = subprocess.run(
+                    [
+                        "xfconf-query",
+                        "-c",
+                        "xfce4-desktop",
+                        "-p",
+                        "/backdrop/screen0/monitor0/workspace0/last-image",
+                        "-s",
+                        abs_image_path,
+                    ],
+                    capture_output=True,
+                    timeout=10,
+                    text=True,
+                )
+                if result.returncode == 0:
+                    print("[DEBUG] XFCE wallpaper set successfully")
+                    return True
+                else:
+                    print(f"[DEBUG] XFCE failed: {result.stderr}")
+            except Exception as e:
+                print(f"[DEBUG] XFCE method failed: {e}")
+
+        # Try KDE
+        if "kde" in desktop_env or "plasma" in desktop_env:
+            try:
+                print("[DEBUG] Trying KDE Plasma...")
+                kde_script = f"var allDesktops = desktops();for(i=0;i<allDesktops.length;i++){{d=allDesktops[i];d.wallpaperPlugin='org.kde.image';d.currentConfigGroup=Array('Wallpaper','org.kde.image','General');d.writeConfig('Image','file://{abs_image_path}')}}"
+                result = subprocess.run(
+                    [
+                        "qdbus",
+                        "org.kde.plasmashell",
+                        "/PlasmaShell",
+                        "org.kde.PlasmaShell.evaluateScript",
+                        kde_script,
+                    ],
+                    capture_output=True,
+                    timeout=10,
+                    text=True,
+                )
+                if result.returncode == 0:
+                    print("[DEBUG] KDE wallpaper set successfully")
+                    return True
+                else:
+                    print(f"[DEBUG] KDE failed: {result.stderr}")
+            except Exception as e:
+                print(f"[DEBUG] KDE method failed: {e}")
+
+        # Fallback: try feh (lightweight alternative)
         try:
-            subprocess.run(['feh', '--bg-scale', image_path], check=True, timeout=10)
-            return True
-        except:
-            pass
+            print("[DEBUG] Trying feh as fallback...")
+            result = subprocess.run(
+                ["feh", "--bg-scale", abs_image_path],
+                capture_output=True,
+                timeout=10,
+                text=True,
+            )
+            if result.returncode == 0:
+                print("[DEBUG] Wallpaper set with feh successfully")
+                return True
+            else:
+                print(f"[DEBUG] feh failed: {result.stderr}")
+        except FileNotFoundError:
+            print("[DEBUG] feh not installed")
+        except Exception as e:
+            print(f"[DEBUG] feh method failed: {e}")
 
+        # Ultimate fallback: try nitrogen
+        try:
+            print("[DEBUG] Trying nitrogen as final fallback...")
+            result = subprocess.run(
+                ["nitrogen", "--set-scaled", abs_image_path],
+                capture_output=True,
+                timeout=10,
+                text=True,
+            )
+            if result.returncode == 0:
+                print("[DEBUG] Wallpaper set with nitrogen successfully")
+                return True
+            else:
+                print(f"[DEBUG] nitrogen failed: {result.stderr}")
+        except FileNotFoundError:
+            print("[DEBUG] nitrogen not installed")
+        except Exception as e:
+            print(f"[DEBUG] nitrogen method failed: {e}")
+
+        print("[ERROR] All wallpaper setting methods failed")
+        print(
+            "[INFO] You may need to install: feh (sudo apt install feh) or nitrogen (sudo apt install nitrogen)"
+        )
         return False
 
     def _set_wallpaper_windows(self, image_path: str) -> bool:
@@ -268,7 +452,7 @@ class WallpaperCore:
                 20,  # SPI_SETDESKWALLPAPER
                 0,
                 abs_path,
-                3  # SPIF_UPDATEINIFILE | SPIF_SENDCHANGE
+                3,  # SPIF_UPDATEINIFILE | SPIF_SENDCHANGE
             )
             return bool(result)
         except Exception:
@@ -282,7 +466,7 @@ class WallpaperCore:
                 set desktop picture to POSIX file "{image_path}"
             end tell
             '''
-            subprocess.run(['osascript', '-e', script], check=True, timeout=10)
+            subprocess.run(["osascript", "-e", script], check=True, timeout=10)
             return True
         except Exception:
             return False
@@ -293,7 +477,7 @@ class WallpaperCore:
 
         try:
             if history_file.exists():
-                with open(history_file, 'r') as f:
+                with open(history_file, "r") as f:
                     history = json.load(f)
             else:
                 history = []
@@ -303,7 +487,7 @@ class WallpaperCore:
                 "timestamp": str(int(time.time())),
                 "image_path": image_path,
                 "quote": quote_data,
-                "datetime": str(datetime.now())
+                "datetime": str(datetime.now()),
             }
 
             history.insert(0, entry)  # Add to beginning
@@ -311,14 +495,16 @@ class WallpaperCore:
             # Keep only last 50 entries
             history = history[:50]
 
-            with open(history_file, 'w') as f:
+            with open(history_file, "w") as f:
                 json.dump(history, f, indent=2)
 
         except Exception as e:
             print(f"Failed to save to history: {e}")
 
 
-def set_wallpaper_from_file(file_path: str, add_quote: bool = True, category: str = "motivational") -> int:
+def set_wallpaper_from_file(
+    file_path: str, add_quote: bool = True, category: str = "motivational"
+) -> int:
     """Set wallpaper from a local file."""
     try:
         core = WallpaperCore()
@@ -348,7 +534,9 @@ def set_wallpaper_from_file(file_path: str, add_quote: bool = True, category: st
         return 1
 
 
-def fetch_and_set_wallpaper(category: str = "motivational", add_quote: bool = True) -> int:
+def fetch_and_set_wallpaper(
+    category: str = "motivational", add_quote: bool = True
+) -> int:
     """Fetch a new wallpaper and set it."""
     try:
         core = WallpaperCore()
@@ -373,7 +561,7 @@ def fetch_and_set_wallpaper(category: str = "motivational", add_quote: bool = Tr
             core.save_to_history(final_path, quote_data)
             print(f"Wallpaper set successfully!")
             if add_quote:
-                print(f"Quote: \"{quote_data['text']}\" — {quote_data['author']}")
+                print(f'Quote: "{quote_data["text"]}" — {quote_data["author"]}')
             return 0
         else:
             print("Failed to set wallpaper")
