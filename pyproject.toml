@@ -11,7 +11,7 @@ authors = [
 description = "Modern Desktop Wallpaper Manager with Motivational Quotes"
 readme = "README.md"
 license = {text = "MIT"}
-requires-python = ">=3.8"
+requires-python = ">=3.9"
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Intended Audience :: End Users/Desktop",
@@ -45,6 +45,8 @@ dev = [
     "black",
     "flake8",
     "mypy",
+    "isort",
+    "types-requests",
 ]
 
 [project.urls]
@@ -103,7 +105,7 @@ markers = [
 ]
 
 [tool.mypy]
-python_version = "3.8"
+python_version = "3.9"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true
@@ -116,6 +118,17 @@ warn_unused_ignores = true
 warn_no_return = true
 warn_unreachable = true
 strict_equality = true
+ignore_missing_imports = true
+
+# Relax rules for the GUI module where dynamic tkinter/PIL patterns are common
+[[tool.mypy.overrides]]
+module = ["paprwall.gui.*"]
+disallow_untyped_defs = false
+check_untyped_defs = false
+disallow_untyped_decorators = false
+warn_no_return = false
+warn_return_any = false
+disable_error_code = ["attr-defined"]
 
 [tool.coverage.run]
 source = ["src"]

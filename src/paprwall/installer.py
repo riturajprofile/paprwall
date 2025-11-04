@@ -9,7 +9,7 @@ import shutil
 import platform
 import subprocess
 from pathlib import Path
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, Union
 
 from . import __version__, PACKAGE_NAME, APP_NAME
 
@@ -17,7 +17,7 @@ from . import __version__, PACKAGE_NAME, APP_NAME
 class SystemInstaller:
     """Handle system-level installation and uninstallation."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the system installer."""
         self.system = platform.system().lower()
         self.version = __version__
@@ -444,7 +444,8 @@ $Shortcut.Save()
             # When running as PyInstaller bundle, assets are bundled
             if getattr(sys, "frozen", False):
                 # Running as PyInstaller bundle
-                bundle_dir = Path(sys._MEIPASS)
+                bundle_root = getattr(sys, "_MEIPASS", None)
+                bundle_dir = Path(bundle_root) if bundle_root else Path.cwd()
                 assets_icon = bundle_dir / "assets" / "paprwall-icon.png"
             else:
                 # Running as script - look for assets relative to this file
@@ -486,8 +487,8 @@ $Shortcut.Save()
 
             # Draw text
             try:
-                font = ImageFont.truetype("arial.ttf", 48)
-            except:
+                font: Union[ImageFont.FreeTypeFont, ImageFont.ImageFont] = ImageFont.truetype("arial.ttf", 48)
+            except Exception:
                 font = ImageFont.load_default()
 
             text = "PW"

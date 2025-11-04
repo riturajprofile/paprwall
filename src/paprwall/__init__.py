@@ -22,7 +22,7 @@ IMAGES_DIR = DATA_DIR / "images"
 LOGS_DIR = DATA_DIR / "logs"
 
 # Ensure directories exist
-def ensure_directories():
+def ensure_directories() -> None:
     """Create necessary directories if they don't exist"""
     for directory in [CONFIG_DIR, DATA_DIR, CACHE_DIR, IMAGES_DIR, LOGS_DIR]:
         directory.mkdir(parents=True, exist_ok=True)

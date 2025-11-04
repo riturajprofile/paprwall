@@ -108,7 +108,7 @@ jobs:
           safety check || true
 
       - name: Upload security reports
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: always()
         with:
           name: security-reports
@@ -150,7 +150,7 @@ jobs:
           ./scripts/build_linux.sh
 
       - name: Upload Linux artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: linux-build
           path: |
@@ -194,7 +194,7 @@ jobs:
           ./scripts/build_appimage.sh
 
       - name: Upload AppImage artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: appimage-build
           path: |
@@ -229,7 +229,7 @@ jobs:
           scripts\build_windows.bat
 
       - name: Upload Windows artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: windows-build
           path: |
@@ -298,7 +298,7 @@ jobs:
           shasum -a 256 "paprwall-v$VERSION-macos-x64.tar.gz" > "paprwall-v$VERSION-macos-x64.tar.gz.sha256"
 
       - name: Upload macOS artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: macos-build
           path: |
@@ -362,7 +362,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Download all artifacts
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
 
       - name: Get version
         id: version

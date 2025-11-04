@@ -62,7 +62,8 @@ class ModernWallpaperGUI:
             # Find the icon file
             if getattr(sys, "frozen", False):
                 # Running as PyInstaller bundle
-                bundle_dir = Path(sys._MEIPASS)
+                bundle_root = getattr(sys, "_MEIPASS", None)
+                bundle_dir = Path(bundle_root) if bundle_root else Path.cwd()
                 icon_path = bundle_dir / "assets" / "paprwall-icon.png"
             else:
                 # Running as script
@@ -723,7 +724,8 @@ class ModernWallpaperGUI:
         except Exception as e:
             print(f"[ERROR] Fetch failed: {e}")
             self.root.after(
-                0, lambda: self.update_status(f"Error: {str(e)}", "accent_red")
+                0,
+                lambda msg=str(e): self.update_status(f"Error: {msg}", "accent_red"),
             )
             return False
 
@@ -946,7 +948,8 @@ class ModernWallpaperGUI:
             except Exception as e:
                 print(f"[ERROR] Failed to set wallpaper: {e}")
                 self.root.after(
-                    0, lambda: messagebox.showerror("Error", f"Failed: {str(e)}")
+                    0,
+                    lambda msg=str(e): messagebox.showerror("Error", f"Failed: {msg}"),
                 )
 
         threading.Thread(target=set_wp, daemon=True).start()
@@ -981,7 +984,10 @@ class ModernWallpaperGUI:
                     )
             except Exception as e:
                 self.root.after(
-                    0, lambda: self.update_status(f"Error: {str(e)}", "accent_red")
+                    0,
+                    lambda msg=str(e): self.update_status(
+                        f"Error: {msg}", "accent_red"
+                    ),
                 )
 
         threading.Thread(target=fetch, daemon=True).start()
@@ -1054,11 +1060,14 @@ class ModernWallpaperGUI:
                     author_font = ImageFont.truetype(fp, afs)
                     print(f"[DEBUG] Loaded font: {fp}")
                     break
-                except Exception as fe:
-                    print(f"[DEBUG] Font load failed: {fp} ({fe})")
-
-            if font is None:
-                try:
+                except Exception as e:
+                    print(f"[ERROR] Failed to set wallpaper: {e}")
+                    self.root.after(
+                        0,
+                        lambda msg=str(e): messagebox.showerror(
+                            "Error", f"Failed: {msg}"
+                        ),
+                    )
                     font = ImageFont.load_default()
                     author_font = font
                     print("[DEBUG] Using default font.")
@@ -1404,7 +1413,8 @@ class ModernWallpaperGUI:
             except Exception as e:
                 print(f"[ERROR] Failed to set from history: {e}")
                 self.root.after(
-                    0, lambda: messagebox.showerror("Error", f"Failed: {str(e)}")
+                    0,
+                    lambda msg=str(e): messagebox.showerror("Error", f"Failed: {msg}")
                 )
 
         threading.Thread(target=set_wp, daemon=True).start()

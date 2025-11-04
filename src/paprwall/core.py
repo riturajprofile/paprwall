@@ -13,7 +13,7 @@ import random
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import Optional, Dict, Any, List, Tuple
+from typing import Optional, Dict, Any, List, Tuple, Union
 from PIL import Image, ImageDraw, ImageFont
 
 from . import DATA_DIR, IMAGES_DIR, CONFIG_DIR
@@ -22,7 +22,7 @@ from . import DATA_DIR, IMAGES_DIR, CONFIG_DIR
 class WallpaperCore:
     """Core wallpaper management functionality."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the wallpaper core."""
         self.quote_categories = {
             "motivational": "motivational",
@@ -102,7 +102,7 @@ class WallpaperCore:
         """Add quote overlay to image and return new image path."""
         try:
             # Open image
-            image = Image.open(image_path)
+            image: Image.Image = Image.open(image_path)
             draw = ImageDraw.Draw(image)
 
             # Quote text
@@ -113,13 +113,13 @@ class WallpaperCore:
             font_size = 32
             author_font_size = 24
             try:
-                font = ImageFont.truetype("arial.ttf", font_size)
-                author_font = ImageFont.truetype("arial.ttf", author_font_size)
-            except:
+                font: Union[ImageFont.FreeTypeFont, ImageFont.ImageFont] = ImageFont.truetype("arial.ttf", font_size)
+                author_font: Union[ImageFont.FreeTypeFont, ImageFont.ImageFont] = ImageFont.truetype("arial.ttf", author_font_size)
+            except Exception:
                 try:
                     font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", font_size)
                     author_font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", author_font_size)
-                except:
+                except Exception:
                     font = ImageFont.load_default()
                     author_font = ImageFont.load_default()
 
@@ -176,11 +176,16 @@ class WallpaperCore:
             print(f"Failed to add quote to image: {e}")
             return image_path
 
-    def _wrap_text(self, text: str, font, max_width: int) -> List[str]:
+    def _wrap_text(
+        self,
+        text: str,
+        font: Union[ImageFont.FreeTypeFont, ImageFont.ImageFont],
+        max_width: int,
+    ) -> List[str]:
         """Wrap text to fit within max_width."""
         words = text.split()
-        lines = []
-        current_line = []
+        lines: List[str] = []
+        current_line: List[str] = []
 
         for word in words:
             test_line = ' '.join(current_line + [word])
@@ -253,14 +258,13 @@ class WallpaperCore:
     def _set_wallpaper_windows(self, image_path: str) -> bool:
         """Set wallpaper on Windows."""
         import ctypes
-        from ctypes import wintypes
 
         try:
             # Convert to absolute path
             abs_path = os.path.abspath(image_path)
 
             # Set wallpaper using Windows API
-            result = ctypes.windll.user32.SystemParametersInfoW(
+            result = ctypes.windll.user32.SystemParametersInfoW(  # type: ignore[attr-defined]
                 20,  # SPI_SETDESKWALLPAPER
                 0,
                 abs_path,
