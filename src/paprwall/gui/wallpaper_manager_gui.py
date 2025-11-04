@@ -25,7 +25,7 @@ class WallpaperManagerGUI:
         """Initialize the wallpaper manager GUI."""
         self.root = root
         self.root.title("Wallpaper Manager")
-        self.root.geometry("900x700")
+        self.root.geometry("1000x800")
         self.root.resizable(True, True)
         
         # Setup data directory
@@ -77,6 +77,8 @@ class WallpaperManagerGUI:
         ttk.Label(input_frame, text="Image URL:").grid(row=0, column=0, sticky=tk.W, pady=5)
         self.url_entry = ttk.Entry(input_frame, width=50)
         self.url_entry.grid(row=0, column=1, sticky=(tk.W, tk.E), padx=5, pady=5)
+        # Prefill with Picsum random URL for convenience
+        self.url_entry.insert(0, "https://picsum.photos/1920/1080")
         self.url_entry.bind('<Return>', lambda e: self.fetch_from_url())
         
         ttk.Button(
@@ -106,7 +108,7 @@ class WallpaperManagerGUI:
         self.preview_canvas = tk.Canvas(
             preview_frame, 
             bg="#2c3e50", 
-            height=300,
+            height=500,
             highlightthickness=1,
             highlightbackground="#34495e"
         )
@@ -304,9 +306,9 @@ class WallpaperManagerGUI:
             
             # Use default size if canvas not yet rendered
             if canvas_width <= 1:
-                canvas_width = 800
+                canvas_width = 900
             if canvas_height <= 1:
-                canvas_height = 300
+                canvas_height = 500
             
             img.thumbnail((canvas_width - 20, canvas_height - 20), Image.Resampling.LANCZOS)
             
@@ -510,7 +512,7 @@ class WallpaperManagerGUI:
         try:
             # Load and create thumbnail
             img = Image.open(item["path"])
-            img.thumbnail((120, 80), Image.Resampling.LANCZOS)
+            img.thumbnail((180, 120), Image.Resampling.LANCZOS)
             photo = ImageTk.PhotoImage(img)
             
             # Keep reference to prevent garbage collection

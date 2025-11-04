@@ -26,27 +26,66 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
+      - name: Install system deps (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y python3-tk ruby ruby-dev build-essential rpm
+          sudo gem install --no-document fpm
+
       - name: Install build deps
         run: |
           python -m pip install --upgrade pip
           pip install pyinstaller
           pip install -e .
 
-      - name: Build CLI (wallpaper-manager)
+      - name: Build CLI (paprwall)
         run: |
-          pyinstaller -F -n wallpaper-manager src/paprwall/wallpaper_cli.py
+          pyinstaller -F -n paprwall src/paprwall/cli.py
 
-      - name: Build GUI (wallpaper-gui)
-        run: |
-          # On macOS/Windows, a windowed build avoids console flashing
-          if [ "$RUNNER_OS" = "Windows" ]; then
-            pyinstaller -F -w -n wallpaper-gui src/paprwall/gui/wallpaper_manager_gui.py
-          elif [ "$RUNNER_OS" = "macOS" ]; then
-            pyinstaller -F -w -n wallpaper-gui src/paprwall/gui/wallpaper_manager_gui.py
-          else
-            pyinstaller -F -n wallpaper-gui src/paprwall/gui/wallpaper_manager_gui.py
-          fi
+      - name: Build GUI (paprwall-gui)
         shell: bash
+        run: |
+          if [ "$RUNNER_OS" == "Windows" ]; then
+            pyinstaller -F -w -n paprwall-gui --add-data "src/paprwall;paprwall" src/paprwall/gui/wallpaper_manager_gui.py
+          elif [ "$RUNNER_OS" == "macOS" ]; then
+            pyinstaller -F -w -n paprwall-gui --add-data "src/paprwall:paprwall" src/paprwall/gui/wallpaper_manager_gui.py
+          else
+            pyinstaller -F -n paprwall-gui --add-data "src/paprwall:paprwall" src/paprwall/gui/wallpaper_manager_gui.py
+          fi
+
+      - name: Rename binaries
+        shell: bash
+        run: |
+          cd dist
+          if [ "$RUNNER_OS" == "Windows" ]; then
+            mv paprwall.exe paprwall-windows-amd64.exe
+            mv paprwall-gui.exe paprwall-gui-windows-amd64.exe
+          elif [ "$RUNNER_OS" == "macOS" ]; then
+            mv paprwall paprwall-macos-amd64
+            mv paprwall-gui paprwall-gui-macos-amd64
+          else
+            mv paprwall paprwall-linux-amd64
+            mv paprwall-gui paprwall-gui-linux-amd64
+          fi
+
+      - name: Build DEB and RPM packages (Linux only)
+        if: runner.os == 'Linux'
+        run: |
+          mkdir -p dist/packages
+          fpm -s dir -t deb -n paprwall -v 1.1.1 \
+            --description "Picsum wallpaper rotator with GUI" \
+            --url "https://github.com/riturajprofile/paprwall" \
+            --license "CC BY-NC 4.0" \
+            dist/paprwall-linux-amd64=/usr/bin/paprwall \
+            dist/paprwall-gui-linux-amd64=/usr/bin/paprwall-gui
+          fpm -s dir -t rpm -n paprwall -v 1.1.1 \
+            --description "Picsum wallpaper rotator with GUI" \
+            --url "https://github.com/riturajprofile/paprwall" \
+            --license "CC BY-NC 4.0" \
+            dist/paprwall-linux-amd64=/usr/bin/paprwall \
+            dist/paprwall-gui-linux-amd64=/usr/bin/paprwall-gui
+          mv *.deb *.rpm dist/packages/
 
       - name: Archive artifacts
         uses: actions/upload-artifact@v4
@@ -54,6 +93,7 @@ jobs:
           name: paprwall-${{ runner.os }}
           path: |
             dist/*
+            dist/packages/*
 
   release:
     name: Create GitHub Release
@@ -68,6 +108,9 @@ jobs:
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
-          files: dist/**
+          files: |
+            dist/**
+            dist/packages/*.deb
+            dist/packages/*.rpm
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

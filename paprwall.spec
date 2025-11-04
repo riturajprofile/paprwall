@@ -2,7 +2,7 @@
 
 
 a = Analysis(
-    ['src/paprwall/wallpaper_cli.py'],
+    ['src/paprwall/cli.py'],
     pathex=[],
     binaries=[],
     datas=[],
@@ -22,7 +22,7 @@ exe = EXE(
     a.binaries,
     a.datas,
     [],
-    name='wallpaper-manager',
+    name='paprwall',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,

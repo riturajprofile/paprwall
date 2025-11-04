@@ -47,7 +47,4 @@ Repository = "https://github.com/riturajprofile/paprwall"
 
 [project.scripts]
 paprwall = "paprwall.cli:main"
-wallpaper-manager = "paprwall.wallpaper_cli:main"
-
-[project.gui-scripts]
-wallpaper-gui = "paprwall.gui.wallpaper_manager_gui:main"
+paprwall-gui = "paprwall.gui.wallpaper_manager_gui:main"

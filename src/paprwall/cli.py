@@ -1,5 +1,5 @@
 """
-CLI interface for paprwall.
+CLI interface for paprwall (Picsum-only, simplified).
 """
 import argparse
 import sys
@@ -7,7 +7,6 @@ from pathlib import Path
 from paprwall import __version__
 from paprwall.config.config_manager import ConfigManager
 from paprwall.core.rotator import WallpaperRotator
-from paprwall.api.source_manager import SourceManager
 from paprwall.utils.logger import setup_logger
 
 logger = setup_logger()
@@ -30,17 +29,7 @@ def main():
     parser.add_argument('--set', metavar='IMAGE_PATH', help='Set specific image as wallpaper')
     parser.add_argument('--current', action='store_true', help='Show current wallpaper info')
     
-    # Sources
-    parser.add_argument('--sources', action='store_true', help='List enabled sources')
-    parser.add_argument('--test', metavar='SOURCE', help='Test specific source (pixabay, unsplash, pexels)')
-    parser.add_argument('--enable', metavar='SOURCE', help='Enable a source')
-    parser.add_argument('--disable', metavar='SOURCE', help='Disable a source')
-    
-    # Themes
-    parser.add_argument('--themes', action='store_true', help='List available themes')
-    parser.add_argument('--set-theme', metavar='THEME', help='Set wallpaper theme (nature, city, space, etc.)')
-    parser.add_argument('--custom-query', metavar='QUERY', help='Set custom search query for all sources')
-    parser.add_argument('--current-theme', action='store_true', help='Show current theme')
+    # Removed: sources and themes management (no longer applicable)
     
     # Service (simplified placeholders)
     parser.add_argument('--start', action='store_true', help='Start wallpaper rotation service')
@@ -52,11 +41,16 @@ def main():
     # Initialize config
     config = ConfigManager()
     
-    # Handle GUI launch (removed - CLI only)
+    # Handle GUI launch
     if args.gui:
-        logger.error("GUI has been removed. Paprwall is now CLI-only.")
-        logger.info("Use --fetch, --next, --prev, --current, etc. for wallpaper management")
-        return 1
+        try:
+            from paprwall.gui.wallpaper_manager_gui import main as gui_main
+            logger.info("Launching GUI...")
+            gui_main()
+            return 0
+        except Exception as e:
+            logger.error(f"Failed to launch GUI: {e}")
+            return 1
     
     # Handle fetch
     if args.fetch:
@@ -123,122 +117,7 @@ def main():
             logger.error("No current wallpaper found")
             return 1
     
-    # Handle sources
-    if args.sources:
-        enabled = config.get_enabled_sources()
-        weights = config.get_source_weights()
-        
-        print("\nEnabled Sources:")
-        for source in enabled:
-            weight = weights.get(source, 0)
-            print(f"  ✓ {source.capitalize()} (weight: {weight})")
-        
-        all_sources = ['pixabay', 'unsplash', 'pexels', 'local']
-        disabled = [s for s in all_sources if s not in enabled]
-        
-        if disabled:
-            print("\nDisabled Sources:")
-            for source in disabled:
-                print(f"  ✗ {source.capitalize()}")
-        
-        return 0
-    
-    # Handle test source
-    if args.test:
-        source_name = args.test.lower()
-        logger.info(f"Testing {source_name}...")
-        
-        source_manager = SourceManager(config)
-        result = source_manager.test_source(source_name)
-        
-        if result['success']:
-            logger.info(f"✓ {result['message']}")
-            return 0
-        else:
-            logger.error(f"✗ {result['message']}")
-            return 1
-    
-    # Handle enable/disable sources
-    if args.enable:
-        source_name = args.enable.lower()
-        enabled = config.get_enabled_sources()
-        
-        if source_name not in enabled:
-            enabled.append(source_name)
-            config.set_enabled_sources(enabled)
-            logger.info(f"✓ Enabled {source_name}")
-        else:
-            logger.info(f"{source_name} is already enabled")
-        return 0
-    
-    if args.disable:
-        source_name = args.disable.lower()
-        enabled = config.get_enabled_sources()
-        
-        if source_name in enabled:
-            enabled.remove(source_name)
-            config.set_enabled_sources(enabled)
-            logger.info(f"✓ Disabled {source_name}")
-        else:
-            logger.info(f"{source_name} is not enabled")
-        return 0
-    
-    # Handle themes
-    if args.themes:
-        from paprwall.config.default_keys import AVAILABLE_THEMES
-        
-        print("\nAvailable Themes:")
-        print("=" * 60)
-        for theme_name, theme_data in AVAILABLE_THEMES.items():
-            print(f"\n  {theme_name.upper()}")
-            print(f"  {theme_data['description']}")
-            print(f"  Searches: {', '.join(theme_data['search_queries'][:3])}")
-        
-        print("\n" + "=" * 60)
-        print("\nSet theme with: paprwall --set-theme THEME_NAME")
-        return 0
-    
-    if args.current_theme:
-        current = config.get_preference('theme', 'nature')
-        custom = config.get_preference('custom_query', '')
-        
-        print("\nCurrent Theme Configuration:")
-        print(f"  Theme: {current}")
-        if custom:
-            print(f"  Custom Query: {custom}")
-        else:
-            print(f"  Custom Query: (none)")
-        return 0
-    
-    if args.set_theme:
-        theme_name = args.set_theme.lower()
-        from paprwall.config.default_keys import AVAILABLE_THEMES
-        
-        if theme_name in AVAILABLE_THEMES:
-            config.set_preference('theme', theme_name)
-            
-            # Update all source preferences
-            for source in ['pixabay', 'pexels', 'unsplash']:
-                prefs = config.get_source_preferences(source)
-                prefs['theme'] = theme_name
-                config.set_source_preferences(source, prefs)
-            
-            logger.info(f"✓ Theme set to: {theme_name}")
-            logger.info(f"  {AVAILABLE_THEMES[theme_name]['description']}")
-            logger.info(f"\nFetch new images with: paprwall --fetch")
-            return 0
-        else:
-            logger.error(f"✗ Unknown theme: {theme_name}")
-            logger.info(f"Available themes: {', '.join(AVAILABLE_THEMES.keys())}")
-            logger.info(f"Or run: paprwall --themes")
-            return 1
-    
-    if args.custom_query:
-        query = args.custom_query
-        config.set_preference('custom_query', query)
-        logger.info(f"✓ Custom query set to: {query}")
-        logger.info(f"\nFetch new images with: paprwall --fetch")
-        return 0
+    # Sources/themes commands removed
     
     # Handle service commands (basic implementation)
     if args.start:

@@ -145,8 +145,8 @@ fi
 
 echo_success "Paprwall installed successfully!"
 
-# Create wrapper scripts
-echo_info "Creating command wrappers..."
+# Create wrapper script
+echo_info "Creating command wrapper..."
 
 cat > "$BIN_DIR/paprwall" << 'WRAPPER_EOF'
 #!/bin/bash
@@ -154,23 +154,22 @@ source "$HOME/.paprwall/.venv/bin/activate"
 exec python -m paprwall.cli "$@"
 WRAPPER_EOF
 
-cat > "$BIN_DIR/wallpaper-manager" << 'WRAPPER_EOF'
-#!/bin/bash
-source "$HOME/.paprwall/.venv/bin/activate"
-exec python -m paprwall.wallpaper_cli "$@"
-WRAPPER_EOF
+chmod +x "$BIN_DIR/paprwall"
 
-cat > "$BIN_DIR/wallpaper-gui" << 'WRAPPER_EOF'
+echo_success "Command wrapper created"
+
+# Create GUI wrapper script
+echo_info "Creating GUI command wrapper..."
+
+cat > "$BIN_DIR/paprwall-gui" << 'WRAPPER_EOF'
 #!/bin/bash
 source "$HOME/.paprwall/.venv/bin/activate"
 exec python -m paprwall.gui.wallpaper_manager_gui "$@"
 WRAPPER_EOF
 
-chmod +x "$BIN_DIR/paprwall"
-chmod +x "$BIN_DIR/wallpaper-manager"
-chmod +x "$BIN_DIR/wallpaper-gui"
+chmod +x "$BIN_DIR/paprwall-gui"
 
-echo_success "Command wrappers created"
+echo_success "GUI command wrapper created"
 
 # Check if ~/.local/bin is in PATH
 if [[ ":$PATH:" != *":$HOME/.local/bin:"* ]]; then
@@ -198,20 +197,22 @@ echo_success "Paprwall has been installed to: $INSTALL_DIR"
 echo ""
 echo "📝 Quick Start:"
 echo ""
-echo "  1. Set up API keys (optional, but recommended):"
-echo "     - Pixabay:  https://pixabay.com/api/docs/"
-echo "     - Unsplash: https://unsplash.com/developers"
-echo "     - Pexels:   https://www.pexels.com/api/"
+echo "  🌐 Paprwall now uses Picsum Photos - no API keys needed!"
 echo ""
-echo "     Add keys to: ~/.config/paprwall/api_keys.json"
+echo "  Try these commands:"
+echo "     paprwall --fetch              # Download & set new wallpaper from Picsum"
+echo "     paprwall --current            # Show current wallpaper info"
+echo "     paprwall-gui                  # Launch the GUI app"
 echo ""
-echo "  2. Try these commands:"
-echo "     paprwall --fetch              # Download & set new wallpapers"
-echo "     paprwall --next               # Navigate to next wallpaper"
-echo "     paprwall --set-theme nature   # Set theme to nature"
-echo "     wallpaper-gui                 # Launch GUI (requires tkinter)"
+echo "  Auto-rotation:"
+echo "     systemctl --user start paprwall   # Start service (fetch every 90 min)"
+echo "     systemctl --user enable paprwall  # Enable on boot"
 echo ""
-echo "  3. For more help:"
+echo "  Configuration:"
+echo "     Edit ~/.config/paprwall/preferences.json to change interval"
+echo "     Default: 90 minutes between wallpaper changes"
+echo ""
+echo "  For more help:"
 echo "     paprwall --help"
 echo ""
 echo "🔗 Documentation: https://github.com/riturajprofile/paprwall"

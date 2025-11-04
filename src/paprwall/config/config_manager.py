@@ -1,32 +1,53 @@
 """
-Configuration manager for paprwall.
+Configuration manager for paprwall (Picsum-only, simplified).
+
+This version removes API key and multi-source management. It keeps only:
+- preferences.json: general app preferences
+- attribution.json: overlay configuration
 """
 import json
 import os
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict
 from paprwall import CONFIG_DIR
-from paprwall.config.default_keys import (
-    DEFAULT_API_KEYS,
-    DEFAULT_SOURCES,
-    DEFAULT_ATTRIBUTION,
-    DEFAULT_PREFERENCES
-)
+
+# Built-in defaults (no external imports required)
+DEFAULT_PREFERENCES: Dict[str, Any] = {
+    # Rotation frequency (minutes)
+    "rotation_interval_minutes": 60,
+    # How many images to fetch per fetch run
+    "images_per_day": 1,
+    # Time of the day to auto-fetch (HH:MM), optional feature
+    "auto_fetch_time": "08:00",
+    # Whether to delete old images automatically
+    "auto_delete_old": True,
+    # Keep images for N days
+    "keep_days": 7,
+    # Optional: local images folder (used by local mode if ever enabled)
+    "local_folder": str(Path('~/Pictures/Wallpapers').expanduser()),
+}
+
+DEFAULT_ATTRIBUTION: Dict[str, Any] = {
+    # Show overlay text on wallpapers
+    "overlay_enabled": True,
+    # Overlay position: bottom-right, bottom-left, top-right, top-left
+    "position": "bottom-right",
+    # Background box opacity (0..1)
+    "opacity": 0.7,
+}
 
 
 class ConfigManager:
-    """Manages all configuration files"""
-    
+    """Manages simplified configuration files (preferences + attribution)."""
+
     def __init__(self):
         self.config_dir = CONFIG_DIR
-        self.api_keys_file = self.config_dir / "api_keys.json"
-        self.sources_file = self.config_dir / "sources.json"
         self.attribution_file = self.config_dir / "attribution.json"
         self.preferences_file = self.config_dir / "preferences.json"
-        
-        # Load .env file if present
+
+        # Load .env file if present (kept for future extensibility)
         self._load_env_file()
-        
+
         # Initialize config files if they don't exist
         self._initialize_configs()
     
@@ -73,15 +94,9 @@ class ConfigManager:
     
     def _initialize_configs(self):
         """Create default config files if they don't exist"""
-        if not self.api_keys_file.exists():
-            self._save_json(self.api_keys_file, DEFAULT_API_KEYS)
-        
-        if not self.sources_file.exists():
-            self._save_json(self.sources_file, DEFAULT_SOURCES)
-        
         if not self.attribution_file.exists():
             self._save_json(self.attribution_file, DEFAULT_ATTRIBUTION)
-        
+
         if not self.preferences_file.exists():
             self._save_json(self.preferences_file, DEFAULT_PREFERENCES)
     
@@ -98,92 +113,7 @@ class ConfigManager:
         with open(file_path, 'w') as f:
             json.dump(data, f, indent=2)
     
-    # API Keys methods
-    def get_api_key(self, source: str) -> str:
-        """Get API key for a source
-        
-        Priority order:
-        1. Environment variables (.env or system)
-        2. User config file (api_keys.json)
-        3. Default keys (placeholders)
-        """
-        # Check environment variables first
-        env_key = None
-        if source == 'pixabay':
-            env_key = os.getenv('PIXABAY_API_KEY')
-        elif source == 'unsplash':
-            env_key = os.getenv('UNSPLASH_ACCESS_KEY')
-        elif source == 'pexels':
-            env_key = os.getenv('PEXELS_API_KEY')
-        
-        if env_key and env_key != 'YOUR_' + source.upper() + '_API_KEY_HERE':
-            return env_key
-        
-        # Check user config file
-        keys = self._load_json(self.api_keys_file)
-        source_config = keys.get(source, {})
-        
-        # Return custom key or default key
-        if source == 'pixabay':
-            return source_config.get('api_key', DEFAULT_API_KEYS['pixabay']['api_key'])
-        elif source == 'unsplash':
-            return source_config.get('access_key', DEFAULT_API_KEYS['unsplash']['access_key'])
-        elif source == 'pexels':
-            return source_config.get('api_key', DEFAULT_API_KEYS['pexels']['api_key'])
-        
-        return ""
-    
-    def set_api_key(self, source: str, key: str):
-        """Set custom API key for a source"""
-        keys = self._load_json(self.api_keys_file)
-        
-        if source not in keys:
-            keys[source] = {}
-        
-        if source == 'unsplash':
-            keys[source]['access_key'] = key
-        else:
-            keys[source]['api_key'] = key
-        
-        self._save_json(self.api_keys_file, keys)
-    
-    # Sources methods
-    def get_enabled_sources(self) -> List[str]:
-        """Get list of enabled sources"""
-        sources = self._load_json(self.sources_file)
-        return sources.get('enabled', DEFAULT_SOURCES['enabled'])
-    
-    def set_enabled_sources(self, sources: List[str]):
-        """Set enabled sources"""
-        config = self._load_json(self.sources_file)
-        config['enabled'] = sources
-        self._save_json(self.sources_file, config)
-    
-    def get_source_weights(self) -> Dict[str, int]:
-        """Get source weights for distribution"""
-        sources = self._load_json(self.sources_file)
-        return sources.get('weights', DEFAULT_SOURCES['weights'])
-    
-    def set_source_weights(self, weights: Dict[str, int]):
-        """Set source weights"""
-        config = self._load_json(self.sources_file)
-        config['weights'] = weights
-        self._save_json(self.sources_file, config)
-    
-    def get_source_preferences(self, source: str) -> Dict[str, Any]:
-        """Get preferences for a specific source"""
-        sources = self._load_json(self.sources_file)
-        prefs = sources.get('preferences', DEFAULT_SOURCES['preferences'])
-        return prefs.get(source, {})
-    
-    def set_source_preferences(self, source: str, preferences: Dict[str, Any]):
-        """Set preferences for a specific source"""
-        config = self._load_json(self.sources_file)
-        if 'preferences' not in config:
-            config['preferences'] = {}
-        config['preferences'][source] = preferences
-        self._save_json(self.sources_file, config)
-    
+    # Simplified API (no keys/sources management in Picsum-only mode)
     # Attribution methods
     def get_attribution_config(self) -> Dict[str, Any]:
         """Get attribution configuration"""
@@ -211,6 +141,5 @@ class ConfigManager:
     
     def get_local_folder(self) -> str:
         """Get local images folder path"""
-        prefs = self.get_source_preferences('local')
-        folder = prefs.get('folder', '~/Pictures/Wallpapers')
+        folder = self.get_preference('local_folder', str(Path('~/Pictures/Wallpapers').expanduser()))
         return str(Path(folder).expanduser())

@@ -11,24 +11,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🚀 **Complete distribution system** for easy deployment
   - `install.sh` - One-line automated installer for all major Linux distros
   - `uninstall.sh` - Clean removal script
-  - `setup_venv.sh` - Development environment setup
-- 🏗️ **Build scripts** for package creation
-  - `build.sh` - Python package builder (wheel + source dist)
-  - `build_binaries.sh` - Standalone binary builder with PyInstaller
-  - `test.sh` - Comprehensive test suite
-  - `prepare_release.sh` - Pre-release validation checks
-- 📚 **Enhanced documentation**
-  - `INSTALL.md` - Detailed installation guide for all methods
-  - `DISTRIBUTION.md` - Distribution and release guide
-  - `SHIPMENT_CHECKLIST.md` - Complete pre-release checklist
-  - `READY_TO_SHIP.md` - Quick start guide for releases
-  - `CHANGELOG.md` - This changelog file
+- 🔑 **Hardcoded API keys** - No setup required, works out of the box
+- 📚 **Simplified documentation** - Just README and CHANGELOG
 
 ### Fixed
 - 🐛 **tkinter module not found** error when using pipx
-  - Install script now properly creates venv with system package access
-  - Added python3-tk installation for all supported distros
-  - GUI now works correctly after installation
+  - Install script creates proper venv with system package access
+  - GUI works correctly after installation
 
 ### Improved
 - ✨ **Installation experience**
@@ -36,17 +25,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Automatic system dependency installation
   - Virtual environment setup at `~/.paprwall/.venv`
   - Command wrapper creation in `~/.local/bin`
-  - Auto-start service configuration
-- 📦 **Distribution readiness**
-  - Multi-distro support (Ubuntu, Debian, Fedora, Arch, openSUSE)
-  - Standalone binary option for users without Python
-  - PyPI-ready package structure
-  - GitHub Release workflow-ready
+  - Auto-start service
+- 🎯 **Simplified setup** - No API key configuration needed
 
 ### Changed
 - 🔄 Moved from pipx to virtual environment installation
-- 📝 Updated README with new installation methods
-- 🎨 Improved error messages and user feedback
+- � Hardcoded API keys for instant use
+- 🧹 Removed unnecessary build scripts
 
 ## [1.0.0] - 2025-11-03
 

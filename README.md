@@ -1,222 +1,111 @@
 # Paprwall 🖼️
 
-🎨 **Minimal CLI wallpaper manager for Linux** with multi-source support, local image management, and proper attribution.
+🎨 **Minimal wallpaper manager for Linux & Windows** – Beautiful random images from **Picsum** with GUI & CLI!
 
 [![License: CC BY-NC 4.0](https://img.shields.io/badge/License-CC%20BY--NC%204.0-lightgrey.svg)](https://creativecommons.org/licenses/by-nc/4.0/)
 [![Python](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
-[![Linux](https://img.shields.io/badge/platform-linux-lightgrey.svg)](https://www.linux.org/)
+[![Platform](https://img.shields.io/badge/platform-linux%20%7C%20windows-lightgrey.svg)](https://www.linux.org/)
 
-> **Simple, fast, and fully functional CLI-only wallpaper manager. Free for personal use!**
+> **Ultra-simple. No API keys. No headaches. Just beautiful random wallpapers!**
+>
+> ✨ **Download ready-to-use binaries** for Linux & Windows - no Python required!
+
+---
 
 ## ✨ Features
 
-### 🌐 Multiple Image Sources
-- **Pixabay** - Free, high-quality images
-- **Unsplash** - Professional photographer community
-- **Pexels** - Curated stock photos
-- **Local Images** - Use your own photos!
-
-### 🎛️ User Control
-- ✅ Choose which sources to use
-- ✅ Set distribution (how many images from each source)
-- ✅ **Select wallpaper themes** (nature, city, space, ocean, minimal, etc.)
-- ✅ **Custom search queries** for specific wallpapers
-- ✅ Upload and manage your own images
-- ✅ Manual wallpaper selection
-- ✅ Custom API keys support
-
-### 🔄 Smart Rotation
-- ✅ Auto-fetch new images daily
-- ✅ **Automatic retry** if fetch fails (retries after 1 hour)
-- ✅ Rotate wallpapers at custom intervals
-- ✅ Pause/resume anytime
-- ✅ Navigate through image history
-- ✅ **Auto-starts on system boot** (enabled during installation)
-
-### 📸 Proper Attribution
-- ✅ Credits photographers automatically
-- ✅ Complies with API terms of service
-- ✅ Optional desktop overlay
-- ✅ View attribution with --current command
-
-### 🖥️ Desktop Environment Support
-Supports all major Linux desktop environments:
-- GNOME / Ubuntu
-- KDE Plasma
-- XFCE
-- MATE
-- Cinnamon
-- LXDE / LXQt
+- 🌐 **Picsum Integration** – High-quality random images (1920×1080)
+- 🔄 **Auto-Rotation** – Fetch and set new wallpaper every 90 minutes
+- 🖼️ **GUI & CLI** – Both graphical and command-line interfaces
+- 📦 **Standalone Binaries** – Download and run, no Python needed
+- 🖥️ **Cross-Platform** – Linux, Windows (macOS builds available)
+- 🪶 **Lightweight** – Minimal dependencies, fast startup
+- 🔄 **History Navigation** – Browse and reuse previous wallpapers
+- 🖥️ **Desktop Support** – GNOME, KDE Plasma, XFCE, MATE, Cinnamon, LXDE/LXQt
 
 ---
 
-## 🚀 Quick Start
+## 📦 Installation
 
-### One-Line Install
+### Option 1: Download Binaries (Recommended)
 
+**No Python required!** Just download and run.
+
+#### Linux:
 ```bash
-curl -fsSL https://raw.githubusercontent.com/riturajprofile/paprwall/main/install.sh | sh
+# Download latest release
+curl -L -o paprwall https://github.com/riturajprofile/paprwall/releases/latest/download/paprwall-linux-amd64
+curl -L -o paprwall-gui https://github.com/riturajprofile/paprwall/releases/latest/download/paprwall-gui-linux-amd64
+
+# Make executable
+chmod +x paprwall paprwall-gui
+
+# Move to PATH
+sudo mv paprwall paprwall-gui /usr/local/bin/
+
+# Run
+paprwall-gui
 ```
 
-### Usage
-
+Or install DEB package:
 ```bash
-# Fetch and set new wallpapers
-paprwall --fetch
-
-# Navigate wallpapers
-paprwall --next
-paprwall --prev
-
-# Show current wallpaper info
-paprwall --current
-
-# Set a theme
-paprwall --set-theme nature
-paprwall --set-theme space
-
-# Custom search
-paprwall --custom-query "mountain sunset"
-
-# Enable/disable sources
-paprwall --enable pixabay
-paprwall --disable unsplash
-
-# Test API connection
-paprwall --test pixabay
+curl -L -O https://github.com/riturajprofile/paprwall/releases/latest/download/paprwall_1.1.1_amd64.deb
+sudo dpkg -i paprwall_1.1.1_amd64.deb
 ```
 
----
+#### Windows:
+1. Download from [Releases](https://github.com/riturajprofile/paprwall/releases/latest):
+   - `paprwall-windows-amd64.exe` (CLI)
+   - `paprwall-gui-windows-amd64.exe` (GUI)
+2. Double-click `paprwall-gui-windows-amd64.exe` to run
+3. Or add to PATH for command-line use
 
-## �� Installation
+### Option 2: One-Line Installer (Linux)
 
-### Prerequisites
-- Python 3.8+
-- pip
-- One of: `gsettings` (GNOME), `qdbus` (KDE), `xfconf-query` (XFCE), or `feh`/`nitrogen` (fallback)
-
-### Automated Installation (Recommended)
-
+Automatically downloads and installs both CLI and GUI:
 ```bash
-curl -fsSL https://raw.githubusercontent.com/riturajprofile/paprwall/main/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/riturajprofile/paprwall/main/install-single.sh | sh
 ```
 
-This will:
-- Create a virtual environment at `~/.paprwall/.venv`
-- Install all dependencies
-- Set up command wrappers in `~/.local/bin`
-- Enable auto-start service
-
-### Manual Installation
+### Option 3: Install from Source
 
 ```bash
 git clone https://github.com/riturajprofile/paprwall.git
 cd paprwall
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -e .
+./install.sh
 ```
 
 ---
 
-## 🔧 Configuration
+## 💻 Usage
 
-### API Keys
-
-Get free API keys:
-- **Pixabay**: https://pixabay.com/api/docs/
-- **Unsplash**: https://unsplash.com/developers
-- **Pexels**: https://www.pexels.com/api/
-
-**Method 1: Environment Variables (.env file)**
-
-Create `.env` in project root or `~/.config/paprwall/`:
+### GUI (Graphical Interface)
 
 ```bash
-PIXABAY_API_KEY=your_key_here
-UNSPLASH_ACCESS_KEY=your_key_here
-PEXELS_API_KEY=your_key_here
+paprwall-gui
 ```
 
-**Method 2: Config File**
-
-Edit `~/.config/paprwall/api_keys.json`:
-
-```json
-{
-  "pixabay": {
-    "api_key": "your_key_here"
-  },
-  "unsplash": {
-    "access_key": "your_key_here"
-  },
-  "pexels": {
-    "api_key": "your_key_here"
-  }
-}
+Or launch from CLI:
+```bash
+paprwall --gui
 ```
 
-### Enable/Disable Sources
+**The GUI lets you:**
+- 🖼️ **Preview wallpapers** before setting them
+- 🌐 **Fetch from URL** (defaults to Picsum random images)
+- 📁 **Browse local files** and set your own images
+- 📜 **View history** with clickable thumbnails
+- ⚡ **One-click wallpaper changes**
+
+![GUI Screenshot](docs/screenshot-gui.png)
+
+### CLI (Command Line)
 
 ```bash
-# Enable a source
-paprwall --enable pixabay
-paprwall --enable pexels
-paprwall --enable local
-
-# Disable a source
-paprwall --disable unsplash
-
-# List enabled sources
-paprwall --sources
-```
-
-Or edit `~/.config/paprwall/sources.json`:
-
-```json
-{
-  "enabled": ["pixabay", "pexels"],
-  "weights": {
-    "pixabay": 50,
-    "pexels": 50
-  }
-}
-```
-
-### Themes
-
-List available themes:
-
-```bash
-paprwall --themes
-```
-
-Set a theme:
-
-```bash
-paprwall --set-theme nature
-paprwall --set-theme city
-paprwall --set-theme space
-paprwall --set-theme minimal
-```
-
-Custom search query (overrides theme):
-
-```bash
-paprwall --custom-query "sunset mountains"
-```
-
----
-
-## 💻 CLI Commands
-
-### Basic Operations
-
-```bash
-# Fetch new wallpapers
+# Fetch and set new wallpaper
 paprwall --fetch
 
-# Navigate
+# Navigate through wallpapers
 paprwall --next
 paprwall --prev
 
@@ -225,78 +114,61 @@ paprwall --current
 
 # Set specific image
 paprwall --set /path/to/image.jpg
+
+# Service management
+paprwall --start
+paprwall --stop
+paprwall --status
 ```
 
-### Source Management
+### Auto-Rotation Service (Linux)
+
+Automatically change wallpapers every 90 minutes:
 
 ```bash
-# List enabled sources
-paprwall --sources
-
-# Test API connection
-paprwall --test pixabay
-paprwall --test pexels
-
-# Enable/disable sources
-paprwall --enable pixabay
-paprwall --disable local
-```
-
-### Theme Configuration
-
-```bash
-# List available themes
-paprwall --themes
-
-# Show current theme
-paprwall --current-theme
-
-# Set theme
-paprwall --set-theme nature
-
-# Custom search
-paprwall --custom-query "ocean waves"
-```
-
-### Service Management
-
-```bash
-# Check service status
-systemctl --user status paprwall
-
-# Start service
+# Enable and start service
+systemctl --user enable paprwall
 systemctl --user start paprwall
+
+# Check status
+systemctl --user status paprwall
 
 # Stop service
 systemctl --user stop paprwall
-
-# Enable auto-start
-systemctl --user enable paprwall
-
-# Disable auto-start
-systemctl --user disable paprwall
 ```
 
 ---
 
-## 📸 Attribution
+## ⚙️ Configuration
 
-Paprwall respects photographers and API terms by:
-- Displaying photographer credits on wallpapers (optional overlay)
-- Including attribution in metadata
-- Complying with all source API requirements
+Configuration files are stored in `~/.config/paprwall/`
 
-### Desktop Overlay
+### Change Rotation Interval
 
-By default, wallpapers include a subtle overlay with photographer credit. To disable:
-
-Edit `~/.config/paprwall/attribution.json`:
-
+Edit `~/.config/paprwall/preferences.json`:
 ```json
 {
-  "attribution_disabled": true
+  "rotation_interval_minutes": 90,
+  "images_per_day": 1,
+  "auto_delete_old": true,
+  "keep_days": 7
 }
 ```
+
+Change `90` to any number of minutes you want between wallpaper changes.
+
+### Attribution Overlay (Optional)
+
+Edit `~/.config/paprwall/attribution.json`:
+```json
+{
+  "overlay_enabled": true,
+  "position": "bottom-right",
+  "opacity": 0.7
+}
+```
+
+Set `overlay_enabled` to `false` to disable the photographer credit overlay.
 
 ---
 
@@ -304,32 +176,57 @@ Edit `~/.config/paprwall/attribution.json`:
 
 ```
 ~/.config/paprwall/          # Configuration
-├── api_keys.json            # API keys
-├── sources.json             # Enabled sources & weights
-├── preferences.json         # General preferences
-└── attribution.json         # Attribution settings
+├── preferences.json         # Rotation interval, cleanup settings
+└── attribution.json         # Overlay settings
 
 ~/.local/share/paprwall/     # Data
-├── images/                  # Downloaded wallpapers
-│   └── 2025-11-03/         # Organized by date
-│       ├── pixabay_1.jpg
-│       └── pexels_1.jpg
+├── images/                  # Downloaded wallpapers (organized by date)
+│   └── 2025-11-04/
+│       └── picsum_*.jpg
 └── logs/                    # Application logs
     └── app.log
-
-~/.paprwall/                 # Installation
-└── .venv/                   # Virtual environment
 ```
 
 ---
 
-## � Ship it: builds and releases
+## 🛠️ Desktop Environment Support
 
-You can distribute Paprwall in two ways: as a Python package or as standalone binaries.
+Paprwall automatically detects your DE and uses the appropriate command:
 
-### Option A: Python package (pip)
+- **GNOME / Ubuntu** – `gsettings` (usually pre-installed)
+- **KDE Plasma** – `qdbus`
+- **XFCE** – `xfconf-query`
+- **MATE / Cinnamon** – `gsettings`
+- **Fallback** – `feh` or `nitrogen`
 
-Build and install locally:
+**If wallpapers don't change:**
+```bash
+# Install the tool for your desktop environment
+sudo apt install gsettings      # GNOME/Ubuntu/MATE
+sudo apt install qdbus-qt5      # KDE
+sudo apt install xfconf          # XFCE
+sudo apt install feh            # Universal fallback
+```
+
+---
+
+## 🔨 Building from Source
+
+### Build Binaries Locally
+
+```bash
+# Install dependencies
+pip install pyinstaller
+
+# Build both CLI and GUI
+./build_gui.sh
+
+# Binaries will be in dist/
+./dist/paprwall --help
+./dist/paprwall-gui
+```
+
+### Build Python Package
 
 ```bash
 python -m pip install --upgrade pip build
@@ -337,84 +234,42 @@ python -m build
 pip install dist/paprwall-*.whl
 ```
 
-Publish to PyPI (optional):
-
-```bash
-python -m pip install twine
-twine upload dist/*
-```
-
-### Option B: Standalone binaries (no Python required)
-
-Create single-file executables with PyInstaller:
-
-```bash
-pip install pyinstaller
-
-# CLI build
-pyinstaller -F -n wallpaper-manager src/paprwall/wallpaper_cli.py
-
-# GUI build
-# On macOS/Windows, add -w to hide console: pyinstaller -F -w -n wallpaper-gui ...
-pyinstaller -F -n wallpaper-gui src/paprwall/gui/wallpaper_manager_gui.py
-
-# Artifacts will be in ./dist/
-```
-
-### Continuous builds with GitHub Actions
-
-This repo includes a workflow at `.github/workflows/release.yml` that:
-- Builds Windows, macOS, and Linux binaries with PyInstaller
-- Runs automatically when you push a tag like `v1.2.3`
-- Uploads the binaries as a GitHub Release
-
-Usage:
-
-```bash
-git tag v1.0.0
-git push origin v1.0.0
-```
-
-When the workflow finishes, download the binaries from the Release page.
-
 ---
 
-## �🛠️ Troubleshooting
+## 🐛 Troubleshooting
 
 ### Wallpaper not changing
 
-Check desktop environment detection:
-
+Check desktop environment:
 ```bash
 echo $XDG_CURRENT_DESKTOP
 echo $DESKTOP_SESSION
 ```
 
-Install the appropriate tool:
-- GNOME: `gsettings` (usually pre-installed)
-- KDE: `qdbus`
-- XFCE: `xfconf-query`
-- Fallback: `feh` or `nitrogen`
-
-### API errors
-
-```bash
-# Test each source
-paprwall --test pixabay
-paprwall --test pexels
-paprwall --test unsplash
-```
-
-Common issues:
-- Invalid API key → Get new key from provider
-- Rate limit exceeded → Wait 1 hour
-- No results → Try different theme/query
+Install the appropriate tool (see Desktop Environment Support section above).
 
 ### Check logs
 
 ```bash
 tail -f ~/.local/share/paprwall/logs/app.log
 ```
+
+### GUI not launching
+
+**On Linux:**
+```bash
+# Make sure Tkinter is installed
+sudo apt install python3-tk      # Ubuntu/Debian
+sudo dnf install python3-tkinter # Fedora
+sudo pacman -S tk                # Arch
+
+# Or use the standalone binary (no Tkinter needed)
+./paprwall-gui-linux-amd64
+```
+
+**On Windows:**
+- Download the `.exe` binary (Tkinter is bundled)
+- Or install Python 3.8+ with Tkinter enabled
 
 ---
 
@@ -430,7 +285,6 @@ tail -f ~/.local/share/paprwall/logs/app.log
 ❌ **Not Allowed:**
 - ❌ Commercial use
 - ❌ Selling this software
-- ❌ Using in commercial products
 
 **Attribution Required:** Must credit riturajprofile
 
@@ -440,7 +294,7 @@ See [LICENSE](LICENSE) for full details.
 
 ## 🤝 Contributing
 
-Contributions welcome! This project is non-commercial and open to community improvements.
+Contributions welcome! This is a non-commercial open-source project.
 
 1. Fork the repository
 2. Create your feature branch
@@ -452,9 +306,8 @@ Contributions welcome! This project is non-commercial and open to community impr
 
 ## 🙏 Credits
 
-- **Image Sources**: Pixabay, Unsplash, Pexels
-- **API Providers**: Thank you for free API access!
-- **Photographers**: Credits displayed with each wallpaper
+- **Image Source**: [Picsum Photos](https://picsum.photos) - Free random image service
+- **Creator**: riturajprofile
 
 ---
 

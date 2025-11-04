@@ -1,5 +1,3 @@
-"""GUI module for wallpaper manager."""
+"""Deprecated GUI package. The GUI has been removed."""
 
-from .wallpaper_manager_gui import WallpaperManagerGUI
-
-__all__ = ['WallpaperManagerGUI']
+__all__ = []

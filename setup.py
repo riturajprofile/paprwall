@@ -22,7 +22,7 @@ class PostInstallCommand(install):
 
 setup(
     name="paprwall",
-    version="1.1.0",
+    version="1.1.1",
     packages=find_packages(where="src"),
     package_dir={"": "src"},
     install_requires=[
@@ -30,13 +30,15 @@ setup(
         "Pillow>=10.0.0",
         "APScheduler>=3.10.0",
     ],
+    extras_require={
+        "build": ["pyinstaller>=5.0.0"],
+    },
     entry_points={
         "console_scripts": [
             "paprwall=paprwall.cli:main",
-            "wallpaper-manager=paprwall.wallpaper_cli:main",
         ],
         "gui_scripts": [
-            "wallpaper-gui=paprwall.gui.wallpaper_manager_gui:main",
+            "paprwall-gui=paprwall.gui.wallpaper_manager_gui:main",
         ],
     },
     cmdclass={

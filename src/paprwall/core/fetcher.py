@@ -1,5 +1,5 @@
 """
-Image fetcher - coordinates downloading and storing images.
+Image fetcher - simplified to download wallpapers from Picsum only.
 """
 import json
 from datetime import datetime
@@ -9,8 +9,6 @@ import logging
 from paprwall import IMAGES_DIR
 import requests
 import time
-from paprwall.api.source_manager import SourceManager
-from paprwall.core.local_images import LocalImageManager
 from paprwall.core.attribution import AttributionManager
 
 logger = logging.getLogger(__name__)
@@ -21,15 +19,13 @@ class ImageFetcher:
     
     def __init__(self, config_manager):
         self.config = config_manager
-        self.source_manager = SourceManager(config_manager)
-        self.local_manager = LocalImageManager(config_manager)
         self.attribution_manager = AttributionManager(config_manager)
         self.images_dir = IMAGES_DIR
     
     def fetch_daily_images(self) -> List[Dict]:
         """
-        Fetch today's wallpaper collection from all enabled sources.
-        
+        Fetch today's wallpapers exclusively from Picsum.
+
         Returns:
             List of image metadata with local paths
         """
@@ -38,105 +34,12 @@ class ImageFetcher:
         today_dir = self.images_dir / today
         today_dir.mkdir(parents=True, exist_ok=True)
         
-        # Get configured image count
-        total_images = self.config.get_preference('images_per_day', 5)
-        
-        # Calculate how many from APIs vs local
-        enabled_sources = self.config.get_enabled_sources()
-        local_enabled = 'local' in enabled_sources
-        
-        if local_enabled:
-            weights = self.config.get_source_weights()
-            local_weight = weights.get('local', 0)
-            total_weight = sum(weights.values())
-            
-            if total_weight > 0:
-                local_count = int((local_weight / total_weight) * total_images)
-                api_count = total_images - local_count
-            else:
-                local_count = 0
-                api_count = total_images
-        else:
-            local_count = 0
-            api_count = total_images
-        
-        all_images = []
-        
-        # Fetch from APIs
-        if api_count > 0:
-            try:
-                api_images = self.source_manager.fetch_daily_images(api_count)
-                
-                # Download each image
-                api_success_start_count = len(all_images)
-                for idx, img_data in enumerate(api_images):
-                    try:
-                        # Generate filename
-                        source = img_data.get('source', 'unknown')
-                        filename = f"{source}_{idx + 1}.jpg"
-                        local_path = today_dir / filename
-                        
-                        # Download image
-                        if source not in self.source_manager.clients:
-                            logger.warning(f"No client found for source: {source}")
-                            continue
-                        
-                        client = self.source_manager.clients[source]
-                        download_url = img_data.get('download_url')
-                        
-                        if not download_url:
-                            logger.warning(f"No download URL for image from {source}")
-                            continue
-                        
-                        if client.download_image(download_url, local_path):
-                            # Add attribution overlay if enabled
-                            final_path = self.attribution_manager.create_desktop_overlay(
-                                local_path, img_data
-                            )
-                            
-                            # Update image data with local path
-                            img_data['local_path'] = str(final_path)
-                            
-                            # Save metadata
-                            metadata_path = local_path.with_suffix('.json')
-                            with open(metadata_path, 'w') as f:
-                                json.dump(img_data, f, indent=2)
-                            
-                            all_images.append(img_data)
-                            logger.info(f"Downloaded: {filename}")
-                        else:
-                            logger.warning(f"Failed to download: {filename}")
-                    
-                    except Exception as e:
-                        logger.error(f"Failed to download image: {e}")
-                # If API images failed or returned fewer than requested, fill with Picsum fallback
-                api_added = len(all_images) - api_success_start_count
-                remaining_needed = max(api_count - api_added, 0)
-                if remaining_needed > 0:
-                    logger.warning(f"API sources returned only {api_added}/{api_count} images. Using Picsum fallback for {remaining_needed} image(s).")
-                    fallback_images = self._download_picsum_images(remaining_needed, today_dir)
-                    all_images.extend(fallback_images)
-            
-            except Exception as e:
-                logger.error(f"Failed to fetch API images: {e}")
-                # Entire API pipeline failed; try to satisfy with Picsum fallbacks
-                try:
-                    logger.warning(f"Falling back to Picsum for {api_count} image(s) due to API failure.")
-                    fallback_images = self._download_picsum_images(api_count, today_dir)
-                    all_images.extend(fallback_images)
-                except Exception as fe:
-                    logger.error(f"Picsum fallback also failed: {fe}")
-        
-        # Add local images
-        if local_count > 0 and local_enabled:
-            try:
-                local_images = self.local_manager.get_random_images(local_count)
-                all_images.extend(local_images)
-                logger.info(f"Added {len(local_images)} local images")
-            except Exception as e:
-                logger.error(f"Failed to get local images: {e}")
-        
-        return all_images
+        # Get configured image count (default to 1 for interval-based fetching)
+        total_images = int(self.config.get_preference('images_per_day', 1) or 1)
+
+        # Always download from Picsum
+        images = self._download_picsum_images(total_images, today_dir)
+        return images
 
     def _download_picsum_images(self, count: int, dest_dir: Path) -> List[Dict]:
         """Download random images from Picsum as a fallback.

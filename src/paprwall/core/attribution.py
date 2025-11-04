@@ -1,5 +1,5 @@
 """
-Attribution manager with secret key functionality.
+Attribution manager (simplified, no secret key).
 """
 import json
 from datetime import datetime
@@ -8,54 +8,21 @@ from typing import Dict
 import logging
 from PIL import Image, ImageDraw, ImageFont
 from paprwall import CONFIG_DIR
-from paprwall.config.default_keys import ATTRIBUTION_SECRET_KEY
 
 logger = logging.getLogger(__name__)
 
 
 class AttributionManager:
-    """Manages attribution display and secret key verification"""
-    
-    SECRET_KEY = ATTRIBUTION_SECRET_KEY
-    
+    """Manages attribution overlay rendering."""
+
     def __init__(self, config_manager):
         self.config = config_manager
         self.config_dir = CONFIG_DIR
     
     def should_show_attribution(self) -> bool:
-        """
-        Check if attribution should be shown on desktop.
-        Returns False if user has entered secret key.
-        """
+        """Check if attribution should be shown on desktop."""
         config = self.config.get_attribution_config()
-        return not config.get('attribution_disabled', False)
-    
-    def verify_secret_key(self, input_key: str) -> bool:
-        """Verify if secret key matches"""
-        if not input_key:
-            return False
-        return input_key.strip() == self.SECRET_KEY
-    
-    def disable_attribution(self, secret_key: str) -> bool:
-        """Disable attribution overlay if secret key is correct"""
-        if self.verify_secret_key(secret_key):
-            config = self.config.get_attribution_config()
-            config['attribution_disabled'] = True
-            config['disabled_at'] = datetime.now().isoformat()
-            self.config.set_attribution_config(config)
-            logger.info("Attribution overlay disabled with secret key")
-            return True
-        logger.warning("Invalid secret key attempt")
-        return False
-    
-    def enable_attribution(self):
-        """Re-enable attribution overlay"""
-        config = self.config.get_attribution_config()
-        config['attribution_disabled'] = False
-        if 'disabled_at' in config:
-            del config['disabled_at']
-        self.config.set_attribution_config(config)
-        logger.info("Attribution overlay re-enabled")
+        return bool(config.get('overlay_enabled', True))
     
     def create_attribution_text(self, image_data: Dict) -> str:
         """
