@@ -2,9 +2,9 @@
 
 **Modern Desktop Wallpaper Manager with Motivational Quotes**
 
-[![Version](https://img.shields.io/badge/version-1.0.2-blue.svg)](https://github.com/riturajprofile/paprwall/releases)
+[![Version](https://img.shields.io/badge/version-1.0.3-blue.svg)](https://github.com/riturajprofile/paprwall/releases)
 [![Python](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
-[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![License: CC BY-NC 4.0](https://img.shields.io/badge/License-CC--BY--NC%204.0-blue.svg)](https://creativecommons.org/licenses/by-nc/4.0/)
 [![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20Windows-lightgrey.svg)](https://github.com/riturajprofile/paprwall)
 
 Transform your desktop with stunning wallpapers embedded with inspirational quotes. PaprWall brings a fresh, modern approach to wallpaper management with automatic rotation and quote personalization.
@@ -20,7 +20,7 @@ Transform your desktop with stunning wallpapers embedded with inspirational quot
 - **Web-inspired layout** - Clean, intuitive controls
 
 ### 💭 Quote System
-- **6 Quote Categories**: 
+- **6 Quote Categories**:
   - 🚀 Motivational
   - 🔢 Mathematics
   - 🔬 Science
@@ -251,19 +251,19 @@ chmod +x paprwall-gui
 ### Windows Issues
 
 #### Issue: Windows SmartScreen warning
-**Solution**: 
+**Solution**:
 1. Click "More info"
 2. Click "Run anyway"
 3. This is normal for unsigned executables
 
 #### Issue: Wallpaper doesn't change
-**Solution**: 
+**Solution**:
 - Make sure you have write permissions to wallpaper directory
 - Try running as normal user (not administrator)
 - Check Windows Settings → Personalization → Background
 
 #### Issue: Python not found (source install)
-**Solution**: 
+**Solution**:
 1. Download Python from [python.org](https://www.python.org/downloads/)
 2. Check "Add Python to PATH" during installation
 3. Restart Command Prompt
@@ -271,7 +271,7 @@ chmod +x paprwall-gui
 ### General Issues
 
 #### Issue: Quote not visible
-**Solution**: 
+**Solution**:
 - Quote is embedded top-right corner
 - Try a different wallpaper with more space
 - Use custom quote with shorter text

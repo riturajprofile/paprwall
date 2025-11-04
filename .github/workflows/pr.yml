@@ -2,15 +2,20 @@ name: Pull Request Tests
 
 on:
   pull_request:
-    branches: [ main, develop ]
+    branches: [main, develop]
     types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 env:
-  PYTHON_VERSION: '3.8'
+  PYTHON_VERSION: "3.8"
 
 jobs:
   changes:
@@ -21,29 +26,29 @@ jobs:
       docs: ${{ steps.changes.outputs.docs }}
       workflows: ${{ steps.changes.outputs.workflows }}
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-    - name: Check for changes
-      uses: dorny/paths-filter@v2
-      id: changes
-      with:
-        filters: |
-          python:
-            - 'src/**'
-            - 'tests/**'
-            - 'requirements.txt'
-            - 'pyproject.toml'
-            - 'setup.py'
-            - 'setup.cfg'
-          docs:
-            - 'README.md'
-            - 'docs/**'
-            - '*.md'
-          workflows:
-            - '.github/workflows/**'
+      - name: Check for changes
+        uses: dorny/paths-filter@v2
+        id: changes
+        with:
+          filters: |
+            python:
+              - 'src/**'
+              - 'tests/**'
+              - 'requirements.txt'
+              - 'pyproject.toml'
+              - 'setup.py'
+              - 'setup.cfg'
+            docs:
+              - 'README.md'
+              - 'docs/**'
+              - '*.md'
+            workflows:
+              - '.github/workflows/**'
 
   lint-and-format:
     name: Code Quality
@@ -52,46 +57,46 @@ jobs:
     if: needs.changes.outputs.python == 'true'
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: ${{ env.PYTHON_VERSION }}
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
 
-    - name: Cache pip dependencies
-      uses: actions/cache@v3
-      with:
-        path: ~/.cache/pip
-        key: ${{ runner.os }}-pip-lint-${{ hashFiles('**/requirements.txt', '**/pyproject.toml') }}
-        restore-keys: |
-          ${{ runner.os }}-pip-lint-
-          ${{ runner.os }}-pip-
+      - name: Cache pip dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-lint-${{ hashFiles('**/requirements.txt', '**/pyproject.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-lint-
+            ${{ runner.os }}-pip-
 
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -e ".[dev]"
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
 
-    - name: Check code formatting with Black
-      run: |
-        black --check --diff src/ tests/
+      - name: Check code formatting with Black
+        run: |
+          black --check --diff src/ tests/
 
-    - name: Lint with flake8
-      run: |
-        # Stop the build if there are Python syntax errors or undefined names
-        flake8 src/ tests/ --count --select=E9,F63,F7,F82 --show-source --statistics
-        # Exit-zero treats all errors as warnings
-        flake8 src/ tests/ --count --exit-zero --max-complexity=10 --max-line-length=88 --statistics
+      - name: Lint with flake8
+        run: |
+          # Stop the build if there are Python syntax errors or undefined names
+          flake8 src/ tests/ --count --select=E9,F63,F7,F82 --show-source --statistics
+          # Exit-zero treats all errors as warnings
+          flake8 src/ tests/ --count --exit-zero --max-complexity=10 --max-line-length=88 --statistics
 
-    - name: Type checking with mypy
-      run: |
-        mypy src/paprwall --ignore-missing-imports --no-strict-optional
+      - name: Type checking with mypy
+        run: |
+          mypy src/paprwall --ignore-missing-imports --no-strict-optional
 
-    - name: Check import sorting
-      run: |
-        python -m isort --check-only --diff src/ tests/
+      - name: Check import sorting
+        run: |
+          python -m isort --check-only --diff src/ tests/
 
   test-matrix:
     name: Test (${{ matrix.os }}, Python ${{ matrix.python-version }})
@@ -102,53 +107,53 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest]
-        python-version: ['3.8', '3.11']
+        python-version: ["3.8", "3.11"]
       fail-fast: false
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v4
-      with:
-        python-version: ${{ matrix.python-version }}
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
 
-    - name: Install system dependencies (Ubuntu)
-      if: runner.os == 'Linux'
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y python3-tk python3-dev xvfb
+      - name: Install system dependencies (Ubuntu)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y python3-tk python3-dev xvfb
 
-    - name: Cache pip dependencies
-      uses: actions/cache@v3
-      with:
-        path: ~/.cache/pip
-        key: ${{ runner.os }}-${{ matrix.python-version }}-pip-${{ hashFiles('**/requirements.txt', '**/pyproject.toml') }}
-        restore-keys: |
-          ${{ runner.os }}-${{ matrix.python-version }}-pip-
-          ${{ runner.os }}-pip-
+      - name: Cache pip dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-${{ matrix.python-version }}-pip-${{ hashFiles('**/requirements.txt', '**/pyproject.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ matrix.python-version }}-pip-
+            ${{ runner.os }}-pip-
 
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip setuptools wheel
-        pip install -r requirements.txt
-        pip install -e ".[dev]"
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip setuptools wheel
+          pip install -r requirements.txt
+          pip install -e ".[dev]"
 
-    - name: Run unit tests (Linux)
-      if: runner.os == 'Linux'
-      run: |
-        xvfb-run -a python -m pytest tests/ -v --tb=short --cov=paprwall --cov-report=term-missing
+      - name: Run unit tests (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          xvfb-run -a python -m pytest tests/ -v --tb=short --cov=paprwall --cov-report=term-missing
 
-    - name: Run unit tests (Windows)
-      if: runner.os == 'Windows'
-      run: |
-        python -m pytest tests/ -v --tb=short --cov=paprwall --cov-report=term-missing
+      - name: Run unit tests (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          python -m pytest tests/ -v --tb=short --cov=paprwall --cov-report=term-missing
 
-    - name: Test CLI functionality
-      run: |
-        python -m paprwall.cli --help
-        python -m paprwall.cli --version
+      - name: Test CLI functionality
+        run: |
+          python -m paprwall.cli --help
+          python -m paprwall.cli --version
 
   security-check:
     name: Security Scan
@@ -157,37 +162,37 @@ jobs:
     if: needs.changes.outputs.python == 'true'
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: ${{ env.PYTHON_VERSION }}
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
 
-    - name: Install security tools
-      run: |
-        python -m pip install --upgrade pip
-        pip install bandit[toml] safety
+      - name: Install security tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install bandit[toml] safety
 
-    - name: Run bandit security scan
-      run: |
-        bandit -r src/ -f json -o bandit-report.json || true
-        bandit -r src/ -ll || true
+      - name: Run bandit security scan
+        run: |
+          bandit -r src/ -f json -o bandit-report.json || true
+          bandit -r src/ -ll || true
 
-    - name: Check for known vulnerabilities
-      run: |
-        safety check --json --output safety-report.json || true
-        safety check || true
+      - name: Check for known vulnerabilities
+        run: |
+          safety check --json --output safety-report.json || true
+          safety check || true
 
-    - name: Upload security artifacts
-      uses: actions/upload-artifact@v3
-      if: always()
-      with:
-        name: security-reports-pr-${{ github.event.number }}
-        path: |
-          bandit-report.json
-          safety-report.json
+      - name: Upload security artifacts
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: security-reports-pr-${{ github.event.number }}
+          path: |
+            bandit-report.json
+            safety-report.json
 
   build-check:
     name: Build Verification
@@ -196,45 +201,45 @@ jobs:
     if: needs.changes.outputs.python == 'true'
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: ${{ env.PYTHON_VERSION }}
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
 
-    - name: Install system dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y python3-tk python3-dev
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y python3-tk python3-dev
 
-    - name: Install build dependencies
-      run: |
-        python -m pip install --upgrade pip setuptools wheel
-        pip install build pyinstaller>=5.0
-        pip install -r requirements.txt
-        pip install -e .
+      - name: Install build dependencies
+        run: |
+          python -m pip install --upgrade pip setuptools wheel
+          pip install build pyinstaller>=5.0
+          pip install -r requirements.txt
+          pip install -e .
 
-    - name: Test package building
-      run: |
-        python -m build --wheel --outdir dist/
+      - name: Test package building
+        run: |
+          python -m build --wheel --outdir dist/
 
-    - name: Test PyInstaller build
-      run: |
-        # Quick PyInstaller test (no full build)
-        pyinstaller --onefile --name test-build \
-          --hidden-import paprwall \
-          --hidden-import paprwall.core \
-          --hidden-import paprwall.gui \
-          --exclude-module matplotlib \
-          --exclude-module numpy \
-          src/paprwall/cli.py
+      - name: Test PyInstaller build
+        run: |
+          # Quick PyInstaller test (no full build)
+          pyinstaller --onefile --name test-build \
+            --hidden-import paprwall \
+            --hidden-import paprwall.core \
+            --hidden-import paprwall.gui \
+            --exclude-module matplotlib \
+            --exclude-module numpy \
+            src/paprwall/cli.py
 
-    - name: Verify build artifacts
-      run: |
-        ls -la dist/
-        ls -la dist/test-build 2>/dev/null || echo "Binary not found (expected in test)"
+      - name: Verify build artifacts
+        run: |
+          ls -la dist/
+          ls -la dist/test-build 2>/dev/null || echo "Binary not found (expected in test)"
 
   docs-check:
     name: Documentation Check
@@ -243,34 +248,34 @@ jobs:
     if: needs.changes.outputs.docs == 'true'
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Check README links
-      run: |
-        # Simple check for broken markdown links (basic regex)
-        if grep -n '\[.*\](.*\.md)' README.md | grep -v '^#'; then
-          echo "Found relative markdown links in README.md"
-          grep -n '\[.*\](.*\.md)' README.md || true
-        fi
+      - name: Check README links
+        run: |
+          # Simple check for broken markdown links (basic regex)
+          if grep -n '\[.*\](.*\.md)' README.md | grep -v '^#'; then
+            echo "Found relative markdown links in README.md"
+            grep -n '\[.*\](.*\.md)' README.md || true
+          fi
 
-    - name: Check for TODO/FIXME comments
-      run: |
-        echo "Checking for TODO/FIXME comments..."
-        grep -r "TODO\|FIXME\|XXX" src/ tests/ || echo "No TODO/FIXME comments found"
+      - name: Check for TODO/FIXME comments
+        run: |
+          echo "Checking for TODO/FIXME comments..."
+          grep -r "TODO\|FIXME\|XXX" src/ tests/ || echo "No TODO/FIXME comments found"
 
-    - name: Validate README structure
-      run: |
-        # Check that README has required sections
-        if ! grep -q "## Installation" README.md; then
-          echo "❌ README.md missing Installation section"
-          exit 1
-        fi
-        if ! grep -q "## Usage" README.md; then
-          echo "❌ README.md missing Usage section"
-          exit 1
-        fi
-        echo "✅ README.md structure looks good"
+      - name: Validate README structure
+        run: |
+          # Check that README has required sections
+          if ! grep -q "## Installation" README.md; then
+            echo "❌ README.md missing Installation section"
+            exit 1
+          fi
+          if ! grep -q "## Usage" README.md; then
+            echo "❌ README.md missing Usage section"
+            exit 1
+          fi
+          echo "✅ README.md structure looks good"
 
   pr-summary:
     name: PR Summary
@@ -279,40 +284,40 @@ jobs:
     if: always()
 
     steps:
-    - name: PR Summary
-      run: |
-        echo "## Pull Request Test Summary" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
+      - name: PR Summary
+        run: |
+          echo "## Pull Request Test Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
 
-        # Check results
-        if [[ "${{ needs.lint-and-format.result }}" == "success" ]]; then
-          echo "✅ Code Quality: Passed" >> $GITHUB_STEP_SUMMARY
-        else
-          echo "❌ Code Quality: ${{ needs.lint-and-format.result }}" >> $GITHUB_STEP_SUMMARY
-        fi
+          # Check results
+          if [[ "${{ needs.lint-and-format.result }}" == "success" ]]; then
+            echo "✅ Code Quality: Passed" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ Code Quality: ${{ needs.lint-and-format.result }}" >> $GITHUB_STEP_SUMMARY
+          fi
 
-        if [[ "${{ needs.test-matrix.result }}" == "success" ]]; then
-          echo "✅ Tests: Passed" >> $GITHUB_STEP_SUMMARY
-        else
-          echo "❌ Tests: ${{ needs.test-matrix.result }}" >> $GITHUB_STEP_SUMMARY
-        fi
+          if [[ "${{ needs.test-matrix.result }}" == "success" ]]; then
+            echo "✅ Tests: Passed" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ Tests: ${{ needs.test-matrix.result }}" >> $GITHUB_STEP_SUMMARY
+          fi
 
-        if [[ "${{ needs.security-check.result }}" == "success" ]]; then
-          echo "✅ Security: Passed" >> $GITHUB_STEP_SUMMARY
-        else
-          echo "❌ Security: ${{ needs.security-check.result }}" >> $GITHUB_STEP_SUMMARY
-        fi
+          if [[ "${{ needs.security-check.result }}" == "success" ]]; then
+            echo "✅ Security: Passed" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ Security: ${{ needs.security-check.result }}" >> $GITHUB_STEP_SUMMARY
+          fi
 
-        if [[ "${{ needs.build-check.result }}" == "success" ]]; then
-          echo "✅ Build: Passed" >> $GITHUB_STEP_SUMMARY
-        else
-          echo "❌ Build: ${{ needs.build-check.result }}" >> $GITHUB_STEP_SUMMARY
-        fi
+          if [[ "${{ needs.build-check.result }}" == "success" ]]; then
+            echo "✅ Build: Passed" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ Build: ${{ needs.build-check.result }}" >> $GITHUB_STEP_SUMMARY
+          fi
 
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "**PR**: #${{ github.event.number }}" >> $GITHUB_STEP_SUMMARY
-        echo "**Branch**: ${{ github.head_ref }}" >> $GITHUB_STEP_SUMMARY
-        echo "**Author**: @${{ github.event.pull_request.user.login }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**PR**: #${{ github.event.number }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Branch**: ${{ github.head_ref }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Author**: @${{ github.event.pull_request.user.login }}" >> $GITHUB_STEP_SUMMARY
 
   auto-assign-reviewers:
     name: Auto-assign Reviewers
@@ -320,25 +325,25 @@ jobs:
     if: github.event.action == 'opened'
 
     steps:
-    - name: Auto-assign reviewers
-      uses: actions/github-script@v6
-      with:
-        script: |
-          // Auto-assign the repository owner as reviewer
-          const { owner, repo } = context.repo;
-          const { number } = context.payload.pull_request;
+      - name: Auto-assign reviewers
+        uses: actions/github-script@v6
+        with:
+          script: |
+            // Auto-assign the repository owner as reviewer
+            const { owner, repo } = context.repo;
+            const { number } = context.payload.pull_request;
 
-          try {
-            await github.rest.pulls.requestReviewers({
-              owner,
-              repo,
-              pull_number: number,
-              reviewers: ['riturajprofile'] // Repository owner
-            });
-            console.log('Successfully requested review from repository owner');
-          } catch (error) {
-            console.log('Could not request review:', error.message);
-          }
+            try {
+              await github.rest.pulls.requestReviewers({
+                owner,
+                repo,
+                pull_number: number,
+                reviewers: ['riturajprofile'] // Repository owner
+              });
+              console.log('Successfully requested review from repository owner');
+            } catch (error) {
+              console.log('Could not request review:', error.message);
+            }
 
   auto-label:
     name: Auto-label PR
@@ -346,59 +351,59 @@ jobs:
     if: github.event.action == 'opened'
 
     steps:
-    - name: Add labels based on files changed
-      uses: actions/github-script@v6
-      with:
-        script: |
-          const { owner, repo } = context.repo;
-          const { number } = context.payload.pull_request;
+      - name: Add labels based on files changed
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const { number } = context.payload.pull_request;
 
-          // Get changed files
-          const files = await github.rest.pulls.listFiles({
-            owner,
-            repo,
-            pull_number: number
-          });
-
-          const labels = [];
-          const changedFiles = files.data.map(f => f.filename);
-
-          // Add labels based on changed files
-          if (changedFiles.some(f => f.startsWith('src/'))) {
-            labels.push('code');
-          }
-          if (changedFiles.some(f => f.startsWith('tests/'))) {
-            labels.push('tests');
-          }
-          if (changedFiles.some(f => f.includes('README') || f.endsWith('.md'))) {
-            labels.push('documentation');
-          }
-          if (changedFiles.some(f => f.startsWith('.github/'))) {
-            labels.push('ci/cd');
-          }
-          if (changedFiles.some(f => f.includes('requirements') || f.includes('pyproject.toml'))) {
-            labels.push('dependencies');
-          }
-
-          // Add size label based on changes
-          const totalChanges = files.data.reduce((sum, f) => sum + f.changes, 0);
-          if (totalChanges < 10) {
-            labels.push('size/XS');
-          } else if (totalChanges < 50) {
-            labels.push('size/S');
-          } else if (totalChanges < 200) {
-            labels.push('size/M');
-          } else if (totalChanges < 500) {
-            labels.push('size/L');
-          } else {
-            labels.push('size/XL');
-          }
-
-          if (labels.length > 0) {
-            await github.rest.issues.addLabels({
+            // Get changed files
+            const files = await github.rest.pulls.listFiles({
               owner,
               repo,
-              issue_number: number,
-              labels
+              pull_number: number
             });
-          }
+
+            const labels = [];
+            const changedFiles = files.data.map(f => f.filename);
+
+            // Add labels based on changed files
+            if (changedFiles.some(f => f.startsWith('src/'))) {
+              labels.push('code');
+            }
+            if (changedFiles.some(f => f.startsWith('tests/'))) {
+              labels.push('tests');
+            }
+            if (changedFiles.some(f => f.includes('README') || f.endsWith('.md'))) {
+              labels.push('documentation');
+            }
+            if (changedFiles.some(f => f.startsWith('.github/'))) {
+              labels.push('ci/cd');
+            }
+            if (changedFiles.some(f => f.includes('requirements') || f.includes('pyproject.toml'))) {
+              labels.push('dependencies');
+            }
+
+            // Add size label based on changes
+            const totalChanges = files.data.reduce((sum, f) => sum + f.changes, 0);
+            if (totalChanges < 10) {
+              labels.push('size/XS');
+            } else if (totalChanges < 50) {
+              labels.push('size/S');
+            } else if (totalChanges < 200) {
+              labels.push('size/M');
+            } else if (totalChanges < 500) {
+              labels.push('size/L');
+            } else {
+              labels.push('size/XL');
+            }
+
+            if (labels.length > 0) {
+              await github.rest.issues.addLabels({
+                owner,
+                repo,
+                issue_number: number,
+                labels
+              });
+            }

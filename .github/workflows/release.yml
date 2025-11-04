@@ -2,30 +2,36 @@ name: Automated Release
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
     paths:
-      - 'src/**'
-      - 'pyproject.toml'
-      - 'requirements.txt'
+      - "src/**"
+      - "pyproject.toml"
+      - "requirements.txt"
   workflow_dispatch:
     inputs:
       release_type:
-        description: 'Release type'
+        description: "Release type"
         required: true
-        default: 'patch'
+        default: "patch"
         type: choice
         options:
           - patch
           - minor
           - major
       prerelease:
-        description: 'Create pre-release'
+        description: "Create pre-release"
         required: false
         default: false
         type: boolean
 
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+  actions: write
+
 env:
-  PYTHON_VERSION: '3.8'
+  PYTHON_VERSION: "3.8"
 
 jobs:
   check-version:
@@ -37,58 +43,58 @@ jobs:
       should_release: ${{ steps.decide.outputs.release }}
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: ${{ env.PYTHON_VERSION }}
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
 
-    - name: Get current version
-      id: version
-      run: |
-        VERSION=$(python -c "from src.paprwall import __version__; print(__version__)")
-        echo "version=$VERSION" >> $GITHUB_OUTPUT
-        echo "Current version: $VERSION"
+      - name: Get current version
+        id: version
+        run: |
+          VERSION=$(python -c "from src.paprwall import __version__; print(__version__)")
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Current version: $VERSION"
 
-    - name: Check if version changed
-      id: check
-      run: |
-        # Get the version from the previous commit
-        git checkout HEAD~1 2>/dev/null || echo "No previous commit"
-        PREV_VERSION=""
-        if [ -f "src/paprwall/__init__.py" ]; then
-          PREV_VERSION=$(python -c "from src.paprwall import __version__; print(__version__)" 2>/dev/null || echo "")
-        fi
-        git checkout HEAD
+      - name: Check if version changed
+        id: check
+        run: |
+          # Get the version from the previous commit
+          git checkout HEAD~1 2>/dev/null || echo "No previous commit"
+          PREV_VERSION=""
+          if [ -f "src/paprwall/__init__.py" ]; then
+            PREV_VERSION=$(python -c "from src.paprwall import __version__; print(__version__)" 2>/dev/null || echo "")
+          fi
+          git checkout HEAD
 
-        echo "Previous version: $PREV_VERSION"
-        echo "Current version: ${{ steps.version.outputs.version }}"
+          echo "Previous version: $PREV_VERSION"
+          echo "Current version: ${{ steps.version.outputs.version }}"
 
-        if [ "$PREV_VERSION" != "${{ steps.version.outputs.version }}" ]; then
-          echo "changed=true" >> $GITHUB_OUTPUT
-          echo "Version has changed!"
-        else
-          echo "changed=false" >> $GITHUB_OUTPUT
-          echo "Version unchanged"
-        fi
+          if [ "$PREV_VERSION" != "${{ steps.version.outputs.version }}" ]; then
+            echo "changed=true" >> $GITHUB_OUTPUT
+            echo "Version has changed!"
+          else
+            echo "changed=false" >> $GITHUB_OUTPUT
+            echo "Version unchanged"
+          fi
 
-    - name: Decide whether to release
-      id: decide
-      run: |
-        if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-          echo "release=true" >> $GITHUB_OUTPUT
-          echo "Manual release triggered"
-        elif [[ "${{ steps.check.outputs.changed }}" == "true" ]]; then
-          echo "release=true" >> $GITHUB_OUTPUT
-          echo "Version changed, will create release"
-        else
-          echo "release=false" >> $GITHUB_OUTPUT
-          echo "No release needed"
-        fi
+      - name: Decide whether to release
+        id: decide
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo "release=true" >> $GITHUB_OUTPUT
+            echo "Manual release triggered"
+          elif [[ "${{ steps.check.outputs.changed }}" == "true" ]]; then
+            echo "release=true" >> $GITHUB_OUTPUT
+            echo "Version changed, will create release"
+          else
+            echo "release=false" >> $GITHUB_OUTPUT
+            echo "No release needed"
+          fi
 
   create-tag:
     name: Create Release Tag
@@ -100,157 +106,157 @@ jobs:
       release_notes: ${{ steps.notes.outputs.notes }}
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-    - name: Configure Git
-      run: |
-        git config --local user.email "action@github.com"
-        git config --local user.name "GitHub Action"
+      - name: Configure Git
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
 
-    - name: Create tag
-      id: tag
-      run: |
-        VERSION="${{ needs.check-version.outputs.current_version }}"
-        TAG_NAME="v$VERSION"
+      - name: Create tag
+        id: tag
+        run: |
+          VERSION="${{ needs.check-version.outputs.current_version }}"
+          TAG_NAME="v$VERSION"
 
-        # Check if tag already exists
-        if git rev-parse "$TAG_NAME" >/dev/null 2>&1; then
-          echo "Tag $TAG_NAME already exists"
-          echo "tag=$TAG_NAME" >> $GITHUB_OUTPUT
-        else
-          # Create and push tag
-          git tag -a "$TAG_NAME" -m "Release $TAG_NAME"
-          git push origin "$TAG_NAME"
-          echo "tag=$TAG_NAME" >> $GITHUB_OUTPUT
-          echo "Created tag: $TAG_NAME"
-        fi
+          # Check if tag already exists
+          if git rev-parse "$TAG_NAME" >/dev/null 2>&1; then
+            echo "Tag $TAG_NAME already exists"
+            echo "tag=$TAG_NAME" >> $GITHUB_OUTPUT
+          else
+            # Create and push tag
+            git tag -a "$TAG_NAME" -m "Release $TAG_NAME"
+            git push origin "$TAG_NAME"
+            echo "tag=$TAG_NAME" >> $GITHUB_OUTPUT
+            echo "Created tag: $TAG_NAME"
+          fi
 
-    - name: Generate release notes
-      id: notes
-      run: |
-        VERSION="${{ needs.check-version.outputs.current_version }}"
-        TAG_NAME="v$VERSION"
+      - name: Generate release notes
+        id: notes
+        run: |
+          VERSION="${{ needs.check-version.outputs.current_version }}"
+          TAG_NAME="v$VERSION"
 
-        # Get previous tag
-        PREV_TAG=$(git describe --tags --abbrev=0 HEAD~1 2>/dev/null || echo "")
+          # Get previous tag
+          PREV_TAG=$(git describe --tags --abbrev=0 HEAD~1 2>/dev/null || echo "")
 
-        echo "Generating release notes for $TAG_NAME (previous: $PREV_TAG)"
+          echo "Generating release notes for $TAG_NAME (previous: $PREV_TAG)"
 
-        # Create release notes
-        cat > release_notes.md << EOF
-        # 🎨 PaprWall v$VERSION - Modern Desktop Wallpaper Manager
+          # Create release notes
+          cat > release_notes.md << EOF
+          # 🎨 PaprWall v$VERSION - Modern Desktop Wallpaper Manager
 
-        ## What's New
+          ## What's New
 
-        This release includes improvements and bug fixes to make your wallpaper experience even better!
+          This release includes improvements and bug fixes to make your wallpaper experience even better!
 
-        ## 📥 Quick Installation
+          ## 📥 Quick Installation
 
-        ### 🐧 Linux
-        \`\`\`bash
-        # Download and extract
-        wget https://github.com/riturajprofile/paprwall/releases/download/$TAG_NAME/paprwall-v$VERSION-linux-x86_64.tar.gz
-        tar -xzf paprwall-v$VERSION-linux-x86_64.tar.gz
-        cd release-v$VERSION
-        ./paprwall-gui
-        \`\`\`
+          ### 🐧 Linux
+          \`\`\`bash
+          # Download and extract
+          wget https://github.com/riturajprofile/paprwall/releases/download/$TAG_NAME/paprwall-v$VERSION-linux-x86_64.tar.gz
+          tar -xzf paprwall-v$VERSION-linux-x86_64.tar.gz
+          cd release-v$VERSION
+          ./paprwall-gui
+          \`\`\`
 
-        ### 🪟 Windows
-        \`\`\`cmd
-        :: Download paprwall-v$VERSION-windows-x64.zip
-        :: Extract and run paprwall-gui.exe
-        \`\`\`
+          ### 🪟 Windows
+          \`\`\`cmd
+          :: Download paprwall-v$VERSION-windows-x64.zip
+          :: Extract and run paprwall-gui.exe
+          \`\`\`
 
-        ### 📦 PyPI (All Platforms)
-        \`\`\`bash
-        pip install paprwall
-        paprwall-gui
-        \`\`\`
+          ### 📦 PyPI (All Platforms)
+          \`\`\`bash
+          pip install paprwall
+          paprwall-gui
+          \`\`\`
 
-        ## 🔄 Changes in this Release
+          ## 🔄 Changes in this Release
 
-        EOF
+          EOF
 
-        # Add commit messages since last tag
-        if [ -n "$PREV_TAG" ]; then
-          echo "### Commits since $PREV_TAG:" >> release_notes.md
-          echo "" >> release_notes.md
-          git log --pretty=format:"- %s (%h)" $PREV_TAG..HEAD >> release_notes.md
-        else
-          echo "### All commits in this release:" >> release_notes.md
-          echo "" >> release_notes.md
-          git log --pretty=format:"- %s (%h)" >> release_notes.md
-        fi
+          # Add commit messages since last tag
+          if [ -n "$PREV_TAG" ]; then
+            echo "### Commits since $PREV_TAG:" >> release_notes.md
+            echo "" >> release_notes.md
+            git log --pretty=format:"- %s (%h)" $PREV_TAG..HEAD >> release_notes.md
+          else
+            echo "### All commits in this release:" >> release_notes.md
+            echo "" >> release_notes.md
+            git log --pretty=format:"- %s (%h)" >> release_notes.md
+          fi
 
-        cat >> release_notes.md << EOF
+          cat >> release_notes.md << EOF
 
-        ## 🛠️ Technical Details
+          ## 🛠️ Technical Details
 
-        - **Version**: $VERSION
-        - **Build Date**: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
-        - **Commit**: $(git rev-parse --short HEAD)
-        - **Python**: 3.8+
+          - **Version**: $VERSION
+          - **Build Date**: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
+          - **Commit**: $(git rev-parse --short HEAD)
+          - **Python**: 3.8+
 
-        ## 📋 Supported Platforms
+          ## 📋 Supported Platforms
 
-        | Platform | Architecture | Package Type | Status |
-        |----------|-------------|--------------|---------|
-        | Linux | x86_64 | .tar.gz, .deb, .rpm | ✅ Supported |
-        | Windows | x64 | .zip, .exe | ✅ Supported |
-        | macOS | x64 | .tar.gz | ⚠️ Experimental |
+          | Platform | Architecture | Package Type | Status |
+          |----------|-------------|--------------|---------|
+          | Linux | x86_64 | .tar.gz, .deb, .rpm | ✅ Supported |
+          | Windows | x64 | .zip, .exe | ✅ Supported |
+          | macOS | x64 | .tar.gz | ⚠️ Experimental |
 
-        ## 🎯 System Requirements
+          ## 🎯 System Requirements
 
-        - **Linux**: Ubuntu 20.04+, Fedora 35+, or equivalent
-        - **Windows**: Windows 10 (1809+) or Windows 11
-        - **Display**: 720p or higher recommended
-        - **Memory**: 256MB RAM minimum
-        - **Storage**: 50MB free space
-        - **Network**: Internet connection for wallpaper downloads
+          - **Linux**: Ubuntu 20.04+, Fedora 35+, or equivalent
+          - **Windows**: Windows 10 (1809+) or Windows 11
+          - **Display**: 720p or higher recommended
+          - **Memory**: 256MB RAM minimum
+          - **Storage**: 50MB free space
+          - **Network**: Internet connection for wallpaper downloads
 
-        ## ✨ Features Included
+          ## ✨ Features Included
 
-        - 🎨 **Modern GUI** - Full-screen responsive design with 480px preview
-        - 💭 **Smart Quotes** - 6 categories: Motivational, Math, Science, Famous, Tech, Philosophy
-        - 🔄 **Auto-Rotation** - Customizable intervals with countdown timer
-        - 📜 **History Gallery** - Browse recent wallpapers with thumbnails
-        - 🖥️ **Multi-Desktop** - GNOME, KDE, XFCE, MATE, Cinnamon, LXQt support
-        - 🌐 **Web APIs** - Quotable.io & ZenQuotes.io integration
-        - 📁 **Local Files** - Use your own images with quote overlays
+          - 🎨 **Modern GUI** - Full-screen responsive design with 480px preview
+          - 💭 **Smart Quotes** - 6 categories: Motivational, Math, Science, Famous, Tech, Philosophy
+          - 🔄 **Auto-Rotation** - Customizable intervals with countdown timer
+          - 📜 **History Gallery** - Browse recent wallpapers with thumbnails
+          - 🖥️ **Multi-Desktop** - GNOME, KDE, XFCE, MATE, Cinnamon, LXQt support
+          - 🌐 **Web APIs** - Quotable.io & ZenQuotes.io integration
+          - 📁 **Local Files** - Use your own images with quote overlays
 
-        ## 🔒 Security & Verification
+          ## 🔒 Security & Verification
 
-        All release assets include SHA-256 checksums for verification:
+          All release assets include SHA-256 checksums for verification:
 
-        \`\`\`bash
-        # Verify downloads
-        sha256sum -c *.sha256
-        \`\`\`
+          \`\`\`bash
+          # Verify downloads
+          sha256sum -c *.sha256
+          \`\`\`
 
-        ## 🆘 Support & Issues
+          ## 🆘 Support & Issues
 
-        - **Documentation**: [README.md](https://github.com/riturajprofile/paprwall#readme)
-        - **Issues**: [GitHub Issues](https://github.com/riturajprofile/paprwall/issues)
-        - **Discussions**: [GitHub Discussions](https://github.com/riturajprofile/paprwall/discussions)
+          - **Documentation**: [README.md](https://github.com/riturajprofile/paprwall#readme)
+          - **Issues**: [GitHub Issues](https://github.com/riturajprofile/paprwall/issues)
+          - **Discussions**: [GitHub Discussions](https://github.com/riturajprofile/paprwall/discussions)
 
-        ---
+          ---
 
-        **⭐ Like PaprWall?** Give us a star on GitHub and share with your friends!
+          **⭐ Like PaprWall?** Give us a star on GitHub and share with your friends!
 
-        **🐛 Found a bug?** Please [report it](https://github.com/riturajprofile/paprwall/issues/new) so we can fix it.
+          **🐛 Found a bug?** Please [report it](https://github.com/riturajprofile/paprwall/issues/new) so we can fix it.
 
-        **💡 Have an idea?** Start a [discussion](https://github.com/riturajprofile/paprwall/discussions) and let's make it happen!
-        EOF
+          **💡 Have an idea?** Start a [discussion](https://github.com/riturajprofile/paprwall/discussions) and let's make it happen!
+          EOF
 
-        # Output the notes
-        {
-          echo 'notes<<EOF'
-          cat release_notes.md
-          echo EOF
-        } >> $GITHUB_OUTPUT
+          # Output the notes
+          {
+            echo 'notes<<EOF'
+            cat release_notes.md
+            echo EOF
+          } >> $GITHUB_OUTPUT
 
   build-and-release:
     name: Build and Create Release
@@ -259,35 +265,35 @@ jobs:
     if: needs.check-version.outputs.should_release == 'true'
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Trigger build workflow
-      uses: actions/github-script@v6
-      with:
-        script: |
-          const { owner, repo } = context.repo;
+      - name: Trigger build workflow
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const { owner, repo } = context.repo;
 
-          // Trigger the main CI workflow which handles building and releasing
-          await github.rest.actions.createWorkflowDispatch({
-            owner,
-            repo,
-            workflow_id: 'ci.yml',
-            ref: 'main'
-          });
+            // Trigger the main CI workflow which handles building and releasing
+            await github.rest.actions.createWorkflowDispatch({
+              owner,
+              repo,
+              workflow_id: 'ci.yml',
+              ref: 'main'
+            });
 
-          console.log('Triggered CI workflow for building and releasing');
+            console.log('Triggered CI workflow for building and releasing');
 
-    - name: Create GitHub Release
-      uses: softprops/action-gh-release@v1
-      with:
-        tag_name: ${{ needs.create-tag.outputs.tag_name }}
-        name: "PaprWall ${{ needs.create-tag.outputs.tag_name }}"
-        body: ${{ needs.create-tag.outputs.release_notes }}
-        draft: false
-        prerelease: ${{ github.event.inputs.prerelease == 'true' }}
-        generate_release_notes: false
-        token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ needs.create-tag.outputs.tag_name }}
+          name: "PaprWall ${{ needs.create-tag.outputs.tag_name }}"
+          body: ${{ needs.create-tag.outputs.release_notes }}
+          draft: false
+          prerelease: ${{ github.event.inputs.prerelease == 'true' }}
+          generate_release_notes: false
+          token: ${{ secrets.GITHUB_TOKEN }}
 
   post-release:
     name: Post-Release Tasks
@@ -296,37 +302,37 @@ jobs:
     if: always() && needs.check-version.outputs.should_release == 'true'
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Update development files
-      run: |
-        VERSION="${{ needs.check-version.outputs.current_version }}"
-        echo "Released version: $VERSION"
+      - name: Update development files
+        run: |
+          VERSION="${{ needs.check-version.outputs.current_version }}"
+          echo "Released version: $VERSION"
 
-        # You could update changelog, bump dev version, etc. here
-        echo "Post-release tasks completed"
+          # You could update changelog, bump dev version, etc. here
+          echo "Post-release tasks completed"
 
-    - name: Notify success
-      if: needs.build-and-release.result == 'success'
-      run: |
-        echo "## 🎉 Release Successful!" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "**Version**: ${{ needs.create-tag.outputs.tag_name }}" >> $GITHUB_STEP_SUMMARY
-        echo "**Release**: https://github.com/${{ github.repository }}/releases/tag/${{ needs.create-tag.outputs.tag_name }}" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "The release has been created and the CI workflow has been triggered to build and upload all platform-specific packages." >> $GITHUB_STEP_SUMMARY
+      - name: Notify success
+        if: needs.build-and-release.result == 'success'
+        run: |
+          echo "## 🎉 Release Successful!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Version**: ${{ needs.create-tag.outputs.tag_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Release**: https://github.com/${{ github.repository }}/releases/tag/${{ needs.create-tag.outputs.tag_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "The release has been created and the CI workflow has been triggered to build and upload all platform-specific packages." >> $GITHUB_STEP_SUMMARY
 
-    - name: Notify failure
-      if: needs.build-and-release.result == 'failure'
-      run: |
-        echo "## ❌ Release Failed!" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "**Version**: ${{ needs.create-tag.outputs.tag_name }}" >> $GITHUB_STEP_SUMMARY
-        echo "**Error**: Build and release process failed" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "Please check the workflow logs and try again." >> $GITHUB_STEP_SUMMARY
-        exit 1
+      - name: Notify failure
+        if: needs.build-and-release.result == 'failure'
+        run: |
+          echo "## ❌ Release Failed!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Version**: ${{ needs.create-tag.outputs.tag_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Error**: Build and release process failed" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Please check the workflow logs and try again." >> $GITHUB_STEP_SUMMARY
+          exit 1
 
   cleanup:
     name: Cleanup
@@ -335,14 +341,14 @@ jobs:
     if: always() && needs.check-version.outputs.should_release == 'false'
 
     steps:
-    - name: No release needed
-      run: |
-        echo "## ℹ️ No Release Needed" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "**Current Version**: ${{ needs.check-version.outputs.current_version }}" >> $GITHUB_STEP_SUMMARY
-        echo "**Reason**: Version unchanged since last commit" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "To create a release:" >> $GITHUB_STEP_SUMMARY
-        echo "1. Update the version in \`src/paprwall/__version__.py\`" >> $GITHUB_STEP_SUMMARY
-        echo "2. Commit and push the changes" >> $GITHUB_STEP_SUMMARY
-        echo "3. Or use the manual 'workflow_dispatch' trigger" >> $GITHUB_STEP_SUMMARY
+      - name: No release needed
+        run: |
+          echo "## ℹ️ No Release Needed" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Current Version**: ${{ needs.check-version.outputs.current_version }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Reason**: Version unchanged since last commit" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "To create a release:" >> $GITHUB_STEP_SUMMARY
+          echo "1. Update the version in \`src/paprwall/__version__.py\`" >> $GITHUB_STEP_SUMMARY
+          echo "2. Commit and push the changes" >> $GITHUB_STEP_SUMMARY
+          echo "3. Or use the manual 'workflow_dispatch' trigger" >> $GITHUB_STEP_SUMMARY

@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=42", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "paprwall"
+version = "0.1.0"
+description = "A modern desktop wallpaper manager with motivational quotes."
+authors = [
+    { name = "Your Name", email = "your.email@example.com" }
+]
+license = { file = "LICENSE" }
+readme = "README.md"
+homepage = "https://github.com/yourusername/paprwall"
+repository = "https://github.com/yourusername/paprwall"
+keywords = ["wallpaper", "manager", "quotes", "desktop"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+
+[project.urls]
+Documentation = "https://github.com/yourusername/paprwall/docs"
+Issues = "https://github.com/yourusername/paprwall/issues"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["paprwall*"]
+
+[tool.setuptools]
+zip_safe = false

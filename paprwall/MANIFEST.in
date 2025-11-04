@@ -1,0 +1,10 @@
+include *.py
+include *.md
+include LICENSE
+include requirements.txt
+include requirements-dev.txt
+include assets/paprwall-icon.png
+recursive-include docs *
+recursive-include tests *
+recursive-include src/paprwall/gui *
+recursive-include src/paprwall *

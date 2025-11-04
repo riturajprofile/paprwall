@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "paprwall"
-version = "1.0.2"
+version = "1.0.3"
 authors = [
     {name = "riturajprofile", email = "riturajprofile@gmail.com"},
 ]

@@ -505,4 +505,4 @@ gtk-update-icon-cache ~/.local/share/icons/hicolor
 
 **Ready to install? Choose your method above and get started! 🚀**
 
-*Last Updated: December 2024 | PaprWall v1.0.2*
+*Last Updated: December 2024 | PaprWall v1.0.3*

@@ -1,0 +1,9 @@
+# Development dependencies for PaprWall project
+pytest
+pytest-cov
+black
+flake8
+mypy
+requests-mock
+tox
+pre-commit
