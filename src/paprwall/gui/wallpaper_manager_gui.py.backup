@@ -25,11 +25,9 @@ class WallpaperManagerGUI:
     def __init__(self, root):
         """Initialize the wallpaper manager GUI."""
         self.root = root
-        self.root.title("PaprWall - Wallpaper Manager")
-        
-        # Start maximized for full screen experience
-        self.root.state('zoomed') if platform.system() == 'Windows' else self.root.attributes('-zoomed', True)
-        self.root.minsize(1024, 576)    # Minimum 16:9 size
+        self.root.title("Wallpaper Manager")
+        self.root.geometry("1000x700")
+        self.root.minsize(800, 600)
         self.root.resizable(True, True)
         
         # Dark theme color system (per design spec)
@@ -102,7 +100,6 @@ class WallpaperManagerGUI:
             "1920x1080", "2560x1440", "3840x2160",
             "1366x768", "1600x900", "1280x720"
         ]
-        self.resolution_var = tk.StringVar(value="1920x1080")
         
         # Wallpaper types
         self.wallpaper_types = [
@@ -129,503 +126,468 @@ class WallpaperManagerGUI:
         self.root.after(500, self.auto_fetch_on_launch)
     
     def setup_ui(self):
-        """Setup the user interface with responsive full-screen layout."""
+        """Setup the user interface with hero section layout."""
+        # Main container
+        main_container = tk.Frame(self.root, bg=self.colors['bg_primary'])
+        main_container.pack(fill=tk.BOTH, expand=True)
         
-        # ===== COMPACT HEADER SECTION =====
-        hero_section = tk.Frame(
-            self.root,
-            bg=self.colors['hero_bg']
-        )
-        hero_section.pack(side=tk.TOP, fill=tk.X)
-        hero_section.pack_propagate(True)
+        # === TOP NAVBAR ===
+        navbar = tk.Frame(main_frame, bg=self.colors['sidebar'], height=60)
+        navbar.pack(side=tk.TOP, fill=tk.X)
+        navbar.pack_propagate(False)
         
-        # Logo + Title (Left)
-        logo_frame = tk.Frame(hero_section, bg=self.colors['hero_bg'])
-        logo_frame.pack(side=tk.LEFT, padx=15, pady=8)
+        # App title
+        title_frame = tk.Frame(navbar, bg=self.colors['sidebar'])
+        title_frame.pack(side=tk.LEFT, padx=20, pady=15)
         
         tk.Label(
-            logo_frame,
-            text="Papr",
-            font=('Poppins', 20, 'bold'),
-            bg=self.colors['hero_bg'],
-            fg=self.colors['accent_blue']
+            title_frame,
+            text="🖼️",
+            font=("Segoe UI", 20),
+            bg=self.colors['sidebar']
         ).pack(side=tk.LEFT)
         
         tk.Label(
-            logo_frame,
-            text="Wall",
-            font=('Poppins', 20, 'bold'),
-            bg=self.colors['hero_bg'],
-            fg=self.colors['accent_purple']
-        ).pack(side=tk.LEFT)
+            title_frame,
+            text="Wallpaper Manager",
+            font=("Segoe UI", 16, "bold"),
+            bg=self.colors['sidebar'],
+            fg=self.colors['text']
+        ).pack(side=tk.LEFT, padx=(10, 0))
         
-        tk.Label(
-            logo_frame,
-            text="  |  Modern Wallpaper Manager",
-            font=('Segoe UI', 12, 'normal'),
-            bg=self.colors['hero_bg'],
-            fg=self.colors['text_secondary']
-        ).pack(side=tk.LEFT, padx=(8, 0))
+        # Quick actions in navbar
+        quick_actions = tk.Frame(navbar, bg=self.colors['sidebar'])
+        quick_actions.pack(side=tk.RIGHT, padx=20)
         
-        # Quick Actions (Right)
-        actions_frame = tk.Frame(hero_section, bg=self.colors['hero_bg'])
-        actions_frame.pack(side=tk.RIGHT, padx=15, pady=8)
-        
-        # Status Label (moved first)
-        self.status_label = tk.Label(
-            actions_frame,
-            text="● Ready",
-            font=self.fonts['body'],
-            bg=self.colors['hero_bg'],
-            fg=self.colors['success_green']
-        )
-        self.status_label.pack(side=tk.LEFT, padx=15)
-        
-        # Random Button
+        # Random wallpaper button
         tk.Button(
-            actions_frame,
+            quick_actions,
             text="🎲 Random",
             command=self.fetch_random_wallpaper,
-            bg=self.colors['accent_blue'],
+            bg=self.colors['accent'],
             fg='white',
-            font=self.fonts['button'],
+            font=("Segoe UI", 9, "bold"),
             relief=tk.FLAT,
             cursor="hand2",
-            padx=15,
-            pady=8
-        ).pack(side=tk.LEFT, padx=3)
-        
-        # Folder Button
-        tk.Button(
-            actions_frame,
-            text="📁 Local",
-            command=self.open_wallpapers_folder,
-            bg=self.colors['bg_tertiary'],
-            fg=self.colors['text_primary'],
-            font=self.fonts['button'],
-            relief=tk.FLAT,
-            cursor="hand2",
-            padx=15,
-            pady=8
-        ).pack(side=tk.LEFT, padx=3)
-        
-        # ===== MAIN SECTION (Full Height) =====
-        main_section = tk.Frame(self.root, bg=self.colors['bg_primary'])
-        main_section.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
-        
-        # ==== LEFT SIDEBAR (Fixed 480px width for larger preview) ====
-        left_panel = tk.Frame(main_section, bg=self.colors['bg_secondary'], width=480)
-        left_panel.pack(side=tk.LEFT, fill=tk.BOTH, expand=False)
-        left_panel.pack_propagate(False)
-        
-        # --- TOP: Preview Section (Responsive Height) ---
-        preview_section = tk.Frame(left_panel, bg=self.colors['bg_secondary'])
-        preview_section.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
-        
-        # Preview Label
-        tk.Label(
-            preview_section,
-            text="Preview",
-            bg=self.colors['bg_secondary'],
-            fg=self.colors['text_primary'],
-            font=self.fonts['heading'],
-            anchor='w'
-        ).pack(fill=tk.X, padx=12, pady=(8, 5))
-        
-        # Preview Canvas Container with fixed aspect ratio
-        canvas_container = tk.Frame(preview_section, bg='black')
-        canvas_container.pack(fill=tk.BOTH, expand=True, padx=12, pady=(0, 8))
-        
-        # Preview Canvas
-        self.preview_canvas = tk.Canvas(
-            canvas_container,
-            bg='#000000',
-            highlightthickness=1,
-            highlightbackground=self.colors['border']
-        )
-        self.preview_canvas.pack(fill=tk.BOTH, expand=True)
-        
-        # Resolution Badge (overlay on canvas)
-        self.resolution_label = tk.Label(
-            self.preview_canvas,
-            text="1920×1080",
-            bg=self.colors['bg_primary'],
-            fg=self.colors['text_secondary'],
-            font=self.fonts['small'],
-            padx=8,
-            pady=4
-        )
-        
-        # Quote Overlay Frame (bottom of canvas)
-        self.quote_frame = tk.Frame(self.preview_canvas, bg='#000000')
-        
-        self.quote_text = tk.Label(
-            self.quote_frame,
-            text='"Change your wallpaper, change your mood"',
-            fg=self.colors['text_primary'],
-            bg='#000000',
-            font=self.fonts['quote'],
-            wraplength=350,
-            justify='left'
-        )
-        self.quote_text.pack(side=tk.LEFT, padx=12, pady=8)
-        
-        # Placeholder (will be positioned dynamically)
-        self.placeholder_id = self.preview_canvas.create_text(
-            200, 150,
-            text="🖼️\n\nLoading wallpaper...",
-            font=('Segoe UI', 14),
-            fill='#666666',
-            justify=tk.CENTER
-        )
-        
-        # --- BOTTOM: Controls Section ---
-        controls_section = tk.Frame(left_panel, bg=self.colors['bg_secondary'])
-        controls_section.pack(side=tk.BOTTOM, fill=tk.X, expand=False)
-        
-        # Thin separator
-        tk.Frame(controls_section, bg=self.colors['border'], height=1).pack(fill=tk.X, pady=(0, 8))
-        
-        # History Section
-        history_label = tk.Label(
-            controls_section,
-            text="Recent History",
-            bg=self.colors['bg_secondary'],
-            fg=self.colors['text_primary'],
-            font=self.fonts['heading'],
-            anchor='w'
-        )
-        history_label.pack(fill=tk.X, padx=12, pady=(8, 5))
-        
-        # History thumbnails (scrollable)
-        history_frame = tk.Frame(controls_section, bg=self.colors['bg_secondary'])
-        history_frame.pack(fill=tk.X, padx=12, pady=(0, 8))
-        
-        history_canvas = tk.Canvas(
-            history_frame,
-            bg=self.colors['bg_secondary'],
-            height=100,
-            highlightthickness=0
-        )
-        history_scrollbar = ttk.Scrollbar(history_frame, orient=tk.VERTICAL, command=history_canvas.yview)
-        
-        self.history_container = tk.Frame(history_canvas, bg=self.colors['bg_secondary'])
-        self.history_container.bind(
-            "<Configure>",
-            lambda e: history_canvas.configure(scrollregion=history_canvas.bbox("all"))
-        )
-        
-        history_canvas.create_window((0, 0), window=self.history_container, anchor='nw')
-        history_canvas.configure(yscrollcommand=history_scrollbar.set)
-        
-        history_canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-        history_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-        
-        # URL Fetch Section
-        tk.Frame(controls_section, bg=self.colors['border'], height=1).pack(fill=tk.X, pady=8)
-        
-        url_label = tk.Label(
-            controls_section,
-            text="IMAGE URL",
-            bg=self.colors['bg_secondary'],
-            fg=self.colors['text_muted'],
-            font=self.fonts['small'],
-            anchor='w'
-        )
-        url_label.pack(fill=tk.X, padx=12, pady=(5, 3))
-        
-        self.url_entry = tk.Entry(
-            controls_section,
-            bg=self.colors['bg_tertiary'],
-            fg=self.colors['text_primary'],
-            font=self.fonts['body'],
-            relief=tk.FLAT,
-            bd=0,
-            insertbackground=self.colors['text_primary']
-        )
-        self.url_entry.pack(fill=tk.X, padx=12, pady=(0, 6))
-        self.url_entry.insert(0, "https://picsum.photos/1920/1080")
-        
-        # Button row
-        button_row = tk.Frame(controls_section, bg=self.colors['bg_secondary'])
-        button_row.pack(fill=tk.X, padx=12, pady=(0, 10))
-        
-        self.fetch_btn = tk.Button(
-            button_row,
-            text="⬇ Fetch",
-            command=self.fetch_from_url,
-            bg=self.colors['accent_blue'],
-            fg='white',
-            font=self.fonts['button'],
-            relief=tk.FLAT,
-            cursor="hand2",
-            pady=8
-        )
-        self.fetch_btn.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 4))
-        
-        # Browse Local File
-        browse_button = tk.Button(
-            button_row,
-            text="📁 Browse",
-            command=self.browse_file,
-            bg=self.colors['bg_tertiary'],
-            fg=self.colors['text_primary'],
-            font=self.fonts['button'],
-            relief=tk.FLAT,
-            cursor="hand2",
-            pady=8
-        )
-        browse_button.pack(side=tk.RIGHT, fill=tk.X, expand=True, padx=(4, 0))
-        
-        # ==== RIGHT PANEL (Expands to fill remaining space) ====
-        right_panel = tk.Frame(main_section, bg=self.colors['bg_primary'])
-        right_panel.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
-        
-        # Scrollable container for right panel
-        right_canvas = tk.Canvas(right_panel, bg=self.colors['bg_primary'], highlightthickness=0)
-        right_scrollbar = ttk.Scrollbar(right_panel, orient=tk.VERTICAL, command=right_canvas.yview)
-        right_content = tk.Frame(right_canvas, bg=self.colors['bg_primary'])
-        
-        right_content.bind(
-            "<Configure>",
-            lambda e: right_canvas.configure(scrollregion=right_canvas.bbox("all"))
-        )
-        
-        right_canvas.create_window((0, 0), window=right_content, anchor='nw', width=right_canvas.winfo_width())
-        right_canvas.configure(yscrollcommand=right_scrollbar.set)
-        
-        # Bind canvas resize to update window width
-        right_canvas.bind('<Configure>', lambda e: right_canvas.itemconfig('window', width=e.width))
-        right_canvas.create_window((0, 0), window=right_content, anchor='nw', tags='window')
-        
-        right_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-        right_canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-        
-        # --- Auto-Rotation Settings ---
-        rotation_header = tk.Frame(right_content, bg=self.colors['bg_primary'])
-        rotation_header.pack(fill=tk.X, padx=15, pady=(0, 8))
-        
-        tk.Label(
-            rotation_header,
-            text="Auto-Rotation",
-            bg=self.colors['bg_primary'],
-            fg=self.colors['text_primary'],
-            font=self.fonts['heading'],
-            anchor='w'
-        ).pack(side=tk.LEFT)
-        
-        rotation_card = tk.Frame(
-            right_content,
-            bg=self.colors['bg_secondary'],
-            relief=tk.FLAT
-        )
-        rotation_card.pack(fill=tk.X, padx=15, pady=(0, 12))
-        
-        # Toggle & Interval
-        toggle_frame = tk.Frame(rotation_card, bg=self.colors['bg_secondary'])
-        toggle_frame.pack(fill=tk.X, padx=12, pady=(12, 8))
-        
-        self.auto_rotate_var = tk.BooleanVar(value=False)
-        toggle_check = ttk.Checkbutton(
-            toggle_frame,
-            text="Enable Auto-Rotate",
-            variable=self.auto_rotate_var,
-            command=self.toggle_auto_rotate
-        )
-        toggle_check.pack(side=tk.LEFT)
-        
-        tk.Label(
-            toggle_frame,
-            text="Interval:",
-            bg=self.colors['bg_secondary'],
-            fg=self.colors['text_secondary'],
-            font=self.fonts['body']
-        ).pack(side=tk.LEFT, padx=(15, 5))
-        
-        self.interval_entry = tk.Entry(
-            toggle_frame,
-            bg=self.colors['bg_tertiary'],
-            fg=self.colors['text_primary'],
-            font=self.fonts['body'],
-            width=6,
-            relief=tk.FLAT,
-            bd=0
-        )
-        self.interval_entry.insert(0, "60")
-        self.interval_entry.pack(side=tk.LEFT, padx=5)
-        
-        tk.Label(
-            toggle_frame,
-            text="min",
-            bg=self.colors['bg_secondary'],
-            fg=self.colors['text_secondary'],
-            font=self.fonts['small']
+            padx=12,
+            pady=5
         ).pack(side=tk.LEFT, padx=5)
         
-        apply_btn = tk.Button(
-            toggle_frame,
-            text="Apply",
-            command=self.apply_interval,
-            bg=self.colors['accent_blue'],
+        # Open wallpapers folder button
+        tk.Button(
+            quick_actions,
+            text="📁 Folder",
+            command=self.open_wallpapers_folder,
+            bg='#6c757d',
             fg='white',
-            font=self.fonts['button'],
+            font=("Segoe UI", 9, "bold"),
             relief=tk.FLAT,
-            cursor='hand2',
+            cursor="hand2",
             padx=12,
+            pady=5
+        ).pack(side=tk.LEFT, padx=5)
+        
+        # Status in navbar
+        self.status_label = tk.Label(
+            navbar,
+            text="● Ready",
+            font=("Segoe UI", 10),
+            bg=self.colors['sidebar'],
+            fg='#28a745'
+        )
+        self.status_label.pack(side=tk.RIGHT, padx=20)
+        
+        # === CONTENT AREA ===
+        content = tk.Frame(main_frame, bg=self.colors['bg'])
+        content.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
+        
+        # === RIGHT SIDEBAR (Fixed width) ===
+        sidebar = tk.Frame(content, bg=self.colors['sidebar'], width=360)
+        sidebar.pack(side=tk.RIGHT, fill=tk.Y, padx=(5, 5), pady=5)
+        sidebar.pack_propagate(False)
+        
+        # Sidebar scrollable content
+        sidebar_canvas = tk.Canvas(sidebar, bg=self.colors['sidebar'], highlightthickness=0)
+        sidebar_scrollbar = ttk.Scrollbar(sidebar, orient=tk.VERTICAL, command=sidebar_canvas.yview)
+        sidebar_content = tk.Frame(sidebar_canvas, bg=self.colors['sidebar'])
+        
+        sidebar_content.bind(
+            "<Configure>",
+            lambda e: sidebar_canvas.configure(scrollregion=sidebar_canvas.bbox("all"))
+        )
+        
+        sidebar_canvas.create_window((0, 0), window=sidebar_content, anchor=tk.NW)
+        sidebar_canvas.configure(yscrollcommand=sidebar_scrollbar.set)
+        
+        sidebar_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        sidebar_canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        
+        # === SIDEBAR SECTIONS ===
+        
+        # Source section
+        self.create_section_header(sidebar_content, "🌐 Image Source")
+        
+        source_frame = tk.Frame(sidebar_content, bg=self.colors['sidebar'])
+        source_frame.pack(fill=tk.X, padx=20, pady=(0, 20))
+        
+        # Resolution selector
+        tk.Label(
+            source_frame,
+            text="Resolution",
+            font=("Segoe UI", 9, "bold"),
+            bg=self.colors['sidebar'],
+            fg=self.colors['text']
+        ).pack(anchor=tk.W, pady=(0, 3))
+        
+        self.resolution_var = tk.StringVar(value="1920x1080")
+        resolution_dropdown = ttk.Combobox(
+            source_frame,
+            textvariable=self.resolution_var,
+            values=self.resolutions,
+            state="readonly",
+            width=15,
+            font=("Segoe UI", 9)
+        )
+        resolution_dropdown.pack(fill=tk.X, pady=(0, 10))
+        resolution_dropdown.bind("<<ComboboxSelected>>", self.update_url_with_resolution)
+        
+        # URL input
+        tk.Label(
+            source_frame,
+            text="URL",
+            font=("Segoe UI", 9, "bold"),
+            bg=self.colors['sidebar'],
+            fg=self.colors['text']
+        ).pack(anchor=tk.W, pady=(0, 3))
+        
+        self.url_entry = tk.Entry(
+            source_frame,
+            font=("Segoe UI", 9),
+            relief=tk.SOLID,
+            borderwidth=1,
+            bg='white'
+        )
+        self.url_entry.pack(fill=tk.X, pady=(0, 6))
+        self.url_entry.insert(0, "https://picsum.photos/1920/1080")
+        self.url_entry.bind('<Return>', lambda e: self.fetch_from_url())
+        
+        # Buttons row
+        btn_row = tk.Frame(source_frame, bg=self.colors['sidebar'])
+        btn_row.pack(fill=tk.X, pady=(0, 8))
+        
+        self.fetch_btn = tk.Button(
+            btn_row,
+            text="Fetch",
+            command=self.fetch_from_url,
+            bg=self.colors['accent'],
+            fg='white',
+            font=("Segoe UI", 9, "bold"),
+            relief=tk.FLAT,
+            cursor="hand2",
+            padx=10,
             pady=6
         )
-        apply_btn.pack(side=tk.LEFT, padx=10)
+        self.fetch_btn.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 3))
         
-        # Timer display
-        self.timer_label = tk.Label(
-            rotation_card,
-            text="--:--",
-            bg=self.colors['bg_secondary'],
-            fg=self.colors['accent_cyan'],
-            font=('Segoe UI', 16, 'bold')
-        )
-        self.timer_label.pack(pady=(8, 12))
-        
-        # --- Current Wallpaper Info ---
-        current_header = tk.Frame(right_content, bg=self.colors['bg_primary'])
-        current_header.pack(fill=tk.X, padx=15, pady=(0, 8))
-        
-        tk.Label(
-            current_header,
-            text="Current Wallpaper",
-            bg=self.colors['bg_primary'],
-            fg=self.colors['text_primary'],
-            font=self.fonts['heading'],
-            anchor='w'
-        ).pack(side=tk.LEFT)
-        
-        current_card = tk.Frame(
-            right_content,
-            bg=self.colors['bg_secondary'],
-            relief=tk.FLAT
-        )
-        current_card.pack(fill=tk.X, padx=15, pady=(0, 12))
-        
-        self.current_text = tk.Text(
-            current_card,
-            height=4,
-            bg=self.colors['bg_tertiary'],
-            fg=self.colors['text_secondary'],
-            font=self.fonts['body'],
+        # Auto Fetch button
+        self.auto_fetch_btn = tk.Button(
+            btn_row,
+            text="🔄 Auto",
+            command=self.auto_fetch_and_set,
+            bg='#28a745',
+            fg='white',
+            font=("Segoe UI", 9, "bold"),
             relief=tk.FLAT,
-            wrap=tk.WORD,
-            padx=12,
-            pady=12,
-            bd=0
+            cursor="hand2",
+            padx=10,
+            pady=6
         )
-        self.current_text.pack(fill=tk.X, padx=12, pady=12)
-        self.current_text.insert(1.0, "No wallpaper set yet")
-        self.current_text.config(state=tk.DISABLED)
+        self.auto_fetch_btn.pack(side=tk.LEFT, fill=tk.X, expand=True)
         
-        # --- Favorites ---
-        favorites_header = tk.Frame(right_content, bg=self.colors['bg_primary'])
-        favorites_header.pack(fill=tk.X, padx=15, pady=(0, 8))
+        # Divider
+        tk.Frame(source_frame, bg=self.colors['border'], height=1).pack(fill=tk.X, pady=10)
         
+        # Local file
         tk.Label(
-            favorites_header,
-            text="❤️ Favorites",
-            bg=self.colors['bg_primary'],
-            fg=self.colors['text_primary'],
-            font=self.fonts['heading'],
-            anchor='w'
-        ).pack(side=tk.LEFT)
+            source_frame,
+            text="Local File",
+            font=("Segoe UI", 9, "bold"),
+            bg=self.colors['sidebar'],
+            fg=self.colors['text']
+        ).pack(anchor=tk.W, pady=(0, 3))
         
-        favorites_card = tk.Frame(
-            right_content,
-            bg=self.colors['bg_secondary'],
-            relief=tk.FLAT
+        self.file_entry = tk.Entry(
+            source_frame,
+            font=("Segoe UI", 8),
+            relief=tk.SOLID,
+            borderwidth=1,
+            bg='white'
         )
-        favorites_card.pack(fill=tk.X, padx=15, pady=(0, 12))
+        self.file_entry.pack(fill=tk.X, pady=(0, 6))
         
-        fav_frame = tk.Frame(favorites_card, bg=self.colors['bg_secondary'])
-        fav_frame.pack(fill=tk.X, padx=12, pady=12)
+        tk.Button(
+            source_frame,
+            text="📁 Browse",
+            command=self.browse_file,
+            bg='white',
+            fg=self.colors['text'],
+            font=("Segoe UI", 9),
+            relief=tk.SOLID,
+            borderwidth=1,
+            cursor="hand2",
+            padx=12,
+            pady=5
+        ).pack(fill=tk.X)
         
-        fav_canvas = tk.Canvas(
-            fav_frame,
-            bg=self.colors['bg_secondary'],
-            height=120,
-            highlightthickness=0
+        # Preview Info section
+        self.create_section_header(sidebar_content, "ℹ️ Preview Info")
+        
+        info_frame = tk.Frame(sidebar_content, bg=self.colors['sidebar'])
+        info_frame.pack(fill=tk.X, padx=20, pady=(0, 10))
+        
+        self.preview_info_text = tk.Text(
+            info_frame,
+            height=2,
+            font=("Segoe UI", 8),
+            relief=tk.SOLID,
+            borderwidth=1,
+            bg='#f8f9fa',
+            wrap=tk.WORD,
+            padx=6,
+            pady=6
         )
-        fav_scrollbar = ttk.Scrollbar(fav_frame, orient=tk.VERTICAL, command=fav_canvas.yview)
+        self.preview_info_text.pack(fill=tk.X)
+        self.preview_info_text.insert(1.0, "Loading...")
+        self.preview_info_text.config(state=tk.DISABLED)
         
-        self.favorites_container = tk.Frame(fav_canvas, bg=self.colors['bg_secondary'])
-        self.favorites_container.bind(
-            "<Configure>",
-            lambda e: fav_canvas.configure(scrollregion=fav_canvas.bbox("all"))
+        # Progress bar
+        self.progress = ttk.Progressbar(
+            info_frame,
+            mode='indeterminate',
+            length=200
         )
         
-        fav_canvas.create_window((0, 0), window=self.favorites_container, anchor='nw')
-        fav_canvas.configure(yscrollcommand=fav_scrollbar.set)
-        
-        fav_canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-        fav_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-        
-        # --- Primary Action Buttons ---
-        action_frame = tk.Frame(right_content, bg=self.colors['bg_primary'])
-        action_frame.pack(fill=tk.X, padx=15, pady=(5, 20))
+        # Action buttons
+        action_frame = tk.Frame(sidebar_content, bg=self.colors['sidebar'])
+        action_frame.pack(fill=tk.X, padx=20, pady=(0, 15))
         
         self.set_button = tk.Button(
             action_frame,
             text="✓ Set Wallpaper",
             command=self.set_wallpaper,
             state=tk.DISABLED,
-            bg=self.colors['success_green'],
+            bg='#28a745',
             fg='white',
-            font=('Segoe UI', 13, 'bold'),
+            font=("Segoe UI", 10, "bold"),
             relief=tk.FLAT,
-            cursor='hand2',
-            pady=15
+            cursor="hand2",
+            padx=12,
+            pady=8
         )
-        self.set_button.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 8))
+        self.set_button.pack(fill=tk.X, pady=(0, 4))
         
+        # Favorite button
         self.favorite_button = tk.Button(
             action_frame,
-            text="❤️",
+            text="⭐ Favorite",
             command=self.add_to_favorites,
             state=tk.DISABLED,
-            bg=self.colors['warning_yellow'],
+            bg='#ffc107',
             fg='white',
-            font=('Segoe UI', 18),
+            font=("Segoe UI", 9, "bold"),
             relief=tk.FLAT,
-            cursor='hand2',
-            width=5,
-            pady=15
+            cursor="hand2",
+            padx=12,
+            pady=6
         )
-        self.favorite_button.pack(side=tk.RIGHT)
+        self.favorite_button.pack(fill=tk.X)
         
-        # Progress bar (initially hidden)
-        self.progress = ttk.Progressbar(
-            right_content,
-            mode='indeterminate',
-            length=200
+        # Auto-Rotation section
+        self.create_section_header(sidebar_content, "⏱️ Auto-Rotation")
+        
+        rotation_frame = tk.Frame(sidebar_content, bg=self.colors['sidebar'])
+        rotation_frame.pack(fill=tk.X, padx=20, pady=(0, 15))
+        
+        # Timer display
+        timer_display = tk.Frame(rotation_frame, bg='#f8f9fa', relief=tk.SOLID, borderwidth=1)
+        timer_display.pack(fill=tk.X, pady=(0, 6))
+        
+        tk.Label(
+            timer_display,
+            text="Next:",
+            font=("Segoe UI", 8),
+            bg='#f8f9fa',
+            fg=self.colors['text']
+        ).pack(side=tk.LEFT, padx=8, pady=6)
+        
+        self.timer_label = tk.Label(
+            timer_display,
+            text="--:--",
+            font=("Segoe UI", 12, "bold"),
+            bg='#f8f9fa',
+            fg=self.colors['accent']
         )
+        self.timer_label.pack(side=tk.RIGHT, padx=8, pady=6)
         
-        # Store additional widgets that will be referenced
-        self.preview_size_label = self.resolution_label
-        self.file_entry = self.url_entry  # Reuse URL entry for file path display
-        self.auto_fetch_btn = self.fetch_btn  # Can be extended later
-
-
+        # Auto-rotate toggle
+        self.auto_rotate_var = tk.BooleanVar(value=False)
+        ttk.Checkbutton(
+            rotation_frame,
+            text="Enable Auto-Rotate",
+            variable=self.auto_rotate_var,
+            command=self.toggle_auto_rotate
+        ).pack(anchor=tk.W, pady=(0, 6))
+        
+        # Interval setting
+        interval_frame = tk.Frame(rotation_frame, bg=self.colors['sidebar'])
+        interval_frame.pack(fill=tk.X)
+        
+        tk.Label(
+            interval_frame,
+            text="Interval:",
+            font=("Segoe UI", 8),
+            bg=self.colors['sidebar']
+        ).pack(side=tk.LEFT, padx=(0, 5))
+        
+        self.interval_entry = tk.Entry(
+            interval_frame,
+            font=("Segoe UI", 8),
+            width=6,
+            relief=tk.SOLID,
+            borderwidth=1
+        )
+        self.interval_entry.insert(0, "60")
+        self.interval_entry.pack(side=tk.LEFT, padx=(0, 5))
+        
+        tk.Label(
+            interval_frame,
+            text="min",
+            font=("Segoe UI", 8),
+            bg=self.colors['sidebar']
+        ).pack(side=tk.LEFT, padx=(0, 5))
+        
+        tk.Button(
+            interval_frame,
+            text="Apply",
+            command=self.apply_interval,
+            bg=self.colors['accent'],
+            fg='white',
+            font=("Segoe UI", 8, "bold"),
+            relief=tk.FLAT,
+            cursor="hand2",
+            padx=8,
+            pady=3
+        ).pack(side=tk.LEFT)
+        
+        # Current Wallpaper section
+        self.create_section_header(sidebar_content, "✨ Current")
+        
+        current_frame = tk.Frame(sidebar_content, bg=self.colors['sidebar'])
+        current_frame.pack(fill=tk.X, padx=20, pady=(0, 10))
+        
+        self.current_text = tk.Text(
+            current_frame,
+            height=3,
+            font=("Segoe UI", 8),
+            relief=tk.SOLID,
+            borderwidth=1,
+            bg='#f8f9fa',
+            wrap=tk.WORD,
+            padx=6,
+            pady=6
+        )
+        self.current_text.pack(fill=tk.X)
+        
+        # Favorites section
+        self.create_section_header(sidebar_content, "⭐ Favorites")
+        
+        # Favorites container
+        self.favorites_container = tk.Frame(sidebar_content, bg=self.colors['sidebar'])
+        self.favorites_container.pack(fill=tk.X, padx=20, pady=(0, 10))
+        
+        # History section
+        self.create_section_header(sidebar_content, "🕐 History")
+        
+        history_header = tk.Frame(sidebar_content, bg=self.colors['sidebar'])
+        history_header.pack(fill=tk.X, padx=20, pady=(0, 6))
+        
+        tk.Button(
+            history_header,
+            text="Clear All",
+            command=self.clear_history,
+            bg='#dc3545',
+            fg='white',
+            font=("Segoe UI", 8, "bold"),
+            relief=tk.FLAT,
+            cursor="hand2",
+            padx=8,
+            pady=3
+        ).pack(side=tk.RIGHT)
+        
+        # History thumbnails
+        self.history_container = tk.Frame(sidebar_content, bg=self.colors['sidebar'])
+        self.history_container.pack(fill=tk.X, padx=20, pady=(0, 10))
+        
+        # === LEFT SIDE: PREVIEW AREA ===
+        preview_container = tk.Frame(content, bg=self.colors['preview_bg'])
+        preview_container.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(5, 0), pady=5)
+        
+        # Preview header
+        preview_header = tk.Frame(preview_container, bg=self.colors['preview_bg'])
+        preview_header.pack(fill=tk.X, padx=15, pady=(10, 8))
+        
+        tk.Label(
+            preview_header,
+            text="Preview",
+            font=("Segoe UI", 12, "bold"),
+            bg=self.colors['preview_bg'],
+            fg='white'
+        ).pack(side=tk.LEFT)
+        
+        self.preview_size_label = tk.Label(
+            preview_header,
+            text="",
+            font=("Segoe UI", 9),
+            bg=self.colors['preview_bg'],
+            fg='#999999'
+        )
+        self.preview_size_label.pack(side=tk.RIGHT)
+        
+        # Canvas for image
+        canvas_container = tk.Frame(preview_container, bg=self.colors['preview_bg'])
+        canvas_container.pack(fill=tk.BOTH, expand=True, padx=15, pady=(0, 15))
+        
+        self.preview_canvas = tk.Canvas(
+            canvas_container,
+            bg='#2a2a2a',
+            highlightthickness=0
+        )
+        self.preview_canvas.pack(fill=tk.BOTH, expand=True)
+        
+        # Placeholder text
+        self.placeholder_id = self.preview_canvas.create_text(
+            400, 300,
+            text="🖼️\n\nLoading wallpaper...",
+            font=("Segoe UI", 14),
+            fill='#666666',
+            justify=tk.CENTER
+        )
+    
     def create_section_header(self, parent, text):
-        """Create a section header (legacy - kept for compatibility)."""
-        frame = tk.Frame(parent, bg=self.colors['bg_secondary'])
+        """Create a section header in sidebar."""
+        frame = tk.Frame(parent, bg=self.colors['sidebar'])
         frame.pack(fill=tk.X, padx=20, pady=(6, 6))
         
         tk.Label(
             frame,
             text=text,
-            font=self.fonts['subheading'],
-            bg=self.colors['bg_secondary'],
-            fg=self.colors['text_primary']
+            font=("Segoe UI", 9, "bold"),
+            bg=self.colors['sidebar'],
+            fg=self.colors['text']
         ).pack(side=tk.LEFT)
         
         # Separator line
-        sep_frame = tk.Frame(parent, bg=self.colors['bg_secondary'])
+        sep_frame = tk.Frame(parent, bg=self.colors['sidebar'])
         sep_frame.pack(fill=tk.X, padx=20, pady=(0, 8))
         tk.Frame(sep_frame, bg=self.colors['border'], height=1).pack(fill=tk.X)
     
@@ -648,38 +610,10 @@ class WallpaperManagerGUI:
         except Exception as e:
             print(f"Error saving history: {e}")
     
-    def update_status(self, message, color=None):
+    def update_status(self, message, color='#28a745'):
         """Update the status bar."""
-        if color is None:
-            color = self.colors['success_green']
         self.status_label.config(text=f"● {message}", fg=color)
         self.root.update_idletasks()
-    
-    def show_toast(self, message, toast_type='success'):
-        """Show a toast notification."""
-        toast = tk.Toplevel(self.root)
-        toast.overrideredirect(True)
-        toast.attributes('-topmost', True)
-        
-        bg_color = self.colors['success_green'] if toast_type == 'success' else self.colors['danger_red']
-        
-        toast_label = tk.Label(
-            toast,
-            text=message,
-            bg=bg_color,
-            fg='white',
-            font=self.fonts['body'],
-            padx=20,
-            pady=10
-        )
-        toast_label.pack()
-        
-        # Position at top-right
-        screen_width = self.root.winfo_screenwidth()
-        toast.geometry(f'+{screen_width-350}+20')
-        
-        # Auto-dismiss after 3 seconds
-        self.root.after(3000, toast.destroy)
     
     def fetch_from_url(self):
         """Fetch image from URL with progress indicator."""
@@ -701,7 +635,7 @@ class WallpaperManagerGUI:
         # Show progress
         self.progress.pack(pady=10)
         self.progress.start()
-        self.update_status("Downloading...", self.colors['accent_blue'])
+        self.update_status("Downloading...", '#007bff')
         self.fetch_btn.config(state=tk.DISABLED)
         
         # Download in thread to keep GUI responsive
@@ -740,7 +674,7 @@ class WallpaperManagerGUI:
         self.fetch_btn.config(state=tk.NORMAL)
         self.preview_image_path = image_path
         self.display_preview(image_path, f"URL: {source_url}")
-        self.update_status("Downloaded successfully", self.colors['success_green'])
+        self.update_status("Downloaded successfully", '#28a745')
     
     def on_download_error(self, error_message):
         """Handle download error."""
@@ -748,7 +682,7 @@ class WallpaperManagerGUI:
         self.progress.pack_forget()
         self.fetch_btn.config(state=tk.NORMAL)
         messagebox.showerror("Download Error", error_message)
-        self.update_status("Download failed", self.colors['danger_red'])
+        self.update_status("Download failed", '#dc3545')
     
     def browse_file(self):
         """Browse for local image file."""
@@ -775,26 +709,22 @@ class WallpaperManagerGUI:
             img = Image.open(image_path)
             original_size = f"{img.width} × {img.height}"
             
-            # Force canvas to update its geometry
-            self.preview_canvas.update_idletasks()
-            
             # Calculate size to fit in canvas (maintain aspect ratio)
             canvas_width = self.preview_canvas.winfo_width()
             canvas_height = self.preview_canvas.winfo_height()
             
             # Use default size if canvas not yet rendered
             if canvas_width <= 1:
-                canvas_width = 456
+                canvas_width = 800
             if canvas_height <= 1:
-                canvas_height = 380
+                canvas_height = 700
             
             # Remove placeholder
             if self.placeholder_id:
                 self.preview_canvas.delete(self.placeholder_id)
                 self.placeholder_id = None
             
-            # Add padding for better fit
-            img.thumbnail((canvas_width - 20, canvas_height - 20), Image.Resampling.LANCZOS)
+            img.thumbnail((canvas_width - 40, canvas_height - 40), Image.Resampling.LANCZOS)
             
             # Convert to PhotoImage
             self.preview_photo = ImageTk.PhotoImage(img)
@@ -808,36 +738,22 @@ class WallpaperManagerGUI:
                 anchor=tk.CENTER
             )
             
-            # Update resolution badge
+            # Update info
+            self.preview_info_text.config(state=tk.NORMAL)
+            self.preview_info_text.delete(1.0, tk.END)
+            self.preview_info_text.insert(1.0, f"{info_text}\nResolution: {original_size} px")
+            self.preview_info_text.config(state=tk.DISABLED)
+            
             self.preview_size_label.config(text=original_size)
-            
-            # Place resolution badge on canvas
-            self.preview_canvas.delete("resolution")
-            self.preview_canvas.create_window(
-                canvas_width - 8, 8,
-                window=self.preview_size_label,
-                anchor='ne',
-                tags="resolution"
-            )
-            
-            # Place quote overlay at bottom
-            self.preview_canvas.delete("quote")
-            self.preview_canvas.create_window(
-                0, canvas_height,
-                window=self.quote_frame,
-                anchor='sw',
-                width=canvas_width,
-                tags="quote"
-            )
             
             # Enable set and favorite buttons
             self.set_button.config(state=tk.NORMAL)
             self.favorite_button.config(state=tk.NORMAL)
-            self.update_status("Preview loaded", self.colors['success_green'])
+            self.update_status("Preview loaded", '#28a745')
             
         except Exception as e:
             messagebox.showerror("Preview Error", f"Could not load image: {str(e)}")
-            self.update_status("Preview failed", self.colors['danger_red'])
+            self.update_status("Preview failed", '#dc3545')
     
     def set_wallpaper(self):
         """Set the previewed image as wallpaper."""
@@ -849,7 +765,7 @@ class WallpaperManagerGUI:
             # Convert to absolute path
             image_path = os.path.abspath(self.preview_image_path)
             
-            self.update_status("Setting wallpaper...", self.colors['accent_blue'])
+            self.update_status("Setting wallpaper...", '#007bff')
             
             # Set wallpaper based on platform
             success = self.set_wallpaper_platform(image_path)
@@ -862,14 +778,14 @@ class WallpaperManagerGUI:
                 self.refresh_display()
                 
                 messagebox.showinfo("Success", "Wallpaper set successfully!")
-                self.update_status("Wallpaper applied", self.colors['success_green'])
+                self.update_status("Wallpaper applied", '#28a745')
             else:
                 messagebox.showerror("Error", "Failed to set wallpaper")
-                self.update_status("Failed", self.colors['danger_red'])
+                self.update_status("Failed", '#dc3545')
                 
         except Exception as e:
             messagebox.showerror("Error", f"Failed to set wallpaper: {str(e)}")
-            self.update_status("Error occurred", self.colors['danger_red'])
+            self.update_status("Error occurred", '#dc3545')
     
     def set_wallpaper_platform(self, image_path):
         """Set wallpaper based on platform."""
@@ -977,11 +893,11 @@ class WallpaperManagerGUI:
         if not self.history:
             tk.Label(
                 self.history_container,
-                text="No history yet",
-                font=self.fonts['body'],
-                bg=self.colors['bg_secondary'],
-                fg=self.colors['text_muted']
-            ).pack(pady=10)
+                text="No history",
+                font=("Segoe UI", 9),
+                bg=self.colors['sidebar'],
+                fg='gray'
+            ).pack(pady=20)
             return
         
         for idx, item in enumerate(self.history):
@@ -1085,11 +1001,11 @@ class WallpaperManagerGUI:
             self.history = []
             self.save_history()
             self.refresh_display()
-            self.update_status("History cleared", self.colors['success_green'])
+            self.update_status("History cleared", '#28a745')
     
     def auto_fetch_and_set(self):
         """Auto fetch new wallpaper and immediately set it (sync)."""
-        self.update_status("Auto-fetching wallpaper...", self.colors['accent_blue'])
+        self.update_status("Auto-fetching wallpaper...", '#007bff')
         self.auto_fetch_btn.config(state=tk.DISABLED)
         
         def auto_fetch_task():
@@ -1127,13 +1043,13 @@ class WallpaperManagerGUI:
         """Handle successful auto-fetch."""
         self.auto_fetch_btn.config(state=tk.NORMAL)
         self.refresh_display()
-        self.update_status(f"Auto-fetched: {os.path.basename(image_path)}", self.colors['success_green'])
+        self.update_status(f"Auto-fetched: {os.path.basename(image_path)}", '#28a745')
         self.reset_timer()  # Reset timer after manual fetch
     
     def on_auto_fetch_error(self, error):
         """Handle auto-fetch error."""
         self.auto_fetch_btn.config(state=tk.NORMAL)
-        self.update_status("Auto-fetch failed", self.colors['danger_red'])
+        self.update_status("Auto-fetch failed", '#dc3545')
         messagebox.showerror("Auto-Fetch Error", f"Failed to fetch wallpaper:\n{error}")
     
     def toggle_auto_rotate(self):
@@ -1153,7 +1069,7 @@ class WallpaperManagerGUI:
                 raise ValueError("Interval must be at least 1 minute")
             
             self.rotation_interval_minutes = interval
-            self.update_status(f"Interval set to {interval} min", self.colors['success_green'])
+            self.update_status(f"Interval set to {interval} min", '#28a745')
             
             # Reset timer if auto-rotate is active
             if self.auto_rotate_enabled:
@@ -1164,14 +1080,14 @@ class WallpaperManagerGUI:
     
     def start_auto_rotate(self):
         """Start auto-rotation with timer."""
-        self.update_status("Auto-rotate enabled", self.colors['success_green'])
+        self.update_status("Auto-rotate enabled", '#28a745')
         self.reset_timer()
     
     def stop_auto_rotate(self):
         """Stop auto-rotation."""
         self.stop_timer_flag = True
         self.timer_label.config(text="--:--")
-        self.update_status("Auto-rotate disabled", self.colors['text_muted'])
+        self.update_status("Auto-rotate disabled", '#6c757d')
     
     def reset_timer(self):
         """Reset the countdown timer."""
@@ -1236,7 +1152,7 @@ class WallpaperManagerGUI:
                 subprocess.run(["open", str(self.wallpapers_dir)])
             else:  # Linux
                 subprocess.run(["xdg-open", str(self.wallpapers_dir)])
-            self.update_status("Opened wallpapers folder", self.colors['success_green'])
+            self.update_status("Opened wallpapers folder", '#28a745')
         except Exception as e:
             messagebox.showerror("Error", f"Could not open folder: {str(e)}")
     
@@ -1284,7 +1200,7 @@ class WallpaperManagerGUI:
         self.save_favorites()
         self.display_favorites()
         
-        self.update_status("Added to favorites", self.colors['success_green'])
+        self.update_status("Added to favorites", '#28a745')
         messagebox.showinfo("Success", "Wallpaper added to favorites!")
     
     def display_favorites(self):
@@ -1296,9 +1212,9 @@ class WallpaperManagerGUI:
             tk.Label(
                 self.favorites_container,
                 text="No favorites yet",
-                font=self.fonts['body'],
-                bg=self.colors['bg_secondary'],
-                fg=self.colors['text_muted']
+                font=("Segoe UI", 9),
+                bg=self.colors['sidebar'],
+                fg='gray'
             ).pack(pady=10)
             return
         
@@ -1395,11 +1311,11 @@ class WallpaperManagerGUI:
         self.favorites = [f for f in self.favorites if f.get("path") != image_path]
         self.save_favorites()
         self.display_favorites()
-        self.update_status("Removed from favorites", self.colors['text_muted'])
+        self.update_status("Removed from favorites", '#6c757d')
     
     def auto_fetch_on_launch(self):
         """Auto-fetch a wallpaper when the GUI launches."""
-        self.update_status("Fetching wallpaper...", self.colors['accent_blue'])
+        self.update_status("Fetching wallpaper...", '#007bff')
         
         def fetch_task():
             try:
@@ -1418,7 +1334,7 @@ class WallpaperManagerGUI:
                 self.root.after(0, lambda: self.on_launch_fetch_success(str(temp_path)))
                 
             except Exception as e:
-                self.root.after(0, lambda: self.update_status("Ready", self.colors['success_green']))
+                self.root.after(0, lambda: self.update_status("Ready", '#28a745'))
         
         threading.Thread(target=fetch_task, daemon=True).start()
     
@@ -1426,7 +1342,7 @@ class WallpaperManagerGUI:
         """Handle successful launch fetch."""
         self.preview_image_path = image_path
         self.display_preview(image_path, f"Picsum: {os.path.basename(image_path)}")
-        self.update_status("Downloaded successfully", self.colors['success_green'])
+        self.update_status("Downloaded successfully", '#28a745')
 
 
 def main():
