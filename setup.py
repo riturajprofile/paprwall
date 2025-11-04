@@ -29,7 +29,6 @@ setup(
         "requests>=2.28.0",
         "Pillow>=10.0.0",
         "APScheduler>=3.10.0",
-        "tk>=0.1.0",
     ],
     entry_points={
         "console_scripts": [

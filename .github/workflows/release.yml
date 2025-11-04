@@ -1,0 +1,70 @@
+name: Release builds
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  build:
+    name: Build standalone binaries
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python-version: ['3.11']
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install build deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install pyinstaller
+          pip install -e .
+
+      - name: Build CLI (wallpaper-manager)
+        run: |
+          pyinstaller -F -n wallpaper-manager src/paprwall/wallpaper_cli.py
+
+      - name: Build GUI (wallpaper-gui)
+        run: |
+          # On macOS/Windows, a windowed build avoids console flashing
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            pyinstaller -F -w -n wallpaper-gui src/paprwall/gui/wallpaper_manager_gui.py
+          elif [ "$RUNNER_OS" = "macOS" ]; then
+            pyinstaller -F -w -n wallpaper-gui src/paprwall/gui/wallpaper_manager_gui.py
+          else
+            pyinstaller -F -n wallpaper-gui src/paprwall/gui/wallpaper_manager_gui.py
+          fi
+        shell: bash
+
+      - name: Archive artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: paprwall-${{ runner.os }}
+          path: |
+            dist/*
+
+  release:
+    name: Create GitHub Release
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/**
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

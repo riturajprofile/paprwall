@@ -323,7 +323,63 @@ Edit `~/.config/paprwall/attribution.json`:
 
 ---
 
-## 🛠️ Troubleshooting
+## � Ship it: builds and releases
+
+You can distribute Paprwall in two ways: as a Python package or as standalone binaries.
+
+### Option A: Python package (pip)
+
+Build and install locally:
+
+```bash
+python -m pip install --upgrade pip build
+python -m build
+pip install dist/paprwall-*.whl
+```
+
+Publish to PyPI (optional):
+
+```bash
+python -m pip install twine
+twine upload dist/*
+```
+
+### Option B: Standalone binaries (no Python required)
+
+Create single-file executables with PyInstaller:
+
+```bash
+pip install pyinstaller
+
+# CLI build
+pyinstaller -F -n wallpaper-manager src/paprwall/wallpaper_cli.py
+
+# GUI build
+# On macOS/Windows, add -w to hide console: pyinstaller -F -w -n wallpaper-gui ...
+pyinstaller -F -n wallpaper-gui src/paprwall/gui/wallpaper_manager_gui.py
+
+# Artifacts will be in ./dist/
+```
+
+### Continuous builds with GitHub Actions
+
+This repo includes a workflow at `.github/workflows/release.yml` that:
+- Builds Windows, macOS, and Linux binaries with PyInstaller
+- Runs automatically when you push a tag like `v1.2.3`
+- Uploads the binaries as a GitHub Release
+
+Usage:
+
+```bash
+git tag v1.0.0
+git push origin v1.0.0
+```
+
+When the workflow finishes, download the binaries from the Release page.
+
+---
+
+## �🛠️ Troubleshooting
 
 ### Wallpaper not changing
 
