@@ -5,33 +5,51 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "paprwall"
 version = "1.0.0"
-description = "Modern Desktop Wallpaper Manager with GUI & Auto-Rotation for Linux/Windows"
-authors = [{name = "riturajprofile", email = "riturajprofile.me@gmail.com"}]
-license = {text = "CC BY-NC 4.0"}
+description = "Modern Desktop Wallpaper Manager with Motivational Quotes"
+authors = [{name = "riturajprofile", email = "riturajprofile@example.com"}]
+license = {text = "MIT"}
 readme = "README.md"
 requires-python = ">=3.8"
-keywords = ["wallpaper", "linux", "windows", "desktop", "picsum", "paprwall", "gui", "cli"]
+keywords = [
+    "wallpaper", 
+    "desktop", 
+    "background", 
+    "quotes", 
+    "motivation", 
+    "linux", 
+    "gnome", 
+    "kde", 
+    "xfce",
+    "gui",
+    "tkinter"
+]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
-    "Environment :: X11 Applications :: GTK",
+    "Environment :: X11 Applications",
     "Intended Audience :: End Users/Desktop",
-    "License :: Other/Proprietary License",
+    "License :: OSI Approved :: MIT License",
     "Operating System :: POSIX :: Linux",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Topic :: Desktop Environment",
+    "Topic :: Multimedia :: Graphics",
+    "Natural Language :: English",
 ]
 
 dependencies = [
     "requests>=2.28.0",
     "Pillow>=10.0.0",
-    "APScheduler>=3.10.0",
 ]
 
 [project.optional-dependencies]
+build = [
+    "pyinstaller>=5.0.0",
+]
 dev = [
     "pytest>=7.0.0",
     "black>=23.0.0",
@@ -41,10 +59,16 @@ dev = [
 
 [project.urls]
 Homepage = "https://github.com/riturajprofile/paprwall"
-Documentation = "https://github.com/riturajprofile/paprwall/wiki"
+Documentation = "https://github.com/riturajprofile/paprwall#readme"
 Repository = "https://github.com/riturajprofile/paprwall"
 "Bug Tracker" = "https://github.com/riturajprofile/paprwall/issues"
+Changelog = "https://github.com/riturajprofile/paprwall/blob/main/CHANGELOG.md"
 
-[project.scripts]
-paprwall = "paprwall.cli:main"
+[project.gui-scripts]
 paprwall-gui = "paprwall.gui.wallpaper_manager_gui:main"
+
+[tool.setuptools]
+packages = ["paprwall", "paprwall.gui"]
+
+[tool.setuptools.package-dir]
+"" = "src"

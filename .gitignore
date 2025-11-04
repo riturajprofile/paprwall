@@ -66,3 +66,11 @@ test_images/
 # Logs
 *.log
 logs/
+
+# PyPI Publishing
+.pypirc
+*.pypirc
+twine.log
+
+# Release artifacts (keep in release directory only)
+*.tar.gz.sha256
