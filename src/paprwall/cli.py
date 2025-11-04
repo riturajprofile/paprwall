@@ -9,6 +9,12 @@ from typing import Optional
 
 from . import __version__
 from .gui.wallpaper_manager_gui import WallpaperManagerGUI
+# Re-export helper functions for easier patching/mocking in tests
+from .installer import install_system, uninstall_system  # noqa: F401
+from .core import (
+    set_wallpaper_from_file,
+    fetch_and_set_wallpaper,
+)  # noqa: F401
 
 
 def create_parser() -> argparse.ArgumentParser:
@@ -91,27 +97,23 @@ def main(args: Optional[list] = None) -> int:
     try:
         # Handle installation/uninstallation
         if parsed_args.install:
-            from .installer import install_system
             return install_system()
 
         if parsed_args.uninstall:
-            from .installer import uninstall_system
             return uninstall_system()
 
         # Handle wallpaper operations
         if parsed_args.set_wallpaper:
-            from .core import set_wallpaper_from_file
             return set_wallpaper_from_file(
                 parsed_args.set_wallpaper,
                 add_quote=not parsed_args.no_quote,
-                category=parsed_args.category
+                category=parsed_args.category,
             )
 
         if parsed_args.fetch:
-            from .core import fetch_and_set_wallpaper
             return fetch_and_set_wallpaper(
                 category=parsed_args.category,
-                add_quote=not parsed_args.no_quote
+                add_quote=not parsed_args.no_quote,
             )
 
         # Default: launch GUI
