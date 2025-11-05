@@ -323,13 +323,13 @@ class ModernWallpaperGUI:
         main = tk.Frame(self.root, bg=self.colors["bg_primary"])
         main.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
-        # Preview section (bigger vertically)
+        # Preview section (reduced padding to fit more)
         preview_container = tk.Frame(main, bg=self.colors["bg_secondary"])
-        preview_container.pack(fill=tk.BOTH, expand=True, padx=20, pady=20)
+        preview_container.pack(fill=tk.BOTH, expand=True, padx=20, pady=(15, 10))
 
-        # Preview header
+        # Preview header (reduced spacing)
         preview_header = tk.Frame(preview_container, bg=self.colors["bg_secondary"])
-        preview_header.pack(fill=tk.X, pady=(10, 15))
+        preview_header.pack(fill=tk.X, pady=(5, 8))
 
         tk.Label(
             preview_header,
@@ -351,9 +351,10 @@ class ModernWallpaperGUI:
         )
         self.resolution_label.pack(side=tk.RIGHT, padx=15)
 
-        # Preview canvas (expands vertically)
-        canvas_frame = tk.Frame(preview_container, bg="black")
-        canvas_frame.pack(fill=tk.BOTH, expand=True, padx=15, pady=(0, 15))
+        # Preview canvas (fixed height to fit on screen)
+        canvas_frame = tk.Frame(preview_container, bg="black", height=320)
+        canvas_frame.pack(fill=tk.X, expand=False, padx=15, pady=(0, 8))
+        canvas_frame.pack_propagate(False)
 
         self.preview_canvas = tk.Canvas(
             canvas_frame,
@@ -363,9 +364,9 @@ class ModernWallpaperGUI:
         )
         self.preview_canvas.pack(fill=tk.BOTH, expand=True)
 
-        # Quote display
+        # Quote display (smaller and more compact)
         quote_frame = tk.Frame(preview_container, bg=self.colors["bg_tertiary"])
-        quote_frame.pack(fill=tk.X, padx=15, pady=(0, 15))
+        quote_frame.pack(fill=tk.X, padx=15, pady=(0, 8))
 
         # Quote content frame with refresh button
         quote_content_frame = tk.Frame(quote_frame, bg=self.colors["bg_tertiary"])
@@ -374,13 +375,13 @@ class ModernWallpaperGUI:
         self.quote_display = tk.Label(
             quote_content_frame,
             text='"Transform your desktop with beautiful wallpapers"',
-            font=("Georgia", 16, "italic"),
+            font=("Georgia", 11, "italic"),
             bg=self.colors["bg_tertiary"],
             fg=self.colors["text_primary"],
-            wraplength=750,
+            wraplength=700,
             justify="left",
-            padx=20,
-            pady=15,
+            padx=12,
+            pady=8,
         )
         self.quote_display.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
@@ -395,7 +396,7 @@ class ModernWallpaperGUI:
 
         # Action buttons
         button_frame = tk.Frame(preview_container, bg=self.colors["bg_secondary"])
-        button_frame.pack(fill=tk.X, padx=15, pady=(0, 15))
+        button_frame.pack(fill=tk.X, padx=15, pady=(0, 8))
 
         self.create_button(
             button_frame,
@@ -418,31 +419,31 @@ class ModernWallpaperGUI:
 
     def create_history_section(self, parent):
         """Create history gallery section."""
-        history_container = tk.Frame(parent, bg=self.colors["bg_secondary"], height=180)
-        history_container.pack(fill=tk.X, expand=False, padx=20, pady=(0, 20))
+        history_container = tk.Frame(parent, bg=self.colors["bg_secondary"], height=160)
+        history_container.pack(fill=tk.X, expand=False, padx=20, pady=(0, 15))
         history_container.pack_propagate(False)
 
         # Header
         header = tk.Frame(history_container, bg=self.colors["bg_secondary"])
-        header.pack(fill=tk.X, pady=(10, 10), padx=15)
+        header.pack(fill=tk.X, pady=(5, 5), padx=15)
 
         tk.Label(
             header,
             text="History",
-            font=("Segoe UI", 14, "bold"),
+            font=("Segoe UI", 12, "bold"),
             bg=self.colors["bg_secondary"],
             fg=self.colors["text_primary"],
         ).pack(side=tk.LEFT)
 
         # Gallery canvas
         gallery_frame = tk.Frame(history_container, bg=self.colors["bg_secondary"])
-        gallery_frame.pack(fill=tk.BOTH, expand=True, padx=15, pady=(0, 15))
+        gallery_frame.pack(fill=tk.BOTH, expand=True, padx=15, pady=(0, 8))
 
         # Scrollable canvas
         self.history_canvas = tk.Canvas(
             gallery_frame,
             bg=self.colors["bg_secondary"],
-            height=150,
+            height=200,
             highlightthickness=0,
         )
 
@@ -1425,41 +1426,73 @@ class ModernWallpaperGUI:
         return lines or [text]
 
     def set_system_wallpaper(self, image_path):
-        """Set wallpaper on the system."""
+        """Set wallpaper on the system with comprehensive debug logging."""
         tried_methods = []
+        print("\n" + "="*80)
+        print("[WALLPAPER SETTER DEBUG] Starting wallpaper set operation")
+        print("="*80)
+        
         try:
             system = platform.system()
             abs_path = str(Path(image_path).resolve())
             file_uri = f"file://{abs_path}"
 
-            # Helpful environment info for debugging
+            # Comprehensive environment info
             de = os.environ.get("XDG_CURRENT_DESKTOP", "")
             sess = os.environ.get("DESKTOP_SESSION", "")
             way = os.environ.get("WAYLAND_DISPLAY", "")
             disp = os.environ.get("DISPLAY", "")
-            print(
-                f"[DEBUG] set_system_wallpaper: system={system} de={de} session={sess} wayland={bool(way)} display={disp}"
-            )
-            print(f"[DEBUG] Absolute path: {abs_path}")
+            
+            print(f"[DEBUG] Operating System: {system}")
+            print(f"[DEBUG] Platform Release: {platform.release()}")
+            print(f"[DEBUG] Desktop Environment: {de or '(not set)'}")
+            print(f"[DEBUG] Desktop Session: {sess or '(not set)'}")
+            print(f"[DEBUG] Wayland Display: {way or '(not set)'}")
+            print(f"[DEBUG] X Display: {disp or '(not set)'}")
+            print(f"[DEBUG] Image Path (input): {image_path}")
+            print(f"[DEBUG] Absolute Path: {abs_path}")
             print(f"[DEBUG] File URI: {file_uri}")
             
-            # Verify file exists
+            # Verify file exists and get details
             if not Path(abs_path).exists():
-                print(f"[ERROR] Image file does not exist: {abs_path}")
+                print(f"[ERROR] ✗ Image file does not exist: {abs_path}")
                 return False
+            
+            file_size = Path(abs_path).stat().st_size
+            print(f"[DEBUG] ✓ File exists, size: {file_size:,} bytes ({file_size/1024:.1f} KB)")
+            print("-"*80)
 
             if system == "Windows":
-                import ctypes
-
-                ctypes.windll.user32.SystemParametersInfoW(20, 0, abs_path, 3)
-                return True
+                print("[DEBUG] Windows OS detected - using SystemParametersInfoW")
+                tried_methods.append("Windows SystemParametersInfoW")
+                try:
+                    import ctypes
+                    result = ctypes.windll.user32.SystemParametersInfoW(20, 0, abs_path, 3)
+                    print(f"[DEBUG] SystemParametersInfoW result: {result}")
+                    if result:
+                        print("[SUCCESS] ✓ Windows wallpaper set successfully!")
+                        print("="*80 + "\n")
+                        return True
+                    else:
+                        print("[ERROR] ✗ SystemParametersInfoW returned 0 (failure)")
+                        print("="*80 + "\n")
+                        return False
+                except Exception as e:
+                    print(f"[ERROR] ✗ Windows wallpaper setting failed: {e}")
+                    import traceback
+                    traceback.print_exc()
+                    print("="*80 + "\n")
+                    return False
 
             elif system == "Linux":
+                print("[DEBUG] Linux OS detected - trying desktop environment methods...")
+                
                 # WSL: set Windows wallpaper from Linux (if running under WSL)
-                try:
-                    if "microsoft" in platform.release().lower():
-                        print("[DEBUG] Detected WSL environment; attempting Windows wallpaper via PowerShell...")
-                        # Convert path to Windows path
+                if "microsoft" in platform.release().lower():
+                    tried_methods.append("WSL->Windows PowerShell")
+                    try:
+                        print("[DEBUG] WSL environment detected")
+                        print("[DEBUG] Converting Linux path to Windows path...")
                         win_path_proc = subprocess.run(
                             ["wslpath", "-w", abs_path],
                             capture_output=True,
@@ -1467,6 +1500,9 @@ class ModernWallpaperGUI:
                             check=True,
                         )
                         win_path = win_path_proc.stdout.strip()
+                        print(f"[DEBUG] Windows path: {win_path}")
+                        
+                        print("[DEBUG] Calling PowerShell to set Windows wallpaper...")
                         ps_script = (
                             "Add-Type -AssemblyName PresentationCore; "
                             "$code='[DllImport(\"user32.dll\")] public static extern int SystemParametersInfo(int uAction, int uParam, string lpvParam, int fuWinIni);'; "
@@ -1478,16 +1514,26 @@ class ModernWallpaperGUI:
                             capture_output=True,
                             text=True,
                         )
-                        print(f"[DEBUG] WSL PowerShell rc={r.returncode} stderr={r.stderr!r}")
+                        print(f"[DEBUG] PowerShell exit code: {r.returncode}")
+                        if r.stdout: print(f"[DEBUG] PowerShell stdout: {r.stdout!r}")
+                        if r.stderr: print(f"[DEBUG] PowerShell stderr: {r.stderr!r}")
+                        
                         if r.returncode == 0:
+                            print("[SUCCESS] ✓ WSL->Windows wallpaper set successfully!")
+                            print("="*80 + "\n")
                             return True
-                except Exception as e:
-                    print(f"[DEBUG] WSL handling failed or not applicable: {e}")
+                        else:
+                            print(f"[ERROR] ✗ PowerShell failed with exit code {r.returncode}")
+                    except Exception as e:
+                        print(f"[DEBUG] WSL->Windows method failed: {e}")
+                        import traceback
+                        traceback.print_exc()
 
                 # Try GNOME (Ubuntu default)
+                tried_methods.append("GNOME gsettings")
                 try:
-                    tried_methods.append("GNOME gsettings")
-                    print("[DEBUG] Trying GNOME gsettings picture-uri...")
+                    print("\n[METHOD 1] Trying GNOME gsettings...")
+                    print(f"[DEBUG] Command: gsettings set org.gnome.desktop.background picture-uri {file_uri}")
                     r = subprocess.run(
                         [
                             "gsettings",
@@ -1500,10 +1546,13 @@ class ModernWallpaperGUI:
                         capture_output=True,
                         text=True,
                     )
-                    print(f"[DEBUG] GNOME picture-uri set. rc={r.returncode} stdout={r.stdout!r} stderr={r.stderr!r}")
+                    print(f"[DEBUG] Exit code: {r.returncode}")
+                    if r.stdout: print(f"[DEBUG] stdout: {r.stdout!r}")
+                    if r.stderr: print(f"[DEBUG] stderr: {r.stderr!r}")
+                    
                     # Best-effort updates for GNOME variants
                     try:
-                        print("[DEBUG] Trying GNOME picture-uri-dark and picture-options...")
+                        print("[DEBUG] Setting picture-uri-dark and picture-options...")
                         r1 = subprocess.run(
                             [
                                 "gsettings",
@@ -1528,18 +1577,25 @@ class ModernWallpaperGUI:
                             capture_output=True,
                             text=True,
                         )
-                        print(f"[DEBUG] GNOME extras applied. dark_rc={r1.returncode} options_rc={r2.returncode}")
+                        print(f"[DEBUG] picture-uri-dark exit code: {r1.returncode}")
+                        print(f"[DEBUG] picture-options exit code: {r2.returncode}")
                         if r1.stderr: print(f"[DEBUG] picture-uri-dark stderr: {r1.stderr!r}")
                         if r2.stderr: print(f"[DEBUG] picture-options stderr: {r2.stderr!r}")
-                    except Exception:
-                        pass
-                    print("[SUCCESS] GNOME wallpaper set successfully!")
+                    except Exception as e:
+                        print(f"[DEBUG] GNOME extras failed (non-critical): {e}")
+                    
+                    print("[SUCCESS] ✓ GNOME wallpaper set successfully!")
+                    print("="*80 + "\n")
                     return True
                 except Exception as e:
-                    print(f"[DEBUG] GNOME gsettings failed: {e}")
+                    print(f"[ERROR] ✗ GNOME gsettings failed: {e}")
+                    import traceback
+                    traceback.print_exc()
                     # dconf direct write fallback (some setups)
+                    tried_methods.append("dconf")
                     try:
-                        print("[DEBUG] Trying dconf write fallback for GNOME...")
+                        print("\n[METHOD 2] Trying dconf write fallback...")
+                        print(f"[DEBUG] Command: dconf write /org/gnome/desktop/background/picture-uri \\\"{file_uri}\\\"")
                         r3 = subprocess.run(
                             [
                                 "dconf",
@@ -1549,15 +1605,23 @@ class ModernWallpaperGUI:
                             ],
                             check=True,
                             capture_output=True,
+                            text=True,
                         )
-                        print(f"[DEBUG] dconf write result: rc={r3.returncode} stderr={r3.stderr!r}")
+                        print(f"[DEBUG] Exit code: {r3.returncode}")
+                        if r3.stdout: print(f"[DEBUG] stdout: {r3.stdout!r}")
+                        if r3.stderr: print(f"[DEBUG] stderr: {r3.stderr!r}")
+                        print("[SUCCESS] ✓ dconf wallpaper set successfully!")
+                        print("="*80 + "\n")
                         return True
                     except Exception as e2:
-                        print(f"[DEBUG] dconf fallback failed: {e2}")
+                        print(f"[ERROR] ✗ dconf fallback failed: {e2}")
+                        import traceback
+                        traceback.print_exc()
 
                 # Try KDE
+                tried_methods.append("KDE qdbus")
                 try:
-                    print("[DEBUG] Trying KDE via qdbus evaluateScript...")
+                    print("\n[METHOD 3] Trying KDE via qdbus...")
                     script = f"""
                     qdbus org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell.evaluateScript '
                         var allDesktops = desktops();
@@ -1569,15 +1633,24 @@ class ModernWallpaperGUI:
                         }}
                     '
                     """
-                    r = subprocess.run(script, shell=True, check=True, capture_output=True)
-                    print(f"[DEBUG] KDE script rc={r.returncode} stderr={r.stderr!r}")
+                    print(f"[DEBUG] Executing shell script: {script[:100]}...")
+                    r = subprocess.run(script, shell=True, check=True, capture_output=True, text=True)
+                    print(f"[DEBUG] Exit code: {r.returncode}")
+                    if r.stdout: print(f"[DEBUG] stdout: {r.stdout!r}")
+                    if r.stderr: print(f"[DEBUG] stderr: {r.stderr!r}")
+                    print("[SUCCESS] ✓ KDE wallpaper set successfully!")
+                    print("="*80 + "\n")
                     return True
                 except Exception as e:
-                    print(f"[DEBUG] KDE attempt failed: {e}")
+                    print(f"[ERROR] ✗ KDE attempt failed: {e}")
+                    import traceback
+                    traceback.print_exc()
 
                 # Try XFCE
+                tried_methods.append("XFCE xfconf-query")
                 try:
-                    print("[DEBUG] Trying XFCE xfconf-query last-image (path)...")
+                    print("\n[METHOD 4] Trying XFCE xfconf-query (absolute path)...")
+                    print(f"[DEBUG] Command: xfconf-query -c xfce4-desktop -p /backdrop/.../last-image -s {abs_path}")
                     r = subprocess.run(
                         [
                             "xfconf-query",
@@ -1590,14 +1663,23 @@ class ModernWallpaperGUI:
                         ],
                         check=True,
                         capture_output=True,
+                        text=True,
                     )
-                    print(f"[DEBUG] XFCE path set rc={r.returncode}")
+                    print(f"[DEBUG] Exit code: {r.returncode}")
+                    if r.stdout: print(f"[DEBUG] stdout: {r.stdout!r}")
+                    if r.stderr: print(f"[DEBUG] stderr: {r.stderr!r}")
+                    print("[SUCCESS] ✓ XFCE wallpaper set successfully!")
+                    print("="*80 + "\n")
                     return True
                 except Exception as e:
-                    print(f"[DEBUG] XFCE path failed: {e}")
+                    print(f"[ERROR] ✗ XFCE path method failed: {e}")
+                    import traceback
+                    traceback.print_exc()
+                    
                     # Try with file:// URI variant
                     try:
-                        print("[DEBUG] Trying XFCE xfconf-query last-image (file URI)...")
+                        print("\n[METHOD 4b] Trying XFCE xfconf-query (file URI)...")
+                        print(f"[DEBUG] Command: xfconf-query -c xfce4-desktop -p /backdrop/.../last-image -s {file_uri}")
                         r = subprocess.run(
                             [
                                 "xfconf-query",
@@ -1610,29 +1692,60 @@ class ModernWallpaperGUI:
                             ],
                             check=True,
                             capture_output=True,
+                            text=True,
                         )
-                        print(f"[DEBUG] XFCE file URI set rc={r.returncode}")
+                        print(f"[DEBUG] Exit code: {r.returncode}")
+                        if r.stdout: print(f"[DEBUG] stdout: {r.stdout!r}")
+                        if r.stderr: print(f"[DEBUG] stderr: {r.stderr!r}")
+                        print("[SUCCESS] ✓ XFCE wallpaper set successfully!")
+                        print("="*80 + "\n")
                         return True
                     except Exception as e2:
-                        print(f"[DEBUG] XFCE file URI failed: {e2}")
+                        print(f"[ERROR] ✗ XFCE file URI method failed: {e2}")
+                        import traceback
+                        traceback.print_exc()
 
                 # Try feh as fallback
+                tried_methods.append("feh")
                 try:
-                    print("[DEBUG] Trying feh fallback --bg-scale ...")
+                    print("\n[METHOD 5] Trying feh as fallback...")
+                    print(f"[DEBUG] Command: feh --bg-scale {abs_path}")
                     r = subprocess.run(
                         ["feh", "--bg-scale", abs_path],
                         check=True,
                         capture_output=True,
+                        text=True,
                     )
-                    print(f"[DEBUG] feh set rc={r.returncode}")
+                    print(f"[DEBUG] Exit code: {r.returncode}")
+                    if r.stdout: print(f"[DEBUG] stdout: {r.stdout!r}")
+                    if r.stderr: print(f"[DEBUG] stderr: {r.stderr!r}")
+                    print("[SUCCESS] ✓ feh wallpaper set successfully!")
+                    print("="*80 + "\n")
                     return True
                 except Exception as e:
-                    print(f"[DEBUG] feh fallback failed: {e}")
+                    print(f"[ERROR] ✗ feh fallback failed: {e}")
+                    import traceback
+                    traceback.print_exc()
 
+            print("\n" + "!"*80)
+            print(f"[FAILURE] All wallpaper methods failed!")
+            print(f"[FAILURE] Tried methods: {', '.join(tried_methods)}")
+            print("!"*80)
+            print("\n[TROUBLESHOOTING TIPS]")
+            print("  • Ubuntu/GNOME: Ensure gsettings is installed")
+            print("  • Install feh as universal fallback: sudo apt install feh")
+            print("  • WSL: Wallpaper sets on Windows host, not Linux GUI")
+            print("  • Check desktop environment variables above")
+            print("="*80 + "\n")
             return False
 
         except Exception as e:
-            print(f"Failed to set wallpaper: {e}")
+            print("\n" + "!"*80)
+            print(f"[CRITICAL ERROR] Exception in set_system_wallpaper: {e}")
+            print("!"*80)
+            import traceback
+            traceback.print_exc()
+            print("="*80 + "\n")
             return False
 
     def update_history_gallery(self):
