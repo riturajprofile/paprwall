@@ -16,5 +16,9 @@ scripts/** text eol=lf
 # Source files: prefer LF consistently
 *.py text eol=lf
 
-# Keep Windows batch files with default platform endings
-*.bat text
+# Ensure Windows batch files use CRLF so cmd.exe parses correctly
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# PowerShell scripts typically use CRLF
+*.ps1 text eol=crlf
