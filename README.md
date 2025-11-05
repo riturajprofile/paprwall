@@ -2,7 +2,7 @@
 
 Modern desktop wallpaper manager with inspirational quotes and one-click apply.
 
-[![Version](https://img.shields.io/badge/version-1.1.0-blue.svg)](https://github.com/riturajprofile/paprwall/releases)
+[![Version](https://img.shields.io/badge/version-1.1.1-blue.svg)](https://github.com/riturajprofile/paprwall/releases)
 [![Python](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
 [![License: CC BY-NC 4.0](https://img.shields.io/badge/License-CC--BY--NC%204.0-blue.svg)](https://creativecommons.org/licenses/by-nc/4.0/)
 [![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20Windows-lightgrey.svg)](https://github.com/riturajprofile/paprwall)
