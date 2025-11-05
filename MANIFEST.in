@@ -9,7 +9,7 @@ include requirements.txt
 include src/paprwall/__version__.py
 
 # Include assets
-recursive-include assets *.png *.svg *.ico
+recursive-include assets *.png *.svg *.ico *.template
 
 # Include scripts
 recursive-include scripts *.sh *.bat

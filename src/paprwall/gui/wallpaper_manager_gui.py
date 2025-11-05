@@ -17,6 +17,13 @@ from tkinter import ttk, filedialog, messagebox, scrolledtext
 from PIL import Image, ImageTk, ImageDraw, ImageFont
 import requests
 
+# Try to import system tray support
+try:
+    from ..tray import SystemTray, TRAY_AVAILABLE
+except ImportError:
+    TRAY_AVAILABLE = False
+    SystemTray = None
+
 
 class ModernWallpaperGUI:
     """Modern wallpaper manager with clean UI and enhanced features."""
@@ -109,6 +116,23 @@ class ModernWallpaperGUI:
         }
 
         self.root.configure(bg=self.colors["bg_primary"])
+        
+        # Setup window close handler (minimize to tray if enabled)
+        self.root.protocol("WM_DELETE_WINDOW", self.on_window_close)
+        
+        # Initialize system tray
+        self.tray_icon = None
+        self.minimize_to_tray = tk.BooleanVar(value=True)  # Default: minimize to tray
+        if TRAY_AVAILABLE and SystemTray:
+            try:
+                self.tray_icon = SystemTray(
+                    app_name="PaprWall",
+                    on_show=self.show_window,
+                    on_quit=self.quit_app
+                )
+            except Exception as e:
+                print(f"Failed to initialize system tray: {e}")
+                self.tray_icon = None
 
     def init_variables(self):
         """Initialize application variables."""
@@ -202,6 +226,7 @@ class ModernWallpaperGUI:
                     self.quote_category.set(config.get("category", "motivational"))
                     self.rotate_interval.set(config.get("interval", 60))
                     self.auto_rotate.set(config.get("auto_rotate", False))
+                    self.minimize_to_tray.set(config.get("minimize_to_tray", True))
             except Exception as e:
                 print(f"Failed to load config: {e}")
 
@@ -212,6 +237,7 @@ class ModernWallpaperGUI:
                 "category": self.quote_category.get(),
                 "interval": self.rotate_interval.get(),
                 "auto_rotate": self.auto_rotate.get(),
+                "minimize_to_tray": self.minimize_to_tray.get(),
             }
             with open(self.config_file, "w") as f:
                 json.dump(config, f, indent=2)
@@ -623,6 +649,32 @@ class ModernWallpaperGUI:
             pady=5,
         )
         self.timer_label.pack(fill=tk.X, pady=5)
+        
+        # Minimize to tray option (if available)
+        if TRAY_AVAILABLE:
+            minimize_check = tk.Checkbutton(
+                section,
+                text="Minimize to tray when closed (keep running in background)",
+                variable=self.minimize_to_tray,
+                font=("Segoe UI", 9),
+                bg=self.colors["bg_secondary"],
+                fg=self.colors["text_secondary"],
+                selectcolor=self.colors["bg_tertiary"],
+                activebackground=self.colors["bg_secondary"],
+                command=self.save_config,
+            )
+            minimize_check.pack(anchor="w", pady=(10, 5))
+        else:
+            # Show info that pystray is needed
+            info_label = tk.Label(
+                section,
+                text="💡 Install 'pystray' for background mode: pip install pystray",
+                font=("Segoe UI", 8),
+                bg=self.colors["bg_secondary"],
+                fg=self.colors["text_muted"],
+                justify=tk.LEFT,
+            )
+            info_label.pack(anchor="w", pady=(10, 5))
 
     def create_url_section(self, parent):
         """Create custom URL input."""
@@ -2227,6 +2279,76 @@ class ModernWallpaperGUI:
                 f"An error occurred during installation:\n{str(e)}",
             )
             self.update_status("Installation error", "accent_red")
+
+    # ===== System Tray and Window Management =====
+    
+    def on_window_close(self):
+        """Handle window close event."""
+        # If auto-rotate is enabled and minimize to tray is enabled, minimize instead of quit
+        if self.auto_rotate.get() and self.minimize_to_tray.get() and self.tray_icon:
+            self.minimize_to_tray_action()
+        else:
+            self.quit_app()
+    
+    def minimize_to_tray_action(self):
+        """Minimize application to system tray."""
+        if not self.tray_icon:
+            self.quit_app()
+            return
+        
+        try:
+            # Start tray icon if not already running
+            if not self.tray_icon.icon:
+                started = self.tray_icon.start()
+                if not started:
+                    messagebox.showwarning(
+                        "System Tray",
+                        "Could not minimize to system tray.\n"
+                        "The application will close instead."
+                    )
+                    self.quit_app()
+                    return
+            
+            # Hide the window
+            self.root.withdraw()
+            self.update_status("Running in background", "accent_green")
+            
+            # Show notification (optional)
+            print("PaprWall is now running in the background.")
+            print("Auto-rotation will continue. Right-click the tray icon to show window or quit.")
+            
+        except Exception as e:
+            print(f"Failed to minimize to tray: {e}")
+            self.quit_app()
+    
+    def show_window(self):
+        """Show the window from system tray."""
+        try:
+            self.root.deiconify()
+            self.root.lift()
+            self.root.focus_force()
+        except Exception as e:
+            print(f"Failed to show window: {e}")
+    
+    def quit_app(self):
+        """Quit the application completely."""
+        try:
+            # Stop timer
+            self.timer_running = False
+            
+            # Stop system tray
+            if self.tray_icon:
+                self.tray_icon.stop()
+            
+            # Save config
+            self.save_config()
+            
+            # Quit
+            self.root.quit()
+            self.root.destroy()
+        except Exception as e:
+            print(f"Error during quit: {e}")
+            sys.exit(0)
 
 
 # Legacy class name for compatibility

@@ -242,12 +242,16 @@ $Shortcut.WorkingDirectory = "{target_executable.parent}"
 $Shortcut.Save()
 '''
 
+            desktop_shortcut_created = False
             try:
-                subprocess.run(
+                result = subprocess.run(
                     ["powershell", "-Command", desktop_shortcut_script],
                     capture_output=True,
                     timeout=30,
+                    text=True
                 )
+                if result.returncode == 0:
+                    desktop_shortcut_created = True
             except:
                 pass
 
@@ -319,10 +323,19 @@ $Shortcut.Save()
             except:
                 pass
 
+            print("\n" + "="*70)
             print("✓ PaprWall installed successfully!")
-            print(f"✓ Program files: {self.programs_dir}")
-            print(f"✓ Start Menu: {start_menu_folder}")
-            print("\nYou can now find PaprWall in your Start Menu.")
+            print("="*70)
+            print(f"\n✓ Program files: {self.programs_dir}")
+            print(f"✓ Start Menu shortcut: {start_menu_folder / 'PaprWall.lnk'}")
+            if desktop_shortcut_created:
+                print(f"✓ Desktop shortcut: {self.desktop / 'PaprWall.lnk'}")
+            print(f"✓ Uninstaller: {uninstall_script}")
+            print("\n📍 Launch PaprWall from:")
+            print("   • Desktop shortcut" if desktop_shortcut_created else "   • Start Menu → PaprWall")
+            print("   • Start Menu → PaprWall")
+            print("   • Or double-click the executable")
+            print("\n" + "="*70 + "\n")
 
             return True
 

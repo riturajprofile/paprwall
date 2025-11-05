@@ -1,0 +1,14 @@
+[Desktop Entry]
+Version=1.1
+Name=PaprWall
+Comment=Modern Desktop Wallpaper Manager with Motivational Quotes
+GenericName=Wallpaper Manager
+Exec={exec_path}
+Icon={icon_path}
+Terminal=false
+Type=Application
+Categories=Graphics;Photography;Viewer;Utility;
+Keywords=wallpaper;background;desktop;quotes;image;
+StartupNotify=true
+StartupWMClass=PaprWall
+X-GNOME-UsesNotifications=true

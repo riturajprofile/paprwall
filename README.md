@@ -14,30 +14,35 @@ Beautiful wallpapers with inspirational quotes. Auto-rotation, 6 quote categorie
 - 🎨 Modern dark UI with large preview
 - 💭 6 quote categories: Motivational, Math, Science, Famous, Tech, Philosophy
 - 🔄 Auto-rotation with live countdown; interval changes take effect immediately
-- ✅ “Applied” indicator shows when the preview matches the current wallpaper
+- 🔕 **Background mode** - Minimize to tray, auto-rotation continues!
+- ✅ "Applied" indicator shows when the preview matches the current wallpaper
 - ♻️ Fallback to previously applied wallpaper if a fetch fails
-- 📜 History gallery with quick “Set” from any past wallpaper
+- 📜 History gallery with quick "Set" from any past wallpaper
 - 🖥️ Multi-desktop support: GNOME, KDE, XFCE, Cinnamon, MATE, LXQt; feh fallback
 - 🧰 Detailed debug logs for wallpaper setting (per-desktop methods and fallbacks)
 - 🌐 Random images from multiple APIs + 📁 use your own images with quotes
 
 ## 🚀 Installation
 
-### PyPI (easiest)
+### PyPI (Recommended)
 ```bash
 pip install paprwall
-paprwall-gui
+paprwall-setup-desktop  # Creates desktop/start menu entry
+paprwall-gui           # Launch
 ```
 
-### Linux / Windows binaries
-Download from [Releases](https://github.com/riturajprofile/paprwall/releases/latest):
-- Linux: `.tar.gz`, `.deb`, `.rpm`, or AppImage
-- Windows: `.zip` with executable
+### Linux Packages
+- `.deb`: `sudo dpkg -i paprwall_*.deb`
+- `.rpm`: `sudo dnf install paprwall_*.rpm`  
+- AppImage: `chmod +x PaprWall-*.AppImage && ./PaprWall-*.AppImage`
+
+### Windows
+1. Download `.zip` from [Releases](https://github.com/riturajprofile/paprwall/releases/latest)
+2. Run `INSTALL.bat` (creates Desktop + Start Menu shortcuts)
+3. Launch from Desktop or Start Menu
 
 ### Requirements
-- Python 3.9+ (PyPI install only)
-- Linux: `sudo apt install python3-tk` (Ubuntu/Debian)
-- Windows: Included with Python
+- Python 3.9+ | Linux: `sudo apt install python3-tk`
 
 ## 🧪 Quick start
 
@@ -54,8 +59,14 @@ Download from [Releases](https://github.com/riturajprofile/paprwall/releases/lat
 2. **Fetch Wallpaper** - Click "Random" or "Refresh" button
 3. **Preview** - View wallpaper with embedded quote
 4. **Set Wallpaper** - Apply to desktop
-5. **Auto-Rotate** - Enable timer for automatic changes
+5. **Auto-Rotate** - Enable timer for automatic changes (continues in background!)
 6. **History** - Browse and reuse previous wallpapers
+
+### Background Mode
+- Enable "Auto-rotate" + "Minimize to tray"
+- Close window → PaprWall runs in system tray
+- Auto-rotation continues even when window is closed!
+- Right-click tray icon to show window or quit
 
 ### Data locations
 - **Linux**: `~/.local/share/paprwall/wallpapers/`

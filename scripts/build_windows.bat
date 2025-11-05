@@ -91,18 +91,27 @@ REM Create installer batch script
 echo @echo off
 echo REM PaprWall Windows Installer
 echo.
-echo echo Installing PaprWall...
+echo echo ================================================================
+echo echo   PaprWall Installation
+echo echo ================================================================
+echo echo.
+echo echo This will install PaprWall to your system and create:
+echo echo   - Start Menu shortcut
+echo echo   - Desktop shortcut
+echo echo   - Uninstaller
+echo echo.
+echo pause
+echo.
 echo "%%~dp0paprwall-gui.exe" --install
 echo if %%ERRORLEVEL%% equ 0 ^(
 echo     echo.
-echo     echo ✓ PaprWall installed successfully!
-echo     echo You can now find PaprWall in your Start Menu.
-echo     echo.
+echo     echo Installation completed! You can now close this window.
 echo     pause
 echo ^) else ^(
 echo     echo.
-echo     echo ❌ Installation failed.
+echo     echo ❌ Installation failed. Check the messages above.
 echo     pause
+echo     exit /b 1
 echo ^)
 ) > "%RELEASE_DIR%\INSTALL.bat"
 
@@ -137,18 +146,31 @@ echo # PaprWall v%VERSION% - Windows Release
 echo.
 echo ## Quick Start
 echo.
-echo 1. **Run PaprWall**: Double-click `paprwall-gui.exe`
-echo 2. **Install to System**: Run `INSTALL.bat` as Administrator
-echo 3. **Uninstall**: Run `UNINSTALL.bat`
+echo ### Option 1: Install to System ^(Recommended^)
+echo 1. Double-click `INSTALL.bat`
+echo 2. Follow the prompts
+echo 3. Launch from Desktop shortcut or Start Menu
+echo.
+echo ### Option 2: Portable Mode
+echo 1. Double-click `paprwall-gui.exe`
+echo 2. Use without installation
+echo.
+echo ## What Gets Installed?
+echo.
+echo When you run `INSTALL.bat`, PaprWall will create:
+echo - ✅ **Desktop Shortcut** - Quick launch from your desktop
+echo - ✅ **Start Menu Entry** - Find in Start Menu ^> PaprWall
+echo - ✅ **Uninstaller** - Easy removal via Start Menu or Programs folder
+echo - ✅ **Program Files** - Copied to `%LOCALAPPDATA%\Programs\PaprWall`
 echo.
 echo ## Files Included
 echo.
-echo - `paprwall-gui.exe` - Main application
-echo - `INSTALL.bat` - System installer
+echo - `paprwall-gui.exe` - Main application ^(portable^)
+echo - `INSTALL.bat` - System installer ^(creates shortcuts^)
 echo - `UNINSTALL.bat` - System uninstaller
 echo - `run.bat` - Simple launcher
 echo - `README.md` - This file
-echo - `LICENSE` - License (CC BY-NC 4.0)
+echo - `LICENSE` - License information
 echo.
 echo ## System Requirements
 echo.
@@ -156,9 +178,19 @@ echo - Windows 10 ^(1809+^) or Windows 11
 echo - Display: 720p or higher recommended
 echo - Internet connection for downloading wallpapers
 echo.
-echo ## First Run
+echo ## Usage After Installation
 echo.
-echo When you run PaprWall for the first time, it will ask if you want to install it to your system. This creates shortcuts and desktop entries for easier access.
+echo 1. Launch from Desktop or Start Menu
+echo 2. Select a quote category
+echo 3. Click "Random" or "Refresh"
+echo 4. Click "Set Wallpaper"
+echo 5. Enable auto-rotate if desired
+echo.
+echo ## Uninstallation
+echo.
+echo - **From Start Menu**: Start ^> PaprWall ^> Uninstall PaprWall
+echo - **From Programs Folder**: Run `UNINSTALL.bat` in the installation directory
+echo - **Manual**: Run the included `UNINSTALL.bat` script
 echo.
 echo ## Support
 echo.
@@ -217,9 +249,16 @@ echo 🎉 Ready for distribution!
 echo.
 echo To test the build:
 echo   1. Navigate to %RELEASE_DIR%\
-echo   2. Run paprwall-gui.exe
+echo   2. Run paprwall-gui.exe (portable mode)
 echo.
-echo To install system-wide:
-echo   1. Run %RELEASE_DIR%\INSTALL.bat as Administrator
+echo To test installation (creates Desktop + Start Menu shortcuts):
+echo   1. Run %RELEASE_DIR%\INSTALL.bat
+echo   2. Check Desktop for PaprWall shortcut
+echo   3. Check Start Menu ^> PaprWall
+echo.
+echo Distribution package includes:
+echo   • Portable executable (no installation needed)
+echo   • INSTALL.bat (creates Desktop + Start Menu shortcuts)
+echo   • UNINSTALL.bat (removes all shortcuts)
 echo.
 pause
