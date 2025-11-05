@@ -2,6 +2,8 @@
 """
 PyInstaller spec file for PaprWall - Modern Desktop Wallpaper Manager
 This builds a standalone executable for Windows distribution.
+
+Note: EOL normalized to LF to avoid CRLF issues in CI.
 """
 
 import os

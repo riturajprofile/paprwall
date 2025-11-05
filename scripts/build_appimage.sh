@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # PaprWall AppImage Build Script
 # Creates a universal Linux executable that runs on all distributions
+# EOL: LF enforced
 
 set -euo pipefail  # Exit on error and treat unset vars as errors
 
@@ -280,9 +281,9 @@ else
         cp "$APPDIR/paprwall.png" "$APPDIR/usr/share/icons/hicolor/256x256/apps/paprwall.png"
     else
         # Create a minimal icon file
-        echo "Creating placeholder icon..."
-        touch "$APPDIR/paprwall.png"
-        touch "$APPDIR/usr/share/icons/hicolor/256x256/apps/paprwall.png"
+    echo "Creating placeholder icon..."
+    touch "$APPDIR/paprwall.png"
+    touch "$APPDIR/usr/share/icons/hicolor/256x256/apps/paprwall.png"
     fi
 fi
 

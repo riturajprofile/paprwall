@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # PaprWall Linux Build Script
 # Builds standalone executable and packages (.deb, .rpm, .AppImage)
+# EOL: LF enforced
 
 set -euo pipefail
 
