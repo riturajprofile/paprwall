@@ -334,7 +334,7 @@ class ModernWallpaperGUI:
         tk.Label(
             preview_header,
             text="Preview",
-            font=("Segoe UI", 16, "bold"),
+            font=("Segoe UI", 12, "bold"),
             bg=self.colors["bg_secondary"],
             fg=self.colors["text_primary"],
         ).pack(side=tk.LEFT, padx=15)
@@ -374,7 +374,7 @@ class ModernWallpaperGUI:
         self.quote_display = tk.Label(
             quote_content_frame,
             text='"Transform your desktop with beautiful wallpapers"',
-            font=("Georgia", 11, "italic"),
+            font=("Georgia", 16, "italic"),
             bg=self.colors["bg_tertiary"],
             fg=self.colors["text_primary"],
             wraplength=750,
@@ -586,8 +586,12 @@ class ModernWallpaperGUI:
             bg=self.colors["bg_tertiary"],
             fg=self.colors["text_primary"],
             buttonbackground=self.colors["bg_hover"],
+            command=self.on_interval_change,
         )
         interval_spin.pack(side=tk.RIGHT)
+        # Also bind Entry events (user typing directly)
+        interval_spin.bind("<Return>", lambda e: self.on_interval_change())
+        interval_spin.bind("<FocusOut>", lambda e: self.on_interval_change())
 
         # Timer display
         self.timer_label = tk.Label(
@@ -693,6 +697,15 @@ class ModernWallpaperGUI:
         else:
             self.stop_auto_rotation()
         self.save_config()
+
+    def on_interval_change(self):
+        """Handle rotation interval change."""
+        self.save_config()
+        # If timer is running, restart with new interval
+        if self.timer_running and self.auto_rotate.get():
+            self.stop_auto_rotation()
+            self.start_auto_rotation()
+            self.update_status(f"Interval updated to {self.rotate_interval.get()} min", "accent_green")
 
     def browse_local_file(self):
         """Browse and select local image file."""
@@ -839,12 +852,27 @@ class ModernWallpaperGUI:
                         self.root.after(
                             0, lambda p=preview_path: self.load_image_to_preview(p)
                         )
-                        self.root.after(
-                            0,
-                            lambda: self.update_status(
-                                "Wallpaper loaded", "accent_green"
-                            ),
-                        )
+                        
+                        # Automatically set as wallpaper
+                        final_path = self.embed_quote_on_image(str(temp_path))
+                        wp_success = self.set_system_wallpaper(final_path)
+                        print(f"[DEBUG] Auto-set wallpaper result: {wp_success}")
+                        
+                        if wp_success:
+                            self.root.after(0, lambda: self.save_to_history(final_path, self.current_quote))
+                            self.root.after(
+                                0,
+                                lambda: self.update_status(
+                                    "Wallpaper set!", "accent_green"
+                                ),
+                            )
+                        else:
+                            self.root.after(
+                                0,
+                                lambda: self.update_status(
+                                    "Loaded (set failed)", "accent_red"
+                                ),
+                            )
 
                         success = True
                         break
@@ -1014,6 +1042,64 @@ class ModernWallpaperGUI:
 
         threading.Thread(target=refresh, daemon=True).start()
 
+    def fetch_and_set_wallpaper(self):
+        """Fetch a new random wallpaper and automatically set it (for auto-rotation)."""
+        self.update_status("Auto-rotating wallpaper...", "accent_blue")
+        
+        def fetch_and_set():
+            try:
+                # First fetch a new wallpaper
+                import random
+                url = random.choice(self.image_sources)
+                print(f"[DEBUG] Auto-rotation: Fetching from {url}")
+                
+                # Fetch new quote
+                self.fetch_quote_with_retry()
+                time.sleep(0.5)
+                
+                # Fetch image
+                response = requests.get(
+                    url,
+                    timeout=15,
+                    allow_redirects=True,
+                    headers={
+                        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+                    },
+                )
+                
+                if response.status_code == 200:
+                    # Save image
+                    temp_path = self.wallpapers_dir / f"auto_{int(time.time())}.jpg"
+                    with open(temp_path, "wb") as f:
+                        f.write(response.content)
+                    
+                    print(f"[DEBUG] Auto-rotation: Image saved to {temp_path}")
+                    
+                    # Update preview in main thread
+                    self.current_wallpaper = str(temp_path)
+                    preview_path = self.embed_quote_on_image(str(temp_path))
+                    self.root.after(0, lambda p=preview_path: self.load_image_to_preview(p))
+                    
+                    # Now set it as wallpaper
+                    final_path = self.embed_quote_on_image(str(temp_path))
+                    success = self.set_system_wallpaper(final_path)
+                    print(f"[DEBUG] Auto-rotation: Wallpaper set result: {success}")
+                    
+                    if success:
+                        self.root.after(0, lambda: self.save_to_history(final_path, self.current_quote))
+                        self.root.after(0, lambda: self.update_status("Wallpaper auto-rotated!", "accent_green"))
+                    else:
+                        self.root.after(0, lambda: self.update_status("Auto-rotation failed", "accent_red"))
+                else:
+                    print(f"[WARN] Auto-rotation fetch failed: HTTP {response.status_code}")
+                    self.root.after(0, lambda: self.update_status("Auto-rotation failed", "accent_red"))
+                    
+            except Exception as e:
+                print(f"[ERROR] Auto-rotation error: {e}")
+                self.root.after(0, lambda: self.update_status("Auto-rotation error", "accent_red"))
+        
+        threading.Thread(target=fetch_and_set, daemon=True).start()
+
     def set_wallpaper(self):
         """Set current image as wallpaper."""
         if not self.current_wallpaper:
@@ -1047,8 +1133,20 @@ class ModernWallpaperGUI:
                         ),
                     )
                 else:
+                    error_msg = (
+                        "Failed to set wallpaper.\n\n"
+                        "Common fixes:\n"
+                        "• Ubuntu/GNOME: Check terminal for [DEBUG] messages\n"
+                        "• Install feh: sudo apt install feh\n"
+                        "• WSL: Wallpaper sets on Windows side\n"
+                        "• Check file exists: " + final_path
+                    )
                     self.root.after(
                         0, lambda: self.update_status("Failed to set", "accent_red")
+                    )
+                    self.root.after(
+                        0,
+                        lambda: messagebox.showerror("Wallpaper Failed", error_msg),
                     )
             except Exception as e:
                 print(f"[ERROR] Failed to set wallpaper: {e}")
@@ -1104,24 +1202,52 @@ class ModernWallpaperGUI:
             quote_text = self.current_quote.get("text", "")
             author_text = f"— {self.current_quote.get('author', '')}" if self.current_quote.get('author', '') else ""
 
-            # Adaptive font size based on image height
-            base_font_size = max(16, img_height // 32)
-            author_font_size = max(12, base_font_size - 2)
-            try:
-                font = ImageFont.truetype("arial.ttf", base_font_size)
-                author_font = ImageFont.truetype("arial.ttf", author_font_size)
-            except Exception:
-                font = ImageFont.load_default()
-                author_font = font
-
-            # Calculate text size for background
+            # Adaptive font size: start smaller and shrink-to-fit within a fraction of the image
             draw = ImageDraw.Draw(img)
-            quote_bbox = draw.textbbox((0, 0), quote_text, font=font)
-            quote_w, quote_h = quote_bbox[2] - quote_bbox[0], quote_bbox[3] - quote_bbox[1]
-            author_bbox = draw.textbbox((0, 0), author_text, font=author_font)
-            author_w, author_h = author_bbox[2] - author_bbox[0], author_bbox[3] - author_bbox[1]
-            box_width = max(quote_w, author_w) + 40
-            box_height = quote_h + author_h + 40
+
+            font_candidates = [
+                ("arial.ttf", "arial.ttf"),
+                ("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+                 "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"),
+                ("/System/Library/Fonts/Helvetica.ttc", "/System/Library/Fonts/Helvetica.ttc"),  # macOS
+                ("C:/Windows/Fonts/arial.ttf", "C:/Windows/Fonts/arial.ttf"),  # Windows absolute
+            ]
+
+            def choose_fonts(q_size, a_size):
+                for qf, af in font_candidates:
+                    try:
+                        q_font = ImageFont.truetype(qf, q_size)
+                        a_font = ImageFont.truetype(af, a_size)
+                        return q_font, a_font
+                    except Exception:
+                        continue
+                # Fallback (bitmap font may ignore size but prevents crash)
+                f = ImageFont.load_default()
+                return f, f
+
+            base_font_size = max(20, img_height // 36)
+            author_font_size = max(14, base_font_size - 4)
+            font, author_font = choose_fonts(base_font_size, author_font_size)
+
+            def measure(f, af):
+                qb = draw.textbbox((0, 0), quote_text, font=f)
+                ab = draw.textbbox((0, 0), author_text, font=af)
+                q_w, q_h = qb[2] - qb[0], qb[3] - qb[1]
+                a_w, a_h = ab[2] - ab[0], ab[3] - ab[1]
+                bw = max(q_w, a_w) + 40
+                bh = q_h + a_h + 40
+                return q_w, q_h, a_w, a_h, bw, bh
+
+            quote_w, quote_h, author_w, author_h, box_width, box_height = measure(font, author_font)
+            allowed_w = int(img_width * 0.55)
+            allowed_h = int(img_height * 0.35)
+
+            # Shrink text if it exceeds allowed area
+            while (box_width > allowed_w or box_height > allowed_h) and base_font_size > 14:
+                base_font_size -= 2
+                author_font_size = max(12, base_font_size - 4)
+                font, author_font = choose_fonts(base_font_size, author_font_size)
+                quote_w, quote_h, author_w, author_h, box_width, box_height = measure(font, author_font)
 
             # Position: top right with padding
             padding = max(30, img_width // 40)
@@ -1300,36 +1426,138 @@ class ModernWallpaperGUI:
 
     def set_system_wallpaper(self, image_path):
         """Set wallpaper on the system."""
+        tried_methods = []
         try:
             system = platform.system()
+            abs_path = str(Path(image_path).resolve())
+            file_uri = f"file://{abs_path}"
+
+            # Helpful environment info for debugging
+            de = os.environ.get("XDG_CURRENT_DESKTOP", "")
+            sess = os.environ.get("DESKTOP_SESSION", "")
+            way = os.environ.get("WAYLAND_DISPLAY", "")
+            disp = os.environ.get("DISPLAY", "")
+            print(
+                f"[DEBUG] set_system_wallpaper: system={system} de={de} session={sess} wayland={bool(way)} display={disp}"
+            )
+            print(f"[DEBUG] Absolute path: {abs_path}")
+            print(f"[DEBUG] File URI: {file_uri}")
+            
+            # Verify file exists
+            if not Path(abs_path).exists():
+                print(f"[ERROR] Image file does not exist: {abs_path}")
+                return False
 
             if system == "Windows":
                 import ctypes
 
-                abs_path = str(Path(image_path).resolve())
                 ctypes.windll.user32.SystemParametersInfoW(20, 0, abs_path, 3)
                 return True
 
             elif system == "Linux":
-                # Try GNOME
+                # WSL: set Windows wallpaper from Linux (if running under WSL)
                 try:
-                    subprocess.run(
+                    if "microsoft" in platform.release().lower():
+                        print("[DEBUG] Detected WSL environment; attempting Windows wallpaper via PowerShell...")
+                        # Convert path to Windows path
+                        win_path_proc = subprocess.run(
+                            ["wslpath", "-w", abs_path],
+                            capture_output=True,
+                            text=True,
+                            check=True,
+                        )
+                        win_path = win_path_proc.stdout.strip()
+                        ps_script = (
+                            "Add-Type -AssemblyName PresentationCore; "
+                            "$code='[DllImport(\"user32.dll\")] public static extern int SystemParametersInfo(int uAction, int uParam, string lpvParam, int fuWinIni);'; "
+                            "Add-Type -MemberDefinition $code -Name User32 -Namespace Win32; "
+                            f"[Win32.User32]::SystemParametersInfo(20,0,\"{win_path}\",3)"
+                        )
+                        r = subprocess.run(
+                            ["powershell.exe", "-NoProfile", "-NonInteractive", "-Command", ps_script],
+                            capture_output=True,
+                            text=True,
+                        )
+                        print(f"[DEBUG] WSL PowerShell rc={r.returncode} stderr={r.stderr!r}")
+                        if r.returncode == 0:
+                            return True
+                except Exception as e:
+                    print(f"[DEBUG] WSL handling failed or not applicable: {e}")
+
+                # Try GNOME (Ubuntu default)
+                try:
+                    tried_methods.append("GNOME gsettings")
+                    print("[DEBUG] Trying GNOME gsettings picture-uri...")
+                    r = subprocess.run(
                         [
                             "gsettings",
                             "set",
                             "org.gnome.desktop.background",
                             "picture-uri",
-                            f"file://{image_path}",
+                            file_uri,
                         ],
                         check=True,
                         capture_output=True,
+                        text=True,
                     )
+                    print(f"[DEBUG] GNOME picture-uri set. rc={r.returncode} stdout={r.stdout!r} stderr={r.stderr!r}")
+                    # Best-effort updates for GNOME variants
+                    try:
+                        print("[DEBUG] Trying GNOME picture-uri-dark and picture-options...")
+                        r1 = subprocess.run(
+                            [
+                                "gsettings",
+                                "set",
+                                "org.gnome.desktop.background",
+                                "picture-uri-dark",
+                                file_uri,
+                            ],
+                            check=False,
+                            capture_output=True,
+                            text=True,
+                        )
+                        r2 = subprocess.run(
+                            [
+                                "gsettings",
+                                "set",
+                                "org.gnome.desktop.background",
+                                "picture-options",
+                                "scaled",
+                            ],
+                            check=False,
+                            capture_output=True,
+                            text=True,
+                        )
+                        print(f"[DEBUG] GNOME extras applied. dark_rc={r1.returncode} options_rc={r2.returncode}")
+                        if r1.stderr: print(f"[DEBUG] picture-uri-dark stderr: {r1.stderr!r}")
+                        if r2.stderr: print(f"[DEBUG] picture-options stderr: {r2.stderr!r}")
+                    except Exception:
+                        pass
+                    print("[SUCCESS] GNOME wallpaper set successfully!")
                     return True
-                except:
-                    pass
+                except Exception as e:
+                    print(f"[DEBUG] GNOME gsettings failed: {e}")
+                    # dconf direct write fallback (some setups)
+                    try:
+                        print("[DEBUG] Trying dconf write fallback for GNOME...")
+                        r3 = subprocess.run(
+                            [
+                                "dconf",
+                                "write",
+                                "/org/gnome/desktop/background/picture-uri",
+                                f"\"{file_uri}\"",
+                            ],
+                            check=True,
+                            capture_output=True,
+                        )
+                        print(f"[DEBUG] dconf write result: rc={r3.returncode} stderr={r3.stderr!r}")
+                        return True
+                    except Exception as e2:
+                        print(f"[DEBUG] dconf fallback failed: {e2}")
 
                 # Try KDE
                 try:
+                    print("[DEBUG] Trying KDE via qdbus evaluateScript...")
                     script = f"""
                     qdbus org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell.evaluateScript '
                         var allDesktops = desktops();
@@ -1337,18 +1565,20 @@ class ModernWallpaperGUI:
                             d = allDesktops[i];
                             d.wallpaperPlugin = "org.kde.image";
                             d.currentConfigGroup = Array("Wallpaper", "org.kde.image", "General");
-                            d.writeConfig("Image", "file://{image_path}");
+                            d.writeConfig("Image", "{file_uri}");
                         }}
                     '
                     """
-                    subprocess.run(script, shell=True, check=True, capture_output=True)
+                    r = subprocess.run(script, shell=True, check=True, capture_output=True)
+                    print(f"[DEBUG] KDE script rc={r.returncode} stderr={r.stderr!r}")
                     return True
-                except:
-                    pass
+                except Exception as e:
+                    print(f"[DEBUG] KDE attempt failed: {e}")
 
                 # Try XFCE
                 try:
-                    subprocess.run(
+                    print("[DEBUG] Trying XFCE xfconf-query last-image (path)...")
+                    r = subprocess.run(
                         [
                             "xfconf-query",
                             "-c",
@@ -1356,25 +1586,48 @@ class ModernWallpaperGUI:
                             "-p",
                             "/backdrop/screen0/monitor0/workspace0/last-image",
                             "-s",
-                            image_path,
+                            abs_path,
                         ],
                         check=True,
                         capture_output=True,
                     )
+                    print(f"[DEBUG] XFCE path set rc={r.returncode}")
                     return True
-                except:
-                    pass
+                except Exception as e:
+                    print(f"[DEBUG] XFCE path failed: {e}")
+                    # Try with file:// URI variant
+                    try:
+                        print("[DEBUG] Trying XFCE xfconf-query last-image (file URI)...")
+                        r = subprocess.run(
+                            [
+                                "xfconf-query",
+                                "-c",
+                                "xfce4-desktop",
+                                "-p",
+                                "/backdrop/screen0/monitor0/workspace0/last-image",
+                                "-s",
+                                file_uri,
+                            ],
+                            check=True,
+                            capture_output=True,
+                        )
+                        print(f"[DEBUG] XFCE file URI set rc={r.returncode}")
+                        return True
+                    except Exception as e2:
+                        print(f"[DEBUG] XFCE file URI failed: {e2}")
 
                 # Try feh as fallback
                 try:
-                    subprocess.run(
-                        ["feh", "--bg-scale", image_path],
+                    print("[DEBUG] Trying feh fallback --bg-scale ...")
+                    r = subprocess.run(
+                        ["feh", "--bg-scale", abs_path],
                         check=True,
                         capture_output=True,
                     )
+                    print(f"[DEBUG] feh set rc={r.returncode}")
                     return True
-                except:
-                    pass
+                except Exception as e:
+                    print(f"[DEBUG] feh fallback failed: {e}")
 
             return False
 
@@ -1534,8 +1787,8 @@ class ModernWallpaperGUI:
             return
 
         if self.time_remaining <= 0:
-            # Time to fetch new wallpaper
-            self.fetch_random_wallpaper()
+            # Time to fetch new wallpaper AND set it automatically
+            self.fetch_and_set_wallpaper()
             self.time_remaining = self.rotate_interval.get() * 60
 
         # Update display
