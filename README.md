@@ -41,7 +41,15 @@ paprwall-gui           # Launch
 ### Option 2: Linux Packages
 - `.deb`: `sudo dpkg -i paprwall_*.deb`
 - `.rpm`: `sudo dnf install paprwall_*.rpm`  
-- AppImage: `chmod +x PaprWall-*.AppImage && ./PaprWall-*.AppImage`
+- AppImage: 
+  ```bash
+  # Install FUSE dependency (required for AppImage)
+  sudo apt install libfuse2  # Ubuntu/Debian
+  # sudo dnf install fuse-libs  # Fedora/RHEL
+  
+  # Run AppImage
+  chmod +x PaprWall-*.AppImage && ./PaprWall-*.AppImage
+  ```
 
 ### Option 3: Windows
 1. Download `.zip` from [Releases](https://github.com/riturajprofile/paprwall/releases/latest)
