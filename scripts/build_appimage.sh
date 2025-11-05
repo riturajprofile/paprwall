@@ -331,7 +331,14 @@ echo
 export ARCH=x86_64
 
 # Build the AppImage
-"$APPIMAGETOOL" "$APPDIR" "$APPIMAGE_NAME"
+if ! "$APPIMAGETOOL" "$APPDIR" "$APPIMAGE_NAME"; then
+        echo -e "${YELLOW}appimagetool failed, attempting FUSE-less fallback...${NC}"
+        (
+            cd build && \
+            ./appimagetool-x86_64.AppImage --appimage-extract && \
+            ./squashfs-root/AppRun ../"$APPDIR" ../"$APPIMAGE_NAME"
+        )
+fi
 
 if [ ! -f "$APPIMAGE_NAME" ]; then
     echo -e "${RED}❌ AppImage creation failed${NC}"
