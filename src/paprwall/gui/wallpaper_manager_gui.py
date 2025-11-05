@@ -17,12 +17,7 @@ from tkinter import ttk, filedialog, messagebox, scrolledtext
 from PIL import Image, ImageTk, ImageDraw, ImageFont
 import requests
 
-# Try to import system tray support
-try:
-    from ..tray import SystemTray, TRAY_AVAILABLE
-except ImportError:
-    TRAY_AVAILABLE = False
-    SystemTray = None
+# Removed tray support - using systemd/Windows service instead
 
 
 class ModernWallpaperGUI:
@@ -117,22 +112,8 @@ class ModernWallpaperGUI:
 
         self.root.configure(bg=self.colors["bg_primary"])
         
-        # Setup window close handler (minimize to tray if enabled)
+        # Setup window close handler
         self.root.protocol("WM_DELETE_WINDOW", self.on_window_close)
-        
-        # Initialize system tray
-        self.tray_icon = None
-        self.minimize_to_tray = tk.BooleanVar(value=True)  # Default: minimize to tray
-        if TRAY_AVAILABLE and SystemTray:
-            try:
-                self.tray_icon = SystemTray(
-                    app_name="PaprWall",
-                    on_show=self.show_window,
-                    on_quit=self.quit_app
-                )
-            except Exception as e:
-                print(f"Failed to initialize system tray: {e}")
-                self.tray_icon = None
 
     def init_variables(self):
         """Initialize application variables."""
@@ -226,7 +207,6 @@ class ModernWallpaperGUI:
                     self.quote_category.set(config.get("category", "motivational"))
                     self.rotate_interval.set(config.get("interval", 60))
                     self.auto_rotate.set(config.get("auto_rotate", False))
-                    self.minimize_to_tray.set(config.get("minimize_to_tray", True))
             except Exception as e:
                 print(f"Failed to load config: {e}")
 
@@ -237,7 +217,6 @@ class ModernWallpaperGUI:
                 "category": self.quote_category.get(),
                 "interval": self.rotate_interval.get(),
                 "auto_rotate": self.auto_rotate.get(),
-                "minimize_to_tray": self.minimize_to_tray.get(),
             }
             with open(self.config_file, "w") as f:
                 json.dump(config, f, indent=2)
@@ -649,32 +628,6 @@ class ModernWallpaperGUI:
             pady=5,
         )
         self.timer_label.pack(fill=tk.X, pady=5)
-        
-        # Minimize to tray option (if available)
-        if TRAY_AVAILABLE:
-            minimize_check = tk.Checkbutton(
-                section,
-                text="Minimize to tray when closed (keep running in background)",
-                variable=self.minimize_to_tray,
-                font=("Segoe UI", 9),
-                bg=self.colors["bg_secondary"],
-                fg=self.colors["text_secondary"],
-                selectcolor=self.colors["bg_tertiary"],
-                activebackground=self.colors["bg_secondary"],
-                command=self.save_config,
-            )
-            minimize_check.pack(anchor="w", pady=(10, 5))
-        else:
-            # Show info that pystray is needed
-            info_label = tk.Label(
-                section,
-                text="💡 Install 'pystray' for background mode: pip install pystray",
-                font=("Segoe UI", 8),
-                bg=self.colors["bg_secondary"],
-                fg=self.colors["text_muted"],
-                justify=tk.LEFT,
-            )
-            info_label.pack(anchor="w", pady=(10, 5))
 
     def create_url_section(self, parent):
         """Create custom URL input."""
@@ -706,6 +659,52 @@ class ModernWallpaperGUI:
                 self.install_to_system,
                 self.colors["accent_blue"],
             ).pack(fill=tk.X, pady=5)
+
+        # Background Service Controls
+        service_frame = tk.Frame(section, bg=self.colors["bg_secondary"])
+        service_frame.pack(fill=tk.X, pady=5)
+        
+        # Service status with icon (left side)
+        status_container = tk.Frame(service_frame, bg=self.colors["bg_secondary"])
+        status_container.pack(fill=tk.X, pady=(0, 8))
+        
+        tk.Label(
+            status_container,
+            text="Background Service:",
+            font=("Segoe UI", 9, "bold"),
+            bg=self.colors["bg_secondary"],
+            fg=self.colors["text_primary"],
+        ).pack(side=tk.LEFT)
+        
+        # Service status icon and text
+        self.service_status_icon = tk.Label(
+            status_container,
+            text="⚪",
+            font=("Segoe UI", 14),
+            bg=self.colors["bg_secondary"],
+        )
+        self.service_status_icon.pack(side=tk.LEFT, padx=(10, 5))
+        
+        self.service_status_label = tk.Label(
+            status_container,
+            text="Checking...",
+            font=("Segoe UI", 9),
+            bg=self.colors["bg_secondary"],
+            fg=self.colors["text_muted"],
+        )
+        self.service_status_label.pack(side=tk.LEFT)
+        
+        # Single toggle button for enable/disable
+        self.service_toggle_btn = self.create_button(
+            service_frame,
+            "Enable Service",
+            self.toggle_service,
+            self.colors["accent_green"],
+        )
+        self.service_toggle_btn.pack(fill=tk.X)
+        
+        # Update status on startup
+        self.root.after(100, self.update_service_status)
 
         # Open data folder
         self.create_button(
@@ -2280,65 +2279,342 @@ class ModernWallpaperGUI:
             )
             self.update_status("Installation error", "accent_red")
 
-    # ===== System Tray and Window Management =====
+    # ===== Background Service Management =====
+    
+    def update_service_status(self):
+        """Check and update the service status display and toggle button."""
+        try:
+            import subprocess
+            system = platform.system().lower()
+            
+            if system == "linux":
+                # Check if systemctl is available
+                try:
+                    subprocess.run(
+                        ["which", "systemctl"],
+                        capture_output=True,
+                        check=True,
+                        timeout=2
+                    )
+                except (subprocess.CalledProcessError, subprocess.TimeoutExpired, FileNotFoundError):
+                    self.service_status_icon.config(text="⚪")
+                    self.service_status_label.config(
+                        text="systemd not available",
+                        fg=self.colors["text_muted"]
+                    )
+                    self.service_toggle_btn.config(
+                        text="Enable Service",
+                        bg=self.colors["bg_tertiary"],
+                        state=tk.DISABLED
+                    )
+                    return
+                
+                # Check if service file exists
+                service_file = Path.home() / ".config" / "systemd" / "user" / "paprwall.service"
+                
+                if not service_file.exists():
+                    self.service_status_icon.config(text="⚪")
+                    self.service_status_label.config(
+                        text="Not Installed",
+                        fg=self.colors["text_muted"]
+                    )
+                    self.service_toggle_btn.config(
+                        text="Enable Service",
+                        bg=self.colors["accent_green"],
+                        state=tk.NORMAL
+                    )
+                    return
+                
+                # Check systemd service status
+                try:
+                    result = subprocess.run(
+                        ["systemctl", "--user", "is-active", "paprwall.service"],
+                        capture_output=True,
+                        text=True,
+                        timeout=5
+                    )
+                    is_active = result.returncode == 0 and result.stdout.strip() == "active"
+                    
+                    # Check if enabled
+                    enabled = subprocess.run(
+                        ["systemctl", "--user", "is-enabled", "paprwall.service"],
+                        capture_output=True,
+                        text=True,
+                        timeout=5
+                    )
+                    is_enabled = enabled.returncode == 0
+                    
+                    if is_active:
+                        self.service_status_icon.config(text="🟢")
+                        self.service_status_label.config(
+                            text="Running" + (" (Enabled)" if is_enabled else ""),
+                            fg=self.colors["accent_green"]
+                        )
+                        self.service_toggle_btn.config(
+                            text="Disable Service",
+                            bg=self.colors["accent_red"],
+                            state=tk.NORMAL
+                        )
+                    elif is_enabled:
+                        self.service_status_icon.config(text="🟡")
+                        self.service_status_label.config(
+                            text="Enabled but Stopped",
+                            fg=self.colors["text_muted"]
+                        )
+                        self.service_toggle_btn.config(
+                            text="Disable Service",
+                            bg=self.colors["accent_red"],
+                            state=tk.NORMAL
+                        )
+                    else:
+                        self.service_status_icon.config(text="🔴")
+                        self.service_status_label.config(
+                            text="Disabled",
+                            fg=self.colors["text_muted"]
+                        )
+                        self.service_toggle_btn.config(
+                            text="Enable Service",
+                            bg=self.colors["accent_green"],
+                            state=tk.NORMAL
+                        )
+                except subprocess.TimeoutExpired:
+                    self.service_status_icon.config(text="⚪")
+                    self.service_status_label.config(
+                        text="Timeout checking service",
+                        fg=self.colors["text_muted"]
+                    )
+                    self.service_toggle_btn.config(
+                        text="Enable Service",
+                        bg=self.colors["bg_tertiary"],
+                        state=tk.DISABLED
+                    )
+                        
+            elif system == "windows":
+                # Check Windows startup
+                try:
+                    appdata = os.environ.get("APPDATA", "")
+                    if not appdata:
+                        self.service_status_icon.config(text="⚪")
+                        self.service_status_label.config(
+                            text="Cannot find APPDATA",
+                            fg=self.colors["text_muted"]
+                        )
+                        self.service_toggle_btn.config(
+                            text="Enable Service",
+                            bg=self.colors["bg_tertiary"],
+                            state=tk.DISABLED
+                        )
+                        return
+                    
+                    startup_folder = Path(appdata) / "Microsoft" / "Windows" / "Start Menu" / "Programs" / "Startup"
+                    
+                    if not startup_folder.exists():
+                        self.service_status_icon.config(text="⚪")
+                        self.service_status_label.config(
+                            text="Startup folder not found",
+                            fg=self.colors["text_muted"]
+                        )
+                        self.service_toggle_btn.config(
+                            text="Enable Service",
+                            bg=self.colors["bg_tertiary"],
+                            state=tk.DISABLED
+                        )
+                        return
+                    
+                    shortcut_path = startup_folder / "PaprWall.lnk"
+                    
+                    if shortcut_path.exists():
+                        self.service_status_icon.config(text="🟢")
+                        self.service_status_label.config(
+                            text="Enabled",
+                            fg=self.colors["accent_green"]
+                        )
+                        self.service_toggle_btn.config(
+                            text="Disable Service",
+                            bg=self.colors["accent_red"],
+                            state=tk.NORMAL
+                        )
+                    else:
+                        self.service_status_icon.config(text="⚪")
+                        self.service_status_label.config(
+                            text="Not Installed",
+                            fg=self.colors["text_muted"]
+                        )
+                        self.service_toggle_btn.config(
+                            text="Enable Service",
+                            bg=self.colors["accent_green"],
+                            state=tk.NORMAL
+                        )
+                except Exception as win_error:
+                    self.service_status_icon.config(text="⚪")
+                    self.service_status_label.config(
+                        text=f"Error: {str(win_error)[:30]}",
+                        fg=self.colors["text_muted"]
+                    )
+                    self.service_toggle_btn.config(
+                        text="Enable Service",
+                        bg=self.colors["bg_tertiary"],
+                        state=tk.DISABLED
+                    )
+            else:
+                self.service_status_icon.config(text="⚪")
+                self.service_status_label.config(
+                    text="Not supported on this platform",
+                    fg=self.colors["text_muted"]
+                )
+                self.service_toggle_btn.config(
+                    text="Enable Service",
+                    bg=self.colors["bg_tertiary"],
+                    state=tk.DISABLED
+                )
+                
+        except Exception as e:
+            # More detailed error message
+            error_msg = str(e)[:50] if len(str(e)) < 50 else str(e)[:47] + "..."
+            self.service_status_icon.config(text="⚪")
+            self.service_status_label.config(
+                text=f"Error: {error_msg}",
+                fg=self.colors["accent_red"]
+            )
+            self.service_toggle_btn.config(
+                text="Enable Service",
+                bg=self.colors["bg_tertiary"],
+                state=tk.DISABLED
+            )
+            print(f"Service status check error: {e}")  # Log to console for debugging
+    
+    def toggle_service(self):
+        """Toggle background service on/off based on current state."""
+        try:
+            import subprocess
+            from ..service import (
+                install_systemd_service, 
+                install_windows_startup,
+                uninstall_systemd_service,
+                uninstall_windows_startup
+            )
+            
+            system = platform.system().lower()
+            
+            # Determine current state
+            is_enabled = False
+            
+            if system == "linux":
+                service_file = Path.home() / ".config" / "systemd" / "user" / "paprwall.service"
+                if service_file.exists():
+                    try:
+                        result = subprocess.run(
+                            ["systemctl", "--user", "is-enabled", "paprwall.service"],
+                            capture_output=True,
+                            text=True,
+                            timeout=5
+                        )
+                        is_enabled = result.returncode == 0
+                    except:
+                        is_enabled = True  # If check fails but file exists, assume enabled
+                        
+            elif system == "windows":
+                appdata = os.environ.get("APPDATA", "")
+                if appdata:
+                    startup_folder = Path(appdata) / "Microsoft" / "Windows" / "Start Menu" / "Programs" / "Startup"
+                    shortcut_path = startup_folder / "PaprWall.lnk"
+                    is_enabled = shortcut_path.exists()
+            
+            # Toggle based on current state
+            if is_enabled:
+                # Disable service
+                response = messagebox.askyesno(
+                    "Disable Service",
+                    "Are you sure you want to disable the background service?\n\n"
+                    "PaprWall will no longer:\n"
+                    "  • Start automatically on login\n"
+                    "  • Run in the background\n"
+                    "  • Change wallpapers automatically"
+                )
+                
+                if not response:
+                    return
+                
+                self.update_status("Disabling background service...", "accent_blue")
+                
+                if system == "linux":
+                    success = uninstall_systemd_service()
+                elif system == "windows":
+                    success = uninstall_windows_startup()
+                else:
+                    messagebox.showerror(
+                        "Not Supported",
+                        f"Background service not supported on {platform.system()}"
+                    )
+                    return
+                
+                if success:
+                    messagebox.showinfo(
+                        "Service Disabled",
+                        "✅ Background service disabled successfully!\n\n"
+                        "You can still run PaprWall manually."
+                    )
+                    self.update_status("Service disabled", "text_muted")
+                else:
+                    messagebox.showwarning(
+                        "Disable Complete",
+                        "Service has been disabled (or was not installed)."
+                    )
+                    self.update_status("Service disabled", "text_muted")
+            else:
+                # Enable service
+                self.update_status("Enabling background service...", "accent_blue")
+                
+                if system == "linux":
+                    success = install_systemd_service()
+                elif system == "windows":
+                    success = install_windows_startup()
+                else:
+                    messagebox.showerror(
+                        "Not Supported",
+                        f"Background service not supported on {platform.system()}"
+                    )
+                    return
+                
+                if success:
+                    messagebox.showinfo(
+                        "Service Enabled",
+                        "✅ Background service enabled successfully!\n\n"
+                        "PaprWall will now:\n"
+                        "  • Start automatically on login\n"
+                        "  • Run in the background\n"
+                        "  • Change wallpapers automatically"
+                    )
+                    self.update_status("Service enabled", "accent_green")
+                else:
+                    messagebox.showerror(
+                        "Enable Failed",
+                        "Could not enable background service.\n"
+                        "Check the console for details."
+                    )
+                    self.update_status("Service enable failed", "accent_red")
+            
+            # Update status display
+            self.update_service_status()
+            
+        except Exception as e:
+            messagebox.showerror(
+                "Error",
+                f"Failed to toggle service:\n{str(e)}"
+            )
+            self.update_status("Service error", "accent_red")
+
+    # ===== Window Management =====
     
     def on_window_close(self):
         """Handle window close event."""
-        # If auto-rotate is enabled and minimize to tray is enabled, minimize instead of quit
-        if self.auto_rotate.get() and self.minimize_to_tray.get() and self.tray_icon:
-            self.minimize_to_tray_action()
-        else:
-            self.quit_app()
-    
-    def minimize_to_tray_action(self):
-        """Minimize application to system tray."""
-        if not self.tray_icon:
-            self.quit_app()
-            return
-        
-        try:
-            # Start tray icon if not already running
-            if not self.tray_icon.icon:
-                started = self.tray_icon.start()
-                if not started:
-                    messagebox.showwarning(
-                        "System Tray",
-                        "Could not minimize to system tray.\n"
-                        "The application will close instead."
-                    )
-                    self.quit_app()
-                    return
-            
-            # Hide the window
-            self.root.withdraw()
-            self.update_status("Running in background", "accent_green")
-            
-            # Show notification (optional)
-            print("PaprWall is now running in the background.")
-            print("Auto-rotation will continue. Right-click the tray icon to show window or quit.")
-            
-        except Exception as e:
-            print(f"Failed to minimize to tray: {e}")
-            self.quit_app()
-    
-    def show_window(self):
-        """Show the window from system tray."""
-        try:
-            self.root.deiconify()
-            self.root.lift()
-            self.root.focus_force()
-        except Exception as e:
-            print(f"Failed to show window: {e}")
+        self.quit_app()
     
     def quit_app(self):
         """Quit the application completely."""
         try:
             # Stop timer
             self.timer_running = False
-            
-            # Stop system tray
-            if self.tray_icon:
-                self.tray_icon.stop()
             
             # Save config
             self.save_config()
@@ -2364,6 +2640,9 @@ def main():
     parser.add_argument(
         "--uninstall", action="store_true", help="Uninstall from system"
     )
+    parser.add_argument(
+        "--daemon", action="store_true", help="Run in daemon mode (no GUI window)"
+    )
     args = parser.parse_args()
 
     if args.install:
@@ -2378,7 +2657,19 @@ def main():
 
     # Launch GUI
     root = tk.Tk()
+    
+    # If daemon mode, hide window and run in background
+    if args.daemon:
+        root.withdraw()  # Hide the window
+        print("PaprWall running in daemon mode")
+    
     app = ModernWallpaperGUI(root)
+    
+    # If daemon mode, auto-start rotation
+    if args.daemon and not app.auto_rotate.get():
+        app.auto_rotate.set(True)
+        app.start_auto_rotation()
+    
     root.mainloop()
 
 

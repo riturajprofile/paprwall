@@ -11,7 +11,7 @@ paprwall/
 │   ├── cli.py              # Command-line interface
 │   ├── installer.py        # System installation (desktop entries)
 │   ├── post_install.py     # Post-pip-install script
-│   ├── tray.py            # System tray icon support
+│   ├── service.py         # systemd/Windows service management
 │   └── gui/
 │       ├── __init__.py
 │       └── wallpaper_manager_gui.py  # Main GUI
@@ -70,7 +70,7 @@ pip install -e ".[dev]"  # Installs: pytest, black, flake8, mypy, etc.
 **`ModernWallpaperGUI` class**:
 - Modern dark UI with tkinter
 - Auto-rotation timer using `root.after()`
-- System tray integration via `pystray`
+- Daemon mode support (`--daemon` flag)
 - History gallery with thumbnails
 - Settings persistence in JSON
 
@@ -82,13 +82,14 @@ pip install -e ".[dev]"  # Installs: pytest, black, flake8, mypy, etc.
 - Copies icons to system directories
 - Updates desktop database
 
-### System Tray (`tray.py`)
+### Service Management (`service.py`)
 
-**`SystemTray` class**:
-- Uses `pystray` for cross-platform tray icons
-- Show/hide window functionality
-- Tray menu (Show, Quit)
-- Icon creation with fallback
+**Service functions**:
+- `install_systemd_service()` - Install as systemd user service (Linux)
+- `uninstall_systemd_service()` - Remove systemd service
+- `install_windows_startup()` - Add to Windows Startup folder
+- `uninstall_windows_startup()` - Remove from Windows Startup
+- `check_service_status()` - Check if service is running
 
 ### Post Install (`post_install.py`)
 
@@ -191,11 +192,11 @@ pre-commit run --all-files
 4. When `time_remaining` reaches 0, fetches new wallpaper
 5. Timer resets to interval value
 
-**Background mode**:
-- System tray icon created via `pystray`
+**Daemon mode**:
+- Launch with `--daemon` flag or via systemd service
 - Window hidden with `root.withdraw()`
 - Timer continues running (tkinter event loop still active)
-- Right-click tray icon to restore window
+- Auto-rotation starts automatically in daemon mode
 
 ### Desktop Integration
 
@@ -231,7 +232,6 @@ pre-commit run --all-files
 
 - `requests` - API calls and image downloads
 - `Pillow` - Image processing and quote overlay
-- `pystray` - System tray icon
 - `tkinter` - GUI (included with Python)
 
 ### Development
@@ -251,8 +251,7 @@ pre-commit run --all-files
 {
   "category": "motivational",
   "interval": 60,
-  "auto_rotate": true,
-  "minimize_to_tray": true
+  "auto_rotate": true
 }
 ```
 
@@ -360,17 +359,28 @@ sudo apt install python3-tk
 python3 -c "import tkinter"
 ```
 
-### System Tray Not Working
+### Background Service Not Working
 
+**Linux:**
 ```bash
-# Install pystray
-pip install pystray
+# Check service status
+systemctl --user status paprwall
 
-# GNOME: Install AppIndicator
-sudo apt install gnome-shell-extension-appindicator
+# View logs
+journalctl --user -u paprwall -f
 
-# Test
-python3 -c "from src.paprwall.tray import TRAY_AVAILABLE; print(TRAY_AVAILABLE)"
+# Restart service
+systemctl --user restart paprwall
+```
+
+**Windows:**
+```bash
+# Check startup folder
+echo %APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup
+
+# Reinstall
+paprwall-service uninstall
+paprwall-service install
 ```
 
 ### Wallpaper Not Setting
@@ -395,18 +405,22 @@ ls -la ~/.local/share/paprwall/wallpapers/
 - ✅ Lightweight
 - ✅ Good enough for this use case
 
-### Why pystray?
+### Why systemd service (Linux)?
 
-- ✅ Cross-platform system tray
-- ✅ Simple API
-- ✅ Active development
-- ✅ Works on Linux, Windows, macOS
+- ✅ Native Linux service management
+- ✅ Automatic restart on failure
+- ✅ Runs without GUI session
+- ✅ User service (no root needed)
+- ✅ Proper logging via journald
+- ✅ Standard systemctl commands
 
-### Why not systemd service?
+### Why Windows Startup (not service)?
 
-- ❌ Linux-only
-- ❌ Requires root/system installation
-- ✅ System tray is simpler and more user-friendly
+- ✅ Simpler than Windows Service
+- ✅ No admin rights required
+- ✅ Runs in user context (can set wallpaper)
+- ✅ Easy for users to manage
+- ❌ Windows Services can't interact with desktop easily
 
 ### Why JSON for config?
 
@@ -417,13 +431,12 @@ ls -la ~/.local/share/paprwall/wallpapers/
 ## Future Improvements
 
 - [ ] Notification when wallpaper changes
-- [ ] Quick change from tray menu
-- [ ] Native service/daemon mode (no GUI)
-- [ ] macOS support improvements
+- [ ] macOS launchd service support
 - [ ] Wayland-native support
 - [ ] Custom image sources/APIs
 - [ ] Themes/color schemes
 - [ ] Multi-monitor support
+- [ ] Web interface for remote control
 
 ## Contributing
 

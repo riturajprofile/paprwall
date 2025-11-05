@@ -14,7 +14,7 @@ Beautiful wallpapers with inspirational quotes. Auto-rotation, 6 quote categorie
 - 🎨 Modern dark UI with large preview
 - 💭 6 quote categories: Motivational, Math, Science, Famous, Tech, Philosophy
 - 🔄 Auto-rotation with live countdown; interval changes take effect immediately
-- 🔕 **Background mode** - Minimize to tray, auto-rotation continues!
+- 🔕 **Background mode** - Run as systemd service (Linux) or Windows startup
 - ✅ "Applied" indicator shows when the preview matches the current wallpaper
 - ♻️ Fallback to previously applied wallpaper if a fetch fails
 - 📜 History gallery with quick "Set" from any past wallpaper
@@ -62,11 +62,27 @@ paprwall-gui           # Launch
 5. **Auto-Rotate** - Enable timer for automatic changes (continues in background!)
 6. **History** - Browse and reuse previous wallpapers
 
-### Background Mode
-- Enable "Auto-rotate" + "Minimize to tray"
-- Close window → PaprWall runs in system tray
-- Auto-rotation continues even when window is closed!
-- Right-click tray icon to show window or quit
+### Background Mode (Daemon)
+
+**Linux (systemd service):**
+```bash
+paprwall-service install   # Install and start service
+paprwall-service status    # Check status
+paprwall-service uninstall # Remove service
+```
+Service runs in background, auto-rotation continues even after logout!
+
+**Windows (Startup):**
+```bash
+paprwall-service install   # Add to Windows Startup
+paprwall-service uninstall # Remove from Startup
+```
+PaprWall starts automatically when you log in.
+
+**Manual daemon mode:**
+```bash
+paprwall-gui --daemon      # Run in background (no window)
+```
 
 ### Data locations
 - **Linux**: `~/.local/share/paprwall/wallpapers/`

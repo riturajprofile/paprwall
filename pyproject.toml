@@ -30,7 +30,6 @@ keywords = ["wallpaper", "desktop", "gui", "quotes", "automation", "linux", "win
 dependencies = [
     "requests>=2.28.0",
     "Pillow>=10.0.0",
-    "pystray>=0.19.0",
 ]
 
 [project.optional-dependencies]
@@ -61,6 +60,7 @@ Changelog = "https://github.com/riturajprofile/paprwall/releases"
 paprwall-gui = "paprwall.gui.wallpaper_manager_gui:main"
 paprwall = "paprwall.gui.wallpaper_manager_gui:main"
 paprwall-setup-desktop = "paprwall.post_install:main"
+paprwall-service = "paprwall.service:main"
 
 [project.gui-scripts]
 paprwall-gui = "paprwall.gui.wallpaper_manager_gui:main"

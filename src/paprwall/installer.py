@@ -537,7 +537,39 @@ def install_system() -> int:
             print(f"Installation not supported on {installer.system}")
             return 1
 
-        return 0 if success else 1
+        if not success:
+            return 1
+        
+        # Auto-install background service after system installation
+        print("\n" + "="*70)
+        print("  Background Service Setup")
+        print("="*70)
+        
+        try:
+            from .service import install_systemd_service, install_windows_startup
+            
+            print("\nWould you like to enable automatic wallpaper rotation?")
+            print("This will:")
+            print("  • Start PaprWall automatically on login")
+            print("  • Change wallpapers in the background")
+            print("  • Run silently without a window")
+            
+            response = input("\nInstall background service? [Y/n]: ").strip().lower()
+            
+            if response == "" or response == "y" or response == "yes":
+                if installer.system == "linux":
+                    install_systemd_service()
+                elif installer.system == "windows":
+                    install_windows_startup()
+            else:
+                print("⚠️  Skipping background service")
+                print("   Install later: paprwall-service install")
+        except Exception as e:
+            print(f"⚠️  Could not install service: {e}")
+            print("   Install manually: paprwall-service install")
+        
+        print("="*70 + "\n")
+        return 0
 
     except Exception as e:
         print(f"Installation error: {e}")

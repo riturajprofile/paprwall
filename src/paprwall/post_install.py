@@ -184,13 +184,13 @@ def install_desktop_entry_windows() -> bool:
     """Install Start Menu entry on Windows."""
     try:
         # Get executable path
-        exec_path = get_executable_path()
-        if not exec_path:
+        exec_path_str = get_executable_path()
+        if not exec_path_str:
             print("⚠️  Could not find paprwall-gui executable.")
             return False
         
         # Convert to Windows path
-        exec_path = Path(exec_path).resolve()
+        exec_path = Path(exec_path_str).resolve()
         
         # Create Start Menu folder
         start_menu = Path(os.environ.get("APPDATA", "")) / "Microsoft" / "Windows" / "Start Menu" / "Programs" / "PaprWall"
@@ -229,7 +229,7 @@ $Shortcut.Save()
         return False
 
 
-def main():
+def main() -> None:
     """Main post-installation function."""
     # Skip in certain environments
     if os.environ.get("SKIP_PAPRWALL_DESKTOP_INSTALL") == "1":
@@ -242,9 +242,10 @@ def main():
     system = platform.system().lower()
     
     print("\n" + "="*70)
-    print("  PaprWall - Desktop Integration Setup")
+    print("  PaprWall - Desktop Integration & Service Setup")
     print("="*70)
     
+    # Install desktop integration first
     if system == "linux":
         install_desktop_entry_linux()
     elif system == "windows":
@@ -256,6 +257,37 @@ def main():
     else:
         print(f"⚠️  Desktop integration not supported on {system}.")
         print("   You can run PaprWall using: paprwall-gui\n")
+    
+    # Auto-install background service
+    print("\n" + "-"*70)
+    print("  Background Service Installation")
+    print("-"*70)
+    
+    try:
+        from .service import install_systemd_service, install_windows_startup
+        
+        print("\nWould you like to enable automatic wallpaper rotation in background?")
+        print("This will:")
+        print("  • Start PaprWall automatically on login")
+        print("  • Change wallpapers even when the window is closed")
+        print("  • Run silently in the background")
+        
+        # Auto-install by default, allow user to skip
+        response = input("\nInstall background service? [Y/n]: ").strip().lower()
+        
+        if response == "" or response == "y" or response == "yes":
+            if system == "linux":
+                install_systemd_service()
+            elif system == "windows":
+                install_windows_startup()
+            else:
+                print("⚠️  Background service not yet supported on this platform")
+        else:
+            print("⚠️  Skipping background service installation")
+            print("   You can install it later using: paprwall-service install")
+    except Exception as e:
+        print(f"⚠️  Could not auto-install service: {e}")
+        print("   You can install it manually using: paprwall-service install")
     
     print("="*70 + "\n")
 

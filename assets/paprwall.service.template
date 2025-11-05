@@ -1,0 +1,19 @@
+[Unit]
+Description=PaprWall - Desktop Wallpaper Manager with Motivational Quotes
+After=graphical-session.target
+Documentation=https://github.com/riturajprofile/paprwall
+
+[Service]
+Type=simple
+ExecStart={EXEC_PATH} --daemon
+Restart=on-failure
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+# Environment variables
+Environment="DISPLAY=:0"
+Environment="XAUTHORITY=%h/.Xauthority"
+
+[Install]
+WantedBy=default.target
