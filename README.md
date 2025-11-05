@@ -1,42 +1,49 @@
-# PaprWall 🎨
+# PaprWall v2.1.0 - Service Control Improvements 🎨
 
-Modern desktop wallpaper manager with inspirational quotes and one-click apply.
+## 🎯 What's New
 
-[![Version](https://img.shields.io/badge/version-1.1.1-blue.svg)](https://github.com/riturajprofile/paprwall/releases)
-[![Python](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
-[![License: CC BY-NC 4.0](https://img.shields.io/badge/License-CC--BY--NC%204.0-blue.svg)](https://creativecommons.org/licenses/by-nc/4.0/)
-[![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20Windows-lightgrey.svg)](https://github.com/riturajprofile/paprwall)
+### Simplified Service Controls
+- **Single Toggle Button**: Replaced 3-button UI (Enable/Disable/Status) with one smart toggle
+- **Color-Coded Status Icons**: 
+  - 🟢 Running
+  - 🔴 Disabled  
+  - 🟡 Enabled but Stopped
+  - ⚪ Not Installed
+- **Smart Button**: Automatically shows "Enable Service" or "Disable Service" based on current state
+- **Better UX**: At-a-glance status understanding with icons + text
 
-Beautiful wallpapers with inspirational quotes. Auto-rotation, 6 quote categories, and a clean dark UI. Robust cross-desktop wallpaper setting with detailed debug logs.
+### Improvements
+- ✅ Proper timeout handling to prevent UI freezes
+- ✅ Improved error messages for service operations
+- ✅ More intuitive service management experience
 
 ## ✨ Features
 
-- 🎨 Modern dark UI with large preview
-- 💭 6 quote categories: Motivational, Math, Science, Famous, Tech, Philosophy
-- 🔄 Auto-rotation with live countdown; interval changes take effect immediately
-- 🔕 **Background mode** - Run as systemd service (Linux) or Windows startup
-- ✅ "Applied" indicator shows when the preview matches the current wallpaper
-- ♻️ Fallback to previously applied wallpaper if a fetch fails
-- 📜 History gallery with quick "Set" from any past wallpaper
-- 🖥️ Multi-desktop support: GNOME, KDE, XFCE, Cinnamon, MATE, LXQt; feh fallback
-- 🧰 Detailed debug logs for wallpaper setting (per-desktop methods and fallbacks)
-- 🌐 Random images from multiple APIs + 📁 use your own images with quotes
+- 🎨 **Modern GUI** - Clean, intuitive interface with large wallpaper preview
+- 📝 **6 Quote Categories** - Motivational, Mathematics, Science, Famous, Technology, Philosophy
+- 🔄 **Auto-Rotation** - Set custom intervals (5min to 24hrs) for automatic wallpaper changes
+- 📜 **History Gallery** - Browse and reuse previously applied wallpapers
+- 🖥️ **Multi-Desktop Support** - Works with GNOME, KDE, XFCE, MATE, Cinnamon, LXQt
+- 🤖 **Background Service** - Systemd (Linux) / Startup (Windows) for persistent operation
+- 🎯 **Service Toggle** - Single-button control with visual status indicators
+- 💾 **Offline Support** - Access wallpaper history without internet
+- 🌐 **Cross-Platform** - Linux, Windows support
 
-## 🚀 Installation
+## 📥 Installation
 
-### PyPI (Recommended)
+### Option 1: PyPI (Recommended)
 ```bash
 pip install paprwall
 paprwall-setup-desktop  # Creates desktop/start menu entry
 paprwall-gui           # Launch
 ```
 
-### Linux Packages
+### Option 2: Linux Packages
 - `.deb`: `sudo dpkg -i paprwall_*.deb`
 - `.rpm`: `sudo dnf install paprwall_*.rpm`  
 - AppImage: `chmod +x PaprWall-*.AppImage && ./PaprWall-*.AppImage`
 
-### Windows
+### Option 3: Windows
 1. Download `.zip` from [Releases](https://github.com/riturajprofile/paprwall/releases/latest)
 2. Run `INSTALL.bat` (creates Desktop + Start Menu shortcuts)
 3. Launch from Desktop or Start Menu
@@ -62,9 +69,15 @@ paprwall-gui           # Launch
 5. **Auto-Rotate** - Enable timer for automatic changes (continues in background!)
 6. **History** - Browse and reuse previous wallpapers
 
-### Background Mode (Daemon)
+### Background Service Management
 
-**Linux (systemd service):**
+**GUI Controls:**
+- Open PaprWall settings
+- Find "Background Service" section with status icon (🟢/🔴/🟡/⚪)
+- Click the toggle button to enable/disable
+- Service status updates automatically
+
+**Command Line (Linux - systemd):**
 ```bash
 paprwall-service install   # Install and start service
 paprwall-service status    # Check status
@@ -72,7 +85,7 @@ paprwall-service uninstall # Remove service
 ```
 Service runs in background, auto-rotation continues even after logout!
 
-**Windows (Startup):**
+**Command Line (Windows - Startup):**
 ```bash
 paprwall-service install   # Add to Windows Startup
 paprwall-service uninstall # Remove from Startup
@@ -112,7 +125,7 @@ pip install -e ".[dev]"
 
 - **Issues**: [GitHub Issues](https://github.com/riturajprofile/paprwall/issues)
 - **Releases**: [Latest Version](https://github.com/riturajprofile/paprwall/releases/latest)
-
+- **PyPI**: [pypi.org/project/paprwall](https://pypi.org/project/paprwall/)
 
 ---
 
