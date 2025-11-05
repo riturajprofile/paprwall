@@ -1390,7 +1390,7 @@ class ModernWallpaperGUI:
                         )
                 except Exception as e:
                     self.root.after(
-                        0, lambda: messagebox.showerror("Error", f"Failed: {str(e)}")
+                        0, lambda e=e: messagebox.showerror("Error", f"Failed: {str(e)}")
                     )
 
             threading.Thread(target=set_wp, daemon=True).start()
