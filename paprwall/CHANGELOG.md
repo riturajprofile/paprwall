@@ -1,5 +1,16 @@
 # CHANGELOG for PaprWall
 
+## [2.1.0] - 2025-11-05
+### Changed
+- **Simplified Service Controls**: Replaced 3-button service UI (Enable/Disable/Status) with single smart toggle button
+- **Enhanced Status Display**: Added color-coded status icons (🟢 Running, 🔴 Disabled, 🟡 Enabled but Stopped, ⚪ Not Installed)
+- **Improved UX**: Toggle button automatically shows correct action ("Enable Service" or "Disable Service") based on current state
+- **Better Visual Feedback**: Service status now displayed with icon + text for at-a-glance understanding
+
+### Fixed
+- Service status checking now has proper timeout handling to prevent UI freezes
+- Improved error messages for service-related operations
+
 ## [2.0.1] - 2025-11-05
 ### Changed
 - **Simplified Service Controls**: Replaced 3-button service UI (Enable/Disable/Status) with single smart toggle button
