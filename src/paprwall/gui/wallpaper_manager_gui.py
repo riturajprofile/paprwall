@@ -17,8 +17,6 @@ from tkinter import ttk, filedialog, messagebox, scrolledtext
 from PIL import Image, ImageTk, ImageDraw, ImageFont
 import requests
 
-from ..core import WallpaperCore
-
 
 class ModernWallpaperGUI:
     """Modern wallpaper manager with clean UI and enhanced features."""
@@ -722,7 +720,7 @@ class ModernWallpaperGUI:
         except Exception as e:
             print(f"[ERROR] Fetch failed: {e}")
             self.root.after(
-                0, lambda: self.update_status(f"Error: {str(e)}", "accent_red")
+                0, lambda e=e: self.update_status(f"Error: {str(e)}", "accent_red")
             )
             return False
 
@@ -968,7 +966,7 @@ class ModernWallpaperGUI:
             except Exception as e:
                 print(f"[ERROR] Failed to set wallpaper: {e}")
                 self.root.after(
-                    0, lambda: messagebox.showerror("Error", f"Failed: {str(e)}")
+                    0, lambda e=e: messagebox.showerror("Error", f"Failed: {str(e)}")
                 )
 
         threading.Thread(target=set_wp, daemon=True).start()
@@ -1003,7 +1001,7 @@ class ModernWallpaperGUI:
                     )
             except Exception as e:
                 self.root.after(
-                    0, lambda: self.update_status(f"Error: {str(e)}", "accent_red")
+                    0, lambda e=e: self.update_status(f"Error: {str(e)}", "accent_red")
                 )
 
         threading.Thread(target=fetch, daemon=True).start()
@@ -1184,13 +1182,87 @@ class ModernWallpaperGUI:
         return lines or [text]
 
     def set_system_wallpaper(self, image_path):
-        """Set wallpaper on the system using improved WallpaperCore implementation."""
+        """Set wallpaper on the system."""
         try:
-            # Use the improved wallpaper setting from WallpaperCore
-            core = WallpaperCore()
-            return core.set_wallpaper(image_path)
+            system = platform.system()
+
+            if system == "Windows":
+                import ctypes
+
+                abs_path = str(Path(image_path).resolve())
+                ctypes.windll.user32.SystemParametersInfoW(20, 0, abs_path, 3)
+                return True
+
+            elif system == "Linux":
+                # Try GNOME
+                try:
+                    subprocess.run(
+                        [
+                            "gsettings",
+                            "set",
+                            "org.gnome.desktop.background",
+                            "picture-uri",
+                            f"file://{image_path}",
+                        ],
+                        check=True,
+                        capture_output=True,
+                    )
+                    return True
+                except:
+                    pass
+
+                # Try KDE
+                try:
+                    script = f"""
+                    qdbus org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell.evaluateScript '
+                        var allDesktops = desktops();
+                        for (i=0;i<allDesktops.length;i++) {{
+                            d = allDesktops[i];
+                            d.wallpaperPlugin = "org.kde.image";
+                            d.currentConfigGroup = Array("Wallpaper", "org.kde.image", "General");
+                            d.writeConfig("Image", "file://{image_path}");
+                        }}
+                    '
+                    """
+                    subprocess.run(script, shell=True, check=True, capture_output=True)
+                    return True
+                except:
+                    pass
+
+                # Try XFCE
+                try:
+                    subprocess.run(
+                        [
+                            "xfconf-query",
+                            "-c",
+                            "xfce4-desktop",
+                            "-p",
+                            "/backdrop/screen0/monitor0/workspace0/last-image",
+                            "-s",
+                            image_path,
+                        ],
+                        check=True,
+                        capture_output=True,
+                    )
+                    return True
+                except:
+                    pass
+
+                # Try feh as fallback
+                try:
+                    subprocess.run(
+                        ["feh", "--bg-scale", image_path],
+                        check=True,
+                        capture_output=True,
+                    )
+                    return True
+                except:
+                    pass
+
+            return False
+
         except Exception as e:
-            print(f"[ERROR] Failed to set wallpaper: {e}")
+            print(f"Failed to set wallpaper: {e}")
             return False
 
     def update_history_gallery(self):
