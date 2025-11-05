@@ -315,23 +315,43 @@ jobs:
 
       - name: Notify success
         if: needs.build-and-release.result == 'success'
+        shell: bash
         run: |
-          echo "## 🎉 Release Successful!" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Version**: ${{ needs.create-tag.outputs.tag_name }}" >> $GITHUB_STEP_SUMMARY
-          echo "**Release**: https://github.com/${{ github.repository }}/releases/tag/${{ needs.create-tag.outputs.tag_name }}" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "The release has been created and the CI workflow has been triggered to build and upload all platform-specific packages." >> $GITHUB_STEP_SUMMARY
+          if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then
+            {
+              echo "## 🎉 Release Successful!"
+              echo ""
+              echo "**Version**: ${{ needs.create-tag.outputs.tag_name }}"
+              echo "**Release**: https://github.com/${{ github.repository }}/releases/tag/${{ needs.create-tag.outputs.tag_name }}"
+              echo ""
+              echo "The release has been created and the CI workflow has been triggered to build and upload all platform-specific packages."
+            } >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "## 🎉 Release Successful!"
+            echo "**Version**: ${{ needs.create-tag.outputs.tag_name }}"
+            echo "**Release**: https://github.com/${{ github.repository }}/releases/tag/${{ needs.create-tag.outputs.tag_name }}"
+            echo "The release has been created and the CI workflow has been triggered to build and upload all platform-specific packages."
+          fi
 
       - name: Notify failure
         if: needs.build-and-release.result == 'failure'
+        shell: bash
         run: |
-          echo "## ❌ Release Failed!" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Version**: ${{ needs.create-tag.outputs.tag_name }}" >> $GITHUB_STEP_SUMMARY
-          echo "**Error**: Build and release process failed" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "Please check the workflow logs and try again." >> $GITHUB_STEP_SUMMARY
+          if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then
+            {
+              echo "## ❌ Release Failed!"
+              echo ""
+              echo "**Version**: ${{ needs.create-tag.outputs.tag_name }}"
+              echo "**Error**: Build and release process failed"
+              echo ""
+              echo "Please check the workflow logs and try again."
+            } >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "## ❌ Release Failed!"
+            echo "**Version**: ${{ needs.create-tag.outputs.tag_name }}"
+            echo "**Error**: Build and release process failed"
+            echo "Please check the workflow logs and try again."
+          fi
           exit 1
 
   cleanup:
@@ -342,13 +362,26 @@ jobs:
 
     steps:
       - name: No release needed
+        shell: bash
         run: |
-          echo "## ℹ️ No Release Needed" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Current Version**: ${{ needs.check-version.outputs.current_version }}" >> $GITHUB_STEP_SUMMARY
-          echo "**Reason**: Version unchanged since last commit" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "To create a release:" >> $GITHUB_STEP_SUMMARY
-          echo "1. Update the version in \`src/paprwall/__version__.py\`" >> $GITHUB_STEP_SUMMARY
-          echo "2. Commit and push the changes" >> $GITHUB_STEP_SUMMARY
-          echo "3. Or use the manual 'workflow_dispatch' trigger" >> $GITHUB_STEP_SUMMARY
+          if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then
+            {
+              echo "## ℹ️ No Release Needed"
+              echo ""
+              echo "**Current Version**: ${{ needs.check-version.outputs.current_version }}"
+              echo "**Reason**: Version unchanged since last commit"
+              echo ""
+              echo "To create a release:"
+              echo "1. Update the version in \`src/paprwall/__version__.py\`"
+              echo "2. Commit and push the changes"
+              echo "3. Or use the manual 'workflow_dispatch' trigger"
+            } >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "## ℹ️ No Release Needed"
+            echo "**Current Version**: ${{ needs.check-version.outputs.current_version }}"
+            echo "**Reason**: Version unchanged since last commit"
+            echo "To create a release:"
+            echo "1. Update the version in \`src/paprwall/__version__.py\`"
+            echo "2. Commit and push the changes"
+            echo "3. Or use the manual 'workflow_dispatch' trigger"
+          fi

@@ -285,39 +285,58 @@ jobs:
 
     steps:
       - name: PR Summary
+        shell: bash
         run: |
-          echo "## Pull Request Test Summary" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then
+            {
+              echo "## Pull Request Test Summary"
+              echo ""
+            } >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "## Pull Request Test Summary"
+          fi
 
           # Check results
           if [[ "${{ needs.lint-and-format.result }}" == "success" ]]; then
-            echo "✅ Code Quality: Passed" >> $GITHUB_STEP_SUMMARY
+            MSG="✅ Code Quality: Passed"
           else
-            echo "❌ Code Quality: ${{ needs.lint-and-format.result }}" >> $GITHUB_STEP_SUMMARY
+            MSG="❌ Code Quality: ${{ needs.lint-and-format.result }}"
           fi
+          [ -n "${GITHUB_STEP_SUMMARY:-}" ] && echo "$MSG" >> "$GITHUB_STEP_SUMMARY" || echo "$MSG"
 
           if [[ "${{ needs.test-matrix.result }}" == "success" ]]; then
-            echo "✅ Tests: Passed" >> $GITHUB_STEP_SUMMARY
+            MSG="✅ Tests: Passed"
           else
-            echo "❌ Tests: ${{ needs.test-matrix.result }}" >> $GITHUB_STEP_SUMMARY
+            MSG="❌ Tests: ${{ needs.test-matrix.result }}"
           fi
+          [ -n "${GITHUB_STEP_SUMMARY:-}" ] && echo "$MSG" >> "$GITHUB_STEP_SUMMARY" || echo "$MSG"
 
           if [[ "${{ needs.security-check.result }}" == "success" ]]; then
-            echo "✅ Security: Passed" >> $GITHUB_STEP_SUMMARY
+            MSG="✅ Security: Passed"
           else
-            echo "❌ Security: ${{ needs.security-check.result }}" >> $GITHUB_STEP_SUMMARY
+            MSG="❌ Security: ${{ needs.security-check.result }}"
           fi
+          [ -n "${GITHUB_STEP_SUMMARY:-}" ] && echo "$MSG" >> "$GITHUB_STEP_SUMMARY" || echo "$MSG"
 
           if [[ "${{ needs.build-check.result }}" == "success" ]]; then
-            echo "✅ Build: Passed" >> $GITHUB_STEP_SUMMARY
+            MSG="✅ Build: Passed"
           else
-            echo "❌ Build: ${{ needs.build-check.result }}" >> $GITHUB_STEP_SUMMARY
+            MSG="❌ Build: ${{ needs.build-check.result }}"
           fi
+          [ -n "${GITHUB_STEP_SUMMARY:-}" ] && echo "$MSG" >> "$GITHUB_STEP_SUMMARY" || echo "$MSG"
 
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**PR**: #${{ github.event.number }}" >> $GITHUB_STEP_SUMMARY
-          echo "**Branch**: ${{ github.head_ref }}" >> $GITHUB_STEP_SUMMARY
-          echo "**Author**: @${{ github.event.pull_request.user.login }}" >> $GITHUB_STEP_SUMMARY
+          if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then
+            {
+              echo ""
+              echo "**PR**: #${{ github.event.number }}"
+              echo "**Branch**: ${{ github.head_ref }}"
+              echo "**Author**: @${{ github.event.pull_request.user.login }}"
+            } >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "**PR**: #${{ github.event.number }}"
+            echo "**Branch**: ${{ github.head_ref }}"
+            echo "**Author**: @${{ github.event.pull_request.user.login }}"
+          fi
 
   auto-assign-reviewers:
     name: Auto-assign Reviewers
