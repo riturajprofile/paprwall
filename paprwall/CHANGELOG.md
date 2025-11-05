@@ -1,5 +1,12 @@
 # CHANGELOG for PaprWall
 
+## [2.1.1] - 2025-11-05
+### Changed
+- Updated author contact information and links
+- Updated email to riturajprofile.me@gmail.com
+- Added portfolio link: www.riturajprofile.me
+- Added LinkedIn profile link
+
 ## [2.1.0] - 2025-11-05
 ### Changed
 - **Simplified Service Controls**: Replaced 3-button service UI (Enable/Disable/Status) with single smart toggle button
