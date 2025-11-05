@@ -395,7 +395,7 @@ Name:           paprwall
 Version:        $VERSION
 Release:        1%{?dist}
 Summary:        Modern Desktop Wallpaper Manager with Motivational Quotes
-License:        MIT
+License:        CC-BY-NC-4.0
 URL:            https://github.com/riturajprofile/paprwall
 Source0:        paprwall-$VERSION.tar.gz
 

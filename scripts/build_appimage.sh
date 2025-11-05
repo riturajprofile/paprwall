@@ -219,8 +219,8 @@ cat > "$APPDIR/usr/share/metainfo/com.github.riturajprofile.paprwall.appdata.xml
 <?xml version="1.0" encoding="UTF-8"?>
 <component type="desktop-application">
   <id>com.github.riturajprofile.paprwall</id>
-  <metadata_license>MIT</metadata_license>
-  <project_license>MIT</project_license>
+    <metadata_license>CC-BY-NC-4.0</metadata_license>
+    <project_license>CC-BY-NC-4.0</project_license>
   <name>PaprWall</name>
   <summary>Modern Desktop Wallpaper Manager with Motivational Quotes</summary>
 

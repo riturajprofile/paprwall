@@ -16,7 +16,7 @@ repository = "https://github.com/yourusername/paprwall"
 keywords = ["wallpaper", "manager", "quotes", "desktop"]
 classifiers = [
     "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: MIT License",
+    "License :: Free for non-commercial use",
     "Operating System :: OS Independent",
 ]
 

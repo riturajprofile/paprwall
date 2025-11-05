@@ -4,13 +4,13 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "paprwall"
-version = "1.0.5"
+version = "1.1.0"
 authors = [
     {name = "riturajprofile", email = "riturajprofile@gmail.com"},
 ]
 description = "Modern Desktop Wallpaper Manager with Motivational Quotes"
 readme = "README.md"
-license = {text = "MIT"}
+license = {text = "CC BY-NC 4.0"}
 requires-python = ">=3.9"
 classifiers = [
     "Development Status :: 5 - Production/Stable",
@@ -24,6 +24,7 @@ classifiers = [
     "Topic :: Desktop Environment",
     "Topic :: Multimedia :: Graphics :: Viewers",
     "Environment :: X11 Applications",
+    "License :: Free for non-commercial use",
 ]
 keywords = ["wallpaper", "desktop", "gui", "quotes", "automation", "linux", "windows"]
 dependencies = [

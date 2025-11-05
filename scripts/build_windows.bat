@@ -81,7 +81,7 @@ mkdir "%RELEASE_DIR%"
 REM Copy executable and required files
 copy "dist\paprwall-gui.exe" "%RELEASE_DIR%\"
 if exist "README.md" copy "README.md" "%RELEASE_DIR%\"
-if exist "LICENSE" copy "LICENSE" "%RELEASE_DIR%\"
+if exist "LICENSE" copy "LICENSE" "%RELEASE_DIR%\" 
 
 REM Create installation scripts
 echo Creating installation scripts...
@@ -148,7 +148,7 @@ echo - `INSTALL.bat` - System installer
 echo - `UNINSTALL.bat` - System uninstaller
 echo - `run.bat` - Simple launcher
 echo - `README.md` - This file
-echo - `LICENSE` - License information
+echo - `LICENSE` - License (CC BY-NC 4.0)
 echo.
 echo ## System Requirements
 echo.

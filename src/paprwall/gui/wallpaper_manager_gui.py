@@ -116,6 +116,8 @@ class ModernWallpaperGUI:
         self.current_wallpaper = None
         self.current_quote = {"text": "Transform your desktop", "author": "PaprWall"}
         self.preview_image = None
+        self.preview_path = None  # Track which file is shown in preview
+        self.applied_wallpaper = None  # Track last successfully applied wallpaper
         self.is_fetching = False  # Prevent concurrent fetches
         self.fetch_lock = threading.Lock()
 
@@ -339,6 +341,18 @@ class ModernWallpaperGUI:
             fg=self.colors["text_primary"],
         ).pack(side=tk.LEFT, padx=15)
 
+        # Applied indicator (shows if current preview is the active system wallpaper)
+        self.applied_indicator = tk.Label(
+            preview_header,
+            text="Preview only",
+            font=("Segoe UI", 9, "bold"),
+            bg=self.colors["bg_tertiary"],
+            fg=self.colors["text_muted"],
+            padx=8,
+            pady=3,
+        )
+        self.applied_indicator.pack(side=tk.LEFT, padx=6)
+
         # Resolution info
         self.resolution_label = tk.Label(
             preview_header,
@@ -350,6 +364,26 @@ class ModernWallpaperGUI:
             pady=5,
         )
         self.resolution_label.pack(side=tk.RIGHT, padx=15)
+
+        # Action buttons (top of preview)
+        top_button_frame = tk.Frame(preview_container, bg=self.colors["bg_secondary"])
+        top_button_frame.pack(fill=tk.X, padx=15, pady=(0, 6))
+
+        self.create_button(
+            top_button_frame,
+            "Set as Wallpaper",
+            self.set_wallpaper,
+            self.colors["accent_green"],
+            width=20,
+        ).pack(side=tk.LEFT, padx=5)
+
+        self.create_button(
+            top_button_frame,
+            "Refresh",
+            self.fetch_random_wallpaper,
+            self.colors["accent_blue"],
+            width=15,
+        ).pack(side=tk.LEFT, padx=5)
 
         # Preview canvas (fixed height to fit on screen)
         canvas_frame = tk.Frame(preview_container, bg="black", height=320)
@@ -363,6 +397,9 @@ class ModernWallpaperGUI:
             highlightbackground=self.colors["border"],
         )
         self.preview_canvas.pack(fill=tk.BOTH, expand=True)
+
+        # Move history section up so it's visible without scrolling
+        self.create_history_section(preview_container)
 
         # Quote display (smaller and more compact)
         quote_frame = tk.Frame(preview_container, bg=self.colors["bg_tertiary"])
@@ -394,28 +431,9 @@ class ModernWallpaperGUI:
             width=3,
         ).pack(side=tk.RIGHT, padx=10, pady=5)
 
-        # Action buttons
-        button_frame = tk.Frame(preview_container, bg=self.colors["bg_secondary"])
-        button_frame.pack(fill=tk.X, padx=15, pady=(0, 8))
+        # (Buttons moved to top of preview)
 
-        self.create_button(
-            button_frame,
-            "Set as Wallpaper",
-            self.set_wallpaper,
-            self.colors["accent_green"],
-            width=20,
-        ).pack(side=tk.LEFT, padx=5)
-
-        self.create_button(
-            button_frame,
-            "Refresh",
-            self.fetch_random_wallpaper,
-            self.colors["accent_blue"],
-            width=15,
-        ).pack(side=tk.LEFT, padx=5)
-
-        # History gallery (fixed height at bottom)
-        self.create_history_section(main)
+        # History section moved above; no call here
 
     def create_history_section(self, parent):
         """Create history gallery section."""
@@ -747,9 +765,14 @@ class ModernWallpaperGUI:
             self.preview_canvas.delete("all")
             self.preview_canvas.create_image(x, y, anchor="nw", image=tk_img)
             self.preview_canvas.image = tk_img  # keep reference
+            # Track current preview path and update applied indicator
+            self.preview_path = str(path)
+            self.update_applied_indicator()
         except Exception as e:
             print(f"[ERROR] Failed to load image preview: {e}")
             self.update_status("Failed to load preview", "accent_red")
+            # Keep indicator consistent even on failure
+            self.update_applied_indicator()
 
     def _fetch_image_helper(self, url, filename_prefix="temp", fetch_quote=True):
         """Helper method to fetch and process images."""
@@ -860,6 +883,10 @@ class ModernWallpaperGUI:
                         print(f"[DEBUG] Auto-set wallpaper result: {wp_success}")
                         
                         if wp_success:
+                            # Update applied state and preview to exactly what was set
+                            self.applied_wallpaper = final_path
+                            self.root.after(0, lambda p=final_path: self.load_image_to_preview(p))
+                            self.root.after(0, self.update_applied_indicator)
                             self.root.after(0, lambda: self.save_to_history(final_path, self.current_quote))
                             self.root.after(
                                 0,
@@ -918,6 +945,11 @@ class ModernWallpaperGUI:
                         f"{msg}\n\nPlease check your internet connection.",
                     ),
                 )
+                # Fallback to previously applied wallpaper in preview, if available
+                if self.applied_wallpaper and Path(self.applied_wallpaper).exists():
+                    self.root.after(0, lambda p=self.applied_wallpaper: self.load_image_to_preview(p))
+                    self.current_wallpaper = self.applied_wallpaper
+                    self.root.after(0, lambda: self.update_status("Using previous wallpaper", "accent_blue"))
 
             # Always reset the flag
             with self.fetch_lock:
@@ -1087,6 +1119,10 @@ class ModernWallpaperGUI:
                     print(f"[DEBUG] Auto-rotation: Wallpaper set result: {success}")
                     
                     if success:
+                        # Record applied and ensure preview shows the exact applied file
+                        self.applied_wallpaper = final_path
+                        self.root.after(0, lambda p=final_path: self.load_image_to_preview(p))
+                        self.root.after(0, self.update_applied_indicator)
                         self.root.after(0, lambda: self.save_to_history(final_path, self.current_quote))
                         self.root.after(0, lambda: self.update_status("Wallpaper auto-rotated!", "accent_green"))
                     else:
@@ -1094,10 +1130,20 @@ class ModernWallpaperGUI:
                 else:
                     print(f"[WARN] Auto-rotation fetch failed: HTTP {response.status_code}")
                     self.root.after(0, lambda: self.update_status("Auto-rotation failed", "accent_red"))
+                    # Fallback to previously applied wallpaper in preview, if available
+                    if self.applied_wallpaper and Path(self.applied_wallpaper).exists():
+                        self.root.after(0, lambda p=self.applied_wallpaper: self.load_image_to_preview(p))
+                        self.current_wallpaper = self.applied_wallpaper
+                        self.root.after(0, lambda: self.update_status("Using previous wallpaper", "accent_blue"))
                     
             except Exception as e:
                 print(f"[ERROR] Auto-rotation error: {e}")
                 self.root.after(0, lambda: self.update_status("Auto-rotation error", "accent_red"))
+                # Fallback to previously applied wallpaper in preview, if available
+                if self.applied_wallpaper and Path(self.applied_wallpaper).exists():
+                    self.root.after(0, lambda p=self.applied_wallpaper: self.load_image_to_preview(p))
+                    self.current_wallpaper = self.applied_wallpaper
+                    self.root.after(0, lambda: self.update_status("Using previous wallpaper", "accent_blue"))
         
         threading.Thread(target=fetch_and_set, daemon=True).start()
 
@@ -1121,12 +1167,17 @@ class ModernWallpaperGUI:
                 print(f"[DEBUG] Wallpaper set result: {success}")
 
                 if success:
+                    # Record applied wallpaper and sync preview
+                    self.applied_wallpaper = final_path
                     self.root.after(
                         0, lambda: self.save_to_history(final_path, self.current_quote)
                     )
                     self.root.after(
                         0, lambda: self.update_status("Wallpaper set!", "accent_green")
                     )
+                    # Ensure preview shows the exact applied file
+                    self.root.after(0, lambda p=final_path: self.load_image_to_preview(p))
+                    self.root.after(0, self.update_applied_indicator)
                     self.root.after(
                         0,
                         lambda: messagebox.showinfo(
@@ -1855,6 +1906,10 @@ class ModernWallpaperGUI:
                 try:
                     success = self.set_system_wallpaper(image_path)
                     if success:
+                        # Record applied and sync preview/indicator
+                        self.applied_wallpaper = image_path
+                        self.root.after(0, lambda p=image_path: self.load_image_to_preview(p))
+                        self.root.after(0, self.update_applied_indicator)
                         self.root.after(
                             0,
                             lambda: self.update_status(
@@ -1981,7 +2036,7 @@ class ModernWallpaperGUI:
         """Show about dialog."""
         about_window = tk.Toplevel(self.root)
         about_window.title("About PaprWall")
-        about_window.geometry("400x300")
+        about_window.geometry("600x300")
         about_window.configure(bg=self.colors["bg_secondary"])
         about_window.resizable(False, False)
 
@@ -2047,6 +2102,37 @@ class ModernWallpaperGUI:
         color = self.colors.get(color_key, self.colors["text_primary"])
         self.status_label.config(text=f"● {message}", fg=color)
         self.root.update_idletasks()
+
+    def update_applied_indicator(self):
+        """Update the small header badge showing whether the preview is applied."""
+        try:
+            preview = str(self.preview_path) if self.preview_path else None
+            applied = str(self.applied_wallpaper) if self.applied_wallpaper else None
+            is_applied = False
+            if preview and applied:
+                try:
+                    # Prefer robust realpath comparison if both exist
+                    p1 = str(Path(preview).resolve())
+                    p2 = str(Path(applied).resolve())
+                    is_applied = p1 == p2
+                except Exception:
+                    is_applied = preview == applied
+
+            if is_applied:
+                self.applied_indicator.config(
+                    text="APPLIED",
+                    bg=self.colors["accent_green"],
+                    fg="#ffffff",
+                )
+            else:
+                self.applied_indicator.config(
+                    text="Preview only",
+                    bg=self.colors["bg_tertiary"],
+                    fg=self.colors["text_muted"],
+                )
+        except Exception as e:
+            # Non-fatal UI update error
+            print(f"[DEBUG] update_applied_indicator failed: {e}")
 
     def check_first_run_installation(self):
         """Check if this is first run and prompt for installation."""
