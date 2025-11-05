@@ -120,6 +120,16 @@ a = Analysis(
 pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
 
 # Create executable
+# Try to attach a Windows version resource file if present; otherwise, skip it.
+_ver_filename = f'VERSION_INFO_{version.replace(".", "_")}'
+_ver_path = (project_root / 'scripts' / _ver_filename)
+_exe_kwargs = {}
+if _ver_path.exists():
+    _exe_kwargs['version'] = str(_ver_path)
+else:
+    # Avoid build failure when the version info file is absent in CI
+    print(f"Version resource file not found, skipping: {_ver_path}")
+
 exe = EXE(
     pyz,
     a.scripts,
@@ -139,8 +149,8 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    version=f'VERSION_INFO_{version.replace(".", "_")}',
     icon=str(assets_dir / 'paprwall-icon.ico') if (assets_dir / 'paprwall-icon.ico').exists() else None,
+    **_exe_kwargs,
 )
 
 # Optional: Create a directory distribution instead of single file

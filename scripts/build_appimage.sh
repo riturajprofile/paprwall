@@ -213,7 +213,9 @@ DESKTOP_EOF
 cp "$APPDIR/paprwall.desktop" "$APPDIR/usr/share/applications/"
 
 # Create AppStream metadata
-cat > "$APPDIR/usr/share/metainfo/paprwall.appdata.xml" << METADATA_EOF
+# Use the full component id as filename to match the metadata <id> and avoid
+# metainfo-filename-cid-mismatch warnings
+cat > "$APPDIR/usr/share/metainfo/com.github.riturajprofile.paprwall.appdata.xml" << METADATA_EOF
 <?xml version="1.0" encoding="UTF-8"?>
 <component type="desktop-application">
   <id>com.github.riturajprofile.paprwall</id>
@@ -242,10 +244,16 @@ cat > "$APPDIR/usr/share/metainfo/paprwall.appdata.xml" << METADATA_EOF
 
   <screenshots>
     <screenshot type="default">
-      <caption>Main window with wallpaper preview</caption>
+            <caption>Main window with wallpaper preview</caption>
+            <!-- point to the packaged icon/screenshot so appstreamcli can validate media -->
+            <image>usr/share/icons/hicolor/256x256/apps/paprwall.png</image>
     </screenshot>
   </screenshots>
-
+  
+    <!-- Minimal developer and content-rating fields to satisfy validators and provide
+             basic metadata. These are intentionally simple; expand if you have more info. -->
+    <developer_name>riturajprofile</developer_name>
+    <content_rating>unrated</content_rating>
   <url type="homepage">https://github.com/riturajprofile/paprwall</url>
   <url type="bugtracker">https://github.com/riturajprofile/paprwall/issues</url>
 

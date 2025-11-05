@@ -70,10 +70,12 @@ class ModernWallpaperGUI:
             if icon_path.exists():
                 # Load icon and set it
                 icon_img = Image.open(icon_path)
-                icon_photo = ImageTk.PhotoImage(icon_img)
-                self.root.iconphoto(True, icon_photo)
-                # Keep a reference to prevent garbage collection
-                self.root._icon_photo = icon_photo
+                try:
+                    icon_photo = ImageTk.PhotoImage(icon_img)
+                    self.root.iconphoto(True, icon_photo)
+                    self.root._icon_photo = icon_photo  # Prevent GC
+                except Exception as e:
+                    print(f"[DEBUG] Failed to set icon: {e}")
 
         except Exception as e:
             # Icon is optional, don't crash if it fails
@@ -94,12 +96,12 @@ class ModernWallpaperGUI:
         self.colors = {
             "bg_primary": "#0f1419",
             "bg_secondary": "#1a1f26",
-            "bg_tertiary": "#242b35",
-            "bg_hover": "#2d3748",
-            "accent_blue": "#3b82f6",
-            "accent_purple": "#8b5cf6",
+            "bg_tertiary": "#23272f",
+            "bg_hover": "#23272f",
             "accent_green": "#10b981",
             "accent_red": "#ef4444",
+            "accent_blue": "#2563eb",
+            "accent_purple": "#8b5cf6",   # <-- add this line
             "text_primary": "#f9fafb",
             "text_secondary": "#9ca3af",
             "text_muted": "#6b7280",
@@ -145,11 +147,28 @@ class ModernWallpaperGUI:
             "type.fit": "https://type.fit/api/quotes",
         }
 
-        # Multiple image sources for reliability
+        # Multiple image sources for reliability (95% picsum, 5% loremflickr as fallback)
         self.image_sources = [
             "https://picsum.photos/1920/1080",
+            "https://picsum.photos/1920/1080",
+            "https://picsum.photos/1920/1080",
+            "https://picsum.photos/1920/1080",
+            "https://picsum.photos/1920/1080",
+            "https://picsum.photos/1920/1080",
+            "https://picsum.photos/1920/1080",
+            "https://picsum.photos/1920/1080",
+            "https://picsum.photos/1920/1080",
+            "https://picsum.photos/1920/1080",
+            "https://picsum.photos/1920/1080",
+            "https://picsum.photos/1920/1080",
+            "https://picsum.photos/1920/1080",
+            "https://picsum.photos/1920/1080",
+            "https://picsum.photos/1920/1080",
+            "https://picsum.photos/1920/1080",
+            "https://picsum.photos/1920/1080",
+            "https://picsum.photos/1920/1080",
+            "https://picsum.photos/1920/1080",
             "https://loremflickr.com/1920/1080/nature",
-            "https://loremflickr.com/1920/1080/landscape",
         ]
 
         # Retry configuration
@@ -445,10 +464,23 @@ class ModernWallpaperGUI:
         )
 
         self.history_frame.bind("<Configure>", self.on_history_configure)
+        
+        # Enable mouse wheel scrolling
+        self.history_canvas.bind("<MouseWheel>", self.on_history_mousewheel)
+        self.history_canvas.bind("<Button-4>", self.on_history_mousewheel)
+        self.history_canvas.bind("<Button-5>", self.on_history_mousewheel)
 
     def on_history_configure(self, event):
         """Update scroll region when history frame changes."""
         self.history_canvas.configure(scrollregion=self.history_canvas.bbox("all"))
+
+    def on_history_mousewheel(self, event):
+        """Handle mouse wheel scrolling for history gallery."""
+        # Windows and MacOS
+        if event.num == 5 or event.delta < 0:
+            self.history_canvas.xview_scroll(1, "units")
+        elif event.num == 4 or event.delta > 0:
+            self.history_canvas.xview_scroll(-1, "units")
 
     def create_sidebar(self):
         """Create right sidebar with controls."""
@@ -677,6 +709,34 @@ class ModernWallpaperGUI:
             self.current_wallpaper = file_path
             self.update_status("Local image loaded", "accent_green")
 
+    def load_image_to_preview(self, path):
+        """Load *path* into the preview canvas, scaled to fit while keeping ratio."""
+        try:
+            img = Image.open(path)
+            canvas_w = self.preview_canvas.winfo_width()
+            canvas_h = self.preview_canvas.winfo_height()
+            if canvas_w < 10 or canvas_h < 10:  # canvas not realised yet
+                self.root.after(100, lambda: self.load_image_to_preview(path))
+                return
+
+            # Update resolution label
+            self.resolution_label.config(text=f"{img.width}×{img.height}")
+
+            # scale to fit
+            img.thumbnail((canvas_w, canvas_h), Image.Resampling.LANCZOS)
+            tk_img = ImageTk.PhotoImage(img)
+
+            # centre image
+            x = (canvas_w - tk_img.width()) // 2
+            y = (canvas_h - tk_img.height()) // 2
+
+            self.preview_canvas.delete("all")
+            self.preview_canvas.create_image(x, y, anchor="nw", image=tk_img)
+            self.preview_canvas.image = tk_img  # keep reference
+        except Exception as e:
+            print(f"[ERROR] Failed to load image preview: {e}")
+            self.update_status("Failed to load preview", "accent_red")
+
     def _fetch_image_helper(self, url, filename_prefix="temp", fetch_quote=True):
         """Helper method to fetch and process images."""
         try:
@@ -741,13 +801,18 @@ class ModernWallpaperGUI:
             success = False
             last_error = None
 
-            # Try multiple image sources
+            # Try multiple times
             for attempt in range(self.max_retries):
                 try:
+                    # Select image source (95% picsum, 5% loremflickr)
                     url = random.choice(self.image_sources)
                     print(
                         f"[DEBUG] Attempt {attempt + 1}/{self.max_retries}: Fetching from {url}"
                     )
+
+                    # Fetch new quote for each attempt
+                    self.fetch_quote_with_retry()
+                    time.sleep(0.5)  # Wait for quote
 
                     # Fetch image with increased timeout
                     response = requests.get(
@@ -766,10 +831,6 @@ class ModernWallpaperGUI:
                             f.write(response.content)
 
                         print(f"[DEBUG] Image saved to: {temp_path}")
-
-                        # Fetch quote (with its own retry logic)
-                        self.fetch_quote_with_retry()
-                        time.sleep(0.5)  # Wait for quote
 
                         # Embed quote and preview
                         preview_path = self.embed_quote_on_image(str(temp_path))
@@ -794,17 +855,23 @@ class ModernWallpaperGUI:
                 except requests.exceptions.Timeout:
                     last_error = "Request timeout"
                     print(f"[WARN] Attempt {attempt + 1} timeout")
+                    # Retry with fresh quote on timeout
+                    if attempt < self.max_retries - 1:
+                        print("[DEBUG] Retrying with new quote...")
 
                 except requests.exceptions.ConnectionError as e:
                     last_error = "Network connection error"
                     print(f"[WARN] Attempt {attempt + 1} connection error: {e}")
+                    # Retry with fresh quote on connection error
+                    if attempt < self.max_retries - 1:
+                        print("[DEBUG] Retrying with new quote...")
 
                 except Exception as e:
                     last_error = str(e)
                     print(f"[WARN] Attempt {attempt + 1} failed: {e}")
 
                 # Wait before retry (except on last attempt)
-                if attempt < self.max_retries - 1:
+                if attempt < self.max_retries - 1 and not success:
                     time.sleep(self.retry_delay)
 
             if not success:
@@ -851,31 +918,51 @@ class ModernWallpaperGUI:
             },
         ]
 
-        for attempt in range(2):  # Try twice for quotes
+        # Try multiple quote APIs (zenquotes first, then forismatic)
+        quote_api_list = [
+            ("https://zenquotes.io/api/random", "zenquotes"),
+            ("https://api.forismatic.com/api/1.0/?method=getQuote&format=json&lang=en", "forismatic"),
+        ]
+
+        for attempt in range(len(quote_api_list)):
             try:
-                category = self.quote_category.get()
-                url = self.quote_apis["quotable"]
-                params = {"tags": category}
-
-                response = requests.get(url, params=params, timeout=5)
-
-                if response.status_code == 200:
-                    data = response.json()
-                    quote = {
-                        "text": data.get("content", "Stay motivated!"),
-                        "author": data.get("author", "Unknown"),
-                    }
-                    self.current_quote = quote
-                    self.root.after(0, self.update_quote_display)
-                    print(f"[DEBUG] Quote fetched: {quote['text'][:50]}...")
-                    return
+                api_url, api_name = quote_api_list[attempt]
+                
+                if api_name == "zenquotes":
+                    response = requests.get(api_url, timeout=5)
+                    
+                    if response.status_code == 200:
+                        data = response.json()
+                        if isinstance(data, list) and len(data) > 0:
+                            quote = {
+                                "text": data[0].get("q", "Stay motivated!"),
+                                "author": data[0].get("a", "Unknown"),
+                            }
+                            self.current_quote = quote
+                            self.root.after(0, self.update_quote_display)
+                            print(f"[DEBUG] Quote fetched from {api_name}: {quote['text'][:50]}...")
+                            return
+                            
+                elif api_name == "forismatic":
+                    response = requests.get(api_url, timeout=5)
+                    
+                    if response.status_code == 200:
+                        data = response.json()
+                        quote = {
+                            "text": data.get("quoteText", "Stay motivated!").strip(),
+                            "author": data.get("quoteAuthor", "Unknown").strip() or "Unknown",
+                        }
+                        self.current_quote = quote
+                        self.root.after(0, self.update_quote_display)
+                        print(f"[DEBUG] Quote fetched from {api_name}: {quote['text'][:50]}...")
+                        return
 
             except Exception as e:
-                print(f"[DEBUG] Quote fetch attempt {attempt + 1} failed: {e}")
-                if attempt == 0:
-                    time.sleep(1)  # Wait before retry
+                print(f"[DEBUG] Quote fetch from {api_name if 'api_name' in locals() else 'API'} attempt {attempt + 1} failed: {e}")
+                if attempt < len(quote_api_list) - 1:
+                    time.sleep(0.5)  # Wait before trying next API
 
-        # Use fallback quote
+        # Use fallback quote if all APIs fail
         import random
 
         quote = random.choice(fallback_quotes)
@@ -1006,55 +1093,65 @@ class ModernWallpaperGUI:
 
         threading.Thread(target=fetch, daemon=True).start()
 
-    def load_image_to_preview(self, image_path):
-        """Load and display image in preview."""
-        try:
-            # First load image to get dimensions
-            img = Image.open(image_path)
-
-            # Update resolution label
-            self.resolution_label.config(text=f"{img.width}×{img.height}")
-
-            # Create preview with quote (if available)
-            if hasattr(self, "current_quote") and self.current_quote:
-                preview_path = self.embed_quote_on_image(image_path)
-                if preview_path != image_path:  # Quote was embedded successfully
-                    img = Image.open(preview_path)
-
-            # Resize to fit canvas
-            canvas_width = self.preview_canvas.winfo_width()
-            canvas_height = self.preview_canvas.winfo_height()
-
-            if canvas_width > 1 and canvas_height > 1:
-                img.thumbnail((canvas_width, canvas_height), Image.Resampling.LANCZOS)
-
-            # Convert to PhotoImage
-            self.preview_image = ImageTk.PhotoImage(img)
-
-            # Display on canvas
-            self.preview_canvas.delete("all")
-            x = canvas_width // 2
-            y = canvas_height // 2
-            self.preview_canvas.create_image(x, y, image=self.preview_image)
-
-        except Exception as e:
-            print(f"[ERROR] Failed to load image: {e}")
-            messagebox.showerror("Error", f"Failed to load image: {str(e)}")
-
     def embed_quote_on_image(self, image_path):
-        """Embed quote permanently on the image file at top-right corner."""
+        """
+        Embed a quote and author on the image with adaptive overlay and font sizing.
+        Returns the output image path, or original if fails.
+        """
         try:
             img = Image.open(image_path)
-            print(f"[DEBUG] Opened image for quote embedding: {image_path}")
-
-            # Get quote
-            if not hasattr(self, "current_quote") or not self.current_quote:
-                return image_path  # Return original if no quote
-
+            img_width, img_height = img.size
             quote_text = self.current_quote.get("text", "")
-            if not quote_text:
-                return image_path  # Return original if no quote
+            author_text = f"— {self.current_quote.get('author', '')}" if self.current_quote.get('author', '') else ""
 
+            # Adaptive font size based on image height
+            base_font_size = max(16, img_height // 32)
+            author_font_size = max(12, base_font_size - 2)
+            try:
+                font = ImageFont.truetype("arial.ttf", base_font_size)
+                author_font = ImageFont.truetype("arial.ttf", author_font_size)
+            except Exception:
+                font = ImageFont.load_default()
+                author_font = font
+
+            # Calculate text size for background
+            draw = ImageDraw.Draw(img)
+            quote_bbox = draw.textbbox((0, 0), quote_text, font=font)
+            quote_w, quote_h = quote_bbox[2] - quote_bbox[0], quote_bbox[3] - quote_bbox[1]
+            author_bbox = draw.textbbox((0, 0), author_text, font=author_font)
+            author_w, author_h = author_bbox[2] - author_bbox[0], author_bbox[3] - author_bbox[1]
+            box_width = max(quote_w, author_w) + 40
+            box_height = quote_h + author_h + 40
+
+            # Position: top right with padding
+            padding = max(30, img_width // 40)
+            x = img_width - box_width - padding
+            y = padding
+
+            # Overlay: semi-transparent black
+            overlay = Image.new("RGBA", img.size, (0, 0, 0, 0))
+            overlay_draw = ImageDraw.Draw(overlay)
+            left = x - 20
+            top = y - 20
+            right = x + box_width
+            bottom = y + box_height
+            overlay_draw.rectangle([left, top, right, bottom], fill=(0, 0, 0, 100))
+
+            if img.mode != "RGBA":
+                img = img.convert("RGBA")
+            img = Image.alpha_composite(img, overlay)
+            img = img.convert("RGB")
+
+            draw = ImageDraw.Draw(img)
+            draw.text((x, y), quote_text, font=font, fill="#ffffff")
+            draw.text((x, y + quote_h + 10), author_text, font=author_font, fill="#cccccc")
+
+            output_path = str(self.wallpapers_dir / f"wallpaper_{int(time.time())}.jpg")
+            img.save(output_path, "JPEG", quality=98, subsampling=0)
+            return output_path
+        except Exception as e:
+            print(f"[ERROR] Failed to embed quote: {e}")
+            return image_path
             author_text = f"— {self.current_quote.get('author', '')}"
 
             # Load font with robust fallback
@@ -1109,16 +1206,36 @@ class ModernWallpaperGUI:
             except:
                 pass
 
+            # Compute tight background box based on actual text width
+            max_line_px = 0
+            for line in lines:
+                try:
+                    bbox = draw.textbbox((0, 0), line, font=font)
+                    max_line_px = max(max_line_px, bbox[2] - bbox[0])
+                except Exception:
+                    # Fallback approximate width using character count
+                    max_line_px = max(max_line_px, int(len(line) * (font.size * 0.6)))
+
+            # Include author width
+            try:
+                author_bbox = draw.textbbox((0, 0), author_text, font=author_font)
+                author_px = author_bbox[2] - author_bbox[0]
+            except Exception:
+                author_px = int(len(author_text) * (author_font.size * 0.6 if hasattr(author_font, "size") else 10))
+
+            box_width = max(max_line_px, author_px)
             total_height = len(lines) * line_height + 50
 
-            # Draw semi-transparent background
+            # Draw semi-transparent background only behind the quote (avoid dimming large area)
             try:
                 overlay = Image.new("RGBA", img.size, (0, 0, 0, 0))
                 overlay_draw = ImageDraw.Draw(overlay)
-                overlay_draw.rectangle(
-                    [x - 20, y - 20, img_width - padding + 20, y + total_height + 20],
-                    fill=(0, 0, 0, 150),
-                )
+                left = max(0, x - 20)
+                top = max(0, y - 20)
+                right = min(img_width, x + box_width + 20)
+                bottom = min(img_height, y + total_height + 20)
+                # Slightly lighter opacity to reduce perceived dimming
+                overlay_draw.rectangle([left, top, right, bottom], fill=(0, 0, 0, 110))
 
                 # Convert image to RGBA and composite with overlay
                 if img.mode != "RGBA":
@@ -1132,7 +1249,7 @@ class ModernWallpaperGUI:
                 print(f"[DEBUG] Overlay creation failed, using direct drawing: {e}")
                 # Fallback: draw directly on image
                 draw.rectangle(
-                    [x - 20, y - 20, img_width - padding + 20, y + total_height + 20],
+                    [left, top, right, bottom],
                     fill=(0, 0, 0),
                     outline=(50, 50, 50),
                 )
