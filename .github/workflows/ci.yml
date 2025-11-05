@@ -364,6 +364,10 @@ jobs:
 
       - name: Download all artifacts
         uses: actions/download-artifact@v4
+        with:
+          pattern: '*'
+          path: artifacts
+          merge-multiple: true
 
       - name: Get version
         id: version
@@ -441,17 +445,17 @@ jobs:
         with:
           body_path: release_notes.md
           files: |
-            linux-build/paprwall-v*-linux-*.tar.gz
-            linux-build/paprwall-v*-linux-*.tar.gz.sha256
-            linux-build/paprwall_*_amd64.deb
-            linux-build/paprwall-*-1.x86_64.rpm
-            appimage-build/PaprWall-*-x86_64.AppImage
-            appimage-build/PaprWall-*-x86_64.AppImage.sha256
-            windows-build/paprwall-v*-windows-*.zip
-            windows-build/paprwall-v*-windows-*.zip.sha256
-            windows-build/dist/paprwall-gui.exe
-            macos-build/paprwall-v*-macos-*.tar.gz
-            macos-build/paprwall-v*-macos-*.tar.gz.sha256
+            artifacts/paprwall-v*-linux-*.tar.gz
+            artifacts/paprwall-v*-linux-*.tar.gz.sha256
+            artifacts/paprwall_*_amd64.deb
+            artifacts/paprwall-*-1.x86_64.rpm
+            artifacts/PaprWall-*-x86_64.AppImage
+            artifacts/PaprWall-*-x86_64.AppImage.sha256
+            artifacts/paprwall-v*-windows-*.zip
+            artifacts/paprwall-v*-windows-*.zip.sha256
+            artifacts/dist/paprwall-gui.exe
+            artifacts/paprwall-v*-macos-*.tar.gz
+            artifacts/paprwall-v*-macos-*.tar.gz.sha256
           token: ${{ secrets.GITHUB_TOKEN }}
           draft: false
           prerelease: false
