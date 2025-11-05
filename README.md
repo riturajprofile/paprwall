@@ -121,11 +121,15 @@ cd paprwall
 pip install -e ".[dev]"
 ```
 
-## 💬 Support
+## 💬 Support & Contact
 
 - **Issues**: [GitHub Issues](https://github.com/riturajprofile/paprwall/issues)
 - **Releases**: [Latest Version](https://github.com/riturajprofile/paprwall/releases/latest)
 - **PyPI**: [pypi.org/project/paprwall](https://pypi.org/project/paprwall/)
+- **Email**: riturajprofile.me@gmail.com | riturajprofile@outlook.com
+- **Portfolio**: [www.riturajprofile.me](https://www.riturajprofile.me)
+- **LinkedIn**: [linkedin.com/in/riturajprofile](https://www.linkedin.com/in/riturajprofile)
+- **GitHub**: [@riturajprofile](https://github.com/riturajprofile)
 
 ---
 

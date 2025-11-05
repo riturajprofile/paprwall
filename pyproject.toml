@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "paprwall"
 version = "2.1.0"
 authors = [
-    {name = "riturajprofile", email = "riturajprofile@gmail.com"},
+    {name = "riturajprofile", email = "riturajprofile.me@gmail.com"},
 ]
 description = "Modern Desktop Wallpaper Manager with Motivational Quotes"
 readme = "README.md"
@@ -50,11 +50,12 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/riturajprofile/paprwall"
+Homepage = "https://www.riturajprofile.me"
 Repository = "https://github.com/riturajprofile/paprwall"
 Documentation = "https://github.com/riturajprofile/paprwall#readme"
 "Bug Tracker" = "https://github.com/riturajprofile/paprwall/issues"
 Changelog = "https://github.com/riturajprofile/paprwall/releases"
+LinkedIn = "https://www.linkedin.com/in/riturajprofile"
 
 [project.scripts]
 paprwall-gui = "paprwall.gui.wallpaper_manager_gui:main"
